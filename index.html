@@ -323,6 +323,8 @@
     const SCHEMA_NAME = 'controle-social-jovens';
     const STORAGE_KEY = 'csj_db_v1';
     const CFG_KEY = 'csj_supabase_cfg';
+    const DEFAULT_SUPABASE_URL = 'https://irlxktcyucvckejrxunk.supabase.co';
+    const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlybHhrdGN5dWN2Y2tlanJ4dW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNTMzNTcsImV4cCI6MjA3MzcyOTM1N30.9JqCS8cN_Lzrc1BYGYmVIpF9JPyLNUmxD0hKoNhStVA';
 
     const fmtBRL = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -405,11 +407,13 @@
 
     function initSupabaseFromConfig() {
       try {
-        const cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
-        if (cfg.url && cfg.key && window.supabase) {
-          document.getElementById('cfg-url').value = cfg.url;
-          document.getElementById('cfg-key').value = cfg.key;
-          sbClient = window.supabase.createClient(cfg.url, cfg.key, {
+        const saved = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
+        const url = saved.url || DEFAULT_SUPABASE_URL;
+        const key = saved.key || DEFAULT_SUPABASE_KEY;
+        if (url && key && window.supabase) {
+          document.getElementById('cfg-url').value = url;
+          document.getElementById('cfg-key').value = key;
+          sbClient = window.supabase.createClient(url, key, {
             db: { schema: SCHEMA_NAME }
           });
           return true;
@@ -450,8 +454,18 @@
       } catch (_) {}
 
       if (initSupabaseFromConfig()) {
-        backendMode = 'supabase';
-        return backendMode;
+        try {
+          const { error } = await sbClient.from('categories').select('id').limit(1);
+          if (!error) {
+            backendMode = 'supabase';
+            return backendMode;
+          } else {
+            console.warn('Aviso Supabase:', error.message);
+            showToast(`Aviso Supabase: ${error.message} (Exponha o schema "controle-social-jovens" em Settings > API no Supabase. Usando modo local temporariamente.)`);
+          }
+        } catch (err) {
+          console.warn('Falha ao conectar Supabase:', err);
+        }
       }
 
       backendMode = 'local';
