@@ -27,6 +27,16 @@ const initialSeed = () => ({
     { id: 3, name: 'Refrigerante Lata 350ml', category_id: 2, price: 6.00, stock_quantity: 48, created_at: new Date().toISOString() },
     { id: 4, name: 'Brigadeiro Gourmet', category_id: 3, price: 4.50, stock_quantity: 30, created_at: new Date().toISOString() }
   ],
+  events: [
+    {
+      id: 1,
+      name: 'Social de Sábado',
+      event_date: new Date().toISOString().slice(0, 10),
+      status: 'aberto',
+      attendance_count: 30,
+      created_at: new Date().toISOString()
+    }
+  ],
   orders: [],
   order_items: []
 });
@@ -35,6 +45,7 @@ let mockStore = initialSeed();
 let counters = {
   categories: 4,
   products: 5,
+  events: 2,
   orders: 1,
   order_items: 1
 };
@@ -42,15 +53,16 @@ let counters = {
 function resetMockDb(withSeed = false) {
   if (withSeed) {
     mockStore = initialSeed();
-    counters = { categories: 4, products: 5, orders: 1, order_items: 1 };
+    counters = { categories: 4, products: 5, events: 2, orders: 1, order_items: 1 };
   } else {
     mockStore = {
       categories: [],
       products: [],
+      events: [],
       orders: [],
       order_items: []
     };
-    counters = { categories: 1, products: 1, orders: 1, order_items: 1 };
+    counters = { categories: 1, products: 1, events: 1, orders: 1, order_items: 1 };
   }
 }
 
@@ -61,6 +73,11 @@ function enrichRow(table, row, selectSpec = '*') {
   if (table === 'products' && (spec.includes('categories') || spec.includes('category'))) {
     const category = mockStore.categories.find((c) => Number(c.id) === Number(clone.category_id)) || null;
     clone.categories = category ? { ...category } : null;
+  }
+
+  if (table === 'orders' && spec.includes('events')) {
+    const ev = (mockStore.events || []).find((e) => Number(e.id) === Number(clone.event_id)) || null;
+    clone.events = ev ? { ...ev } : null;
   }
 
   if (table === 'orders' && spec.includes('order_items')) {
@@ -209,8 +226,13 @@ class MockQueryBuilder {
                 ? null
                 : Number(newRow.stock_quantity);
           }
+          if (this.table === 'events') {
+            newRow.attendance_count = Number(newRow.attendance_count || 0);
+            newRow.status = newRow.status || 'agendado';
+          }
           if (this.table === 'orders') {
             newRow.total_amount = Number(newRow.total_amount);
+            newRow.event_id = newRow.event_id === undefined || newRow.event_id === null || newRow.event_id === '' ? null : Number(newRow.event_id);
           }
           if (this.table === 'order_items') {
             newRow.order_id = Number(newRow.order_id);

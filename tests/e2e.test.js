@@ -429,4 +429,110 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
     assert.match(htmlRes.body, /controle-social-jovens/i);
     console.log('✔ [Teste 5] Interface EJS renderizada com sucesso (tamanho HTML:', htmlRes.body.length, 'bytes)');
   });
+
+  test('Teste 6: Gestão de Eventos, Ciclo de Vendas (Agendado -> Aberto -> Encerrado) e Cálculo de Adesão', async () => {
+    // 6.1 Agendar um evento para sábado com 20 jovens presentes
+    const createEv = await apiRequest('/events', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'Social Noite do Hot Dog',
+        event_date: '2026-11-14',
+        attendance_count: 20,
+        status: 'agendado'
+      })
+    });
+    assert.equal(createEv.status, 201);
+    const evId = createEv.body.id;
+    assert.equal(createEv.body.status, 'agendado');
+    assert.equal(createEv.body.attendance_count, 20);
+
+    // 6.2 Tentar lançar pedido enquanto evento está "agendado" deve bloquear (400)
+    const blockedOrder = await apiRequest('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        event_id: evId,
+        customer_name: 'Ana Clara',
+        payment_method: 'pix',
+        payment_status: 'pago',
+        items: [{ product_id: prodHotDogId, quantity: 1 }]
+      })
+    });
+    assert.equal(blockedOrder.status, 400);
+    assert.match(blockedOrder.body.error, /não estão abertas/i);
+
+    // 6.3 Iniciar vendas do evento (mudar status para "aberto")
+    const openEv = await apiRequest(`/events/${evId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'aberto' })
+    });
+    assert.equal(openEv.status, 200);
+    assert.equal(openEv.body.status, 'aberto');
+
+    // 6.4 Registrar 2 pedidos para a mesma pessoa ("Ana Clara" e "ana clara ") e 1 para "Pedro Henrique"
+    const ordA1 = await apiRequest('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        event_id: evId,
+        customer_name: 'Ana Clara',
+        payment_method: 'pix',
+        payment_status: 'pago',
+        items: [{ product_id: prodHotDogId, quantity: 1 }]
+      })
+    });
+    assert.equal(ordA1.status, 201);
+
+    const ordA2 = await apiRequest('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        event_id: evId,
+        customer_name: '  ana clara ',
+        payment_method: 'pix',
+        payment_status: 'pendente',
+        items: [{ product_id: prodRefriId, quantity: 1 }]
+      })
+    });
+    assert.equal(ordA2.status, 201);
+
+    const ordB1 = await apiRequest('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        event_id: evId,
+        customer_name: 'Pedro Henrique',
+        payment_method: 'dinheiro',
+        payment_status: 'pago',
+        items: [{ product_id: prodHotDogId, quantity: 1 }]
+      })
+    });
+    assert.equal(ordB1.status, 201);
+
+    // 6.5 Verificar métricas de adesão do evento: 3 pedidos, mas 2 compradores únicos em 20 presentes = 10% de adesão
+    const evList = await apiRequest('/events');
+    assert.equal(evList.status, 200);
+    const targetEv = evList.body.find((e) => e.id === evId);
+    assert.equal(targetEv.orders_count, 3);
+    assert.equal(targetEv.unique_buyers_count, 2, 'Deve unificar Ana Clara como 1 única participante');
+    assert.equal(targetEv.adherence_rate, 10.0, '2 compradores / 20 presentes = 10% de adesão');
+
+    // 6.6 Encerrar o evento e confirmar que ainda é possível dar baixa na pendência de Ana Clara
+    const closeEv = await apiRequest(`/events/${evId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'encerrado' })
+    });
+    assert.equal(closeEv.status, 200);
+    assert.equal(closeEv.body.status, 'encerrado');
+
+    const payClosedEvOrder = await apiRequest(`/orders/${ordA2.body.id}/pay`, {
+      method: 'PATCH'
+    });
+    assert.equal(payClosedEvOrder.status, 200);
+    assert.equal(payClosedEvOrder.body.payment_status, 'pago');
+
+    console.log('✔ [Teste 6] Evento e métricas de adesão validados:', {
+      name: targetEv.name,
+      attendance_count: targetEv.attendance_count,
+      unique_buyers_count: targetEv.unique_buyers_count,
+      adherence_rate: `${targetEv.adherence_rate}%`,
+      orders_count: targetEv.orders_count
+    });
+  });
 });

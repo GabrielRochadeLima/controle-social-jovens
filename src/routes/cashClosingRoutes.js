@@ -11,6 +11,8 @@ const { supabase } = require('../config/supabase');
  */
 router.get('/', async (req, res) => {
   try {
+    const { event_id } = req.query;
+
     const { data: orders, error } = await supabase
       .from('orders')
       .select('*, order_items ( id, product_id, quantity, unit_price, products ( id, name ) )')
@@ -21,6 +23,10 @@ router.get('/', async (req, res) => {
     }
 
     const allOrders = orders || [];
+    const hasEventFilter = event_id !== undefined && event_id !== '' && event_id !== 'all';
+    const filteredOrders = hasEventFilter
+      ? allOrders.filter((o) => Number(o.event_id) === Number(event_id))
+      : allOrders;
 
     let totalPaid = 0;
     let totalPending = 0;
@@ -28,11 +34,19 @@ router.get('/', async (req, res) => {
     let pendingCount = 0;
     const byPaymentMethod = {};
     const pendingOrders = [];
+    const uniqueBuyersSet = new Set();
 
-    for (const order of allOrders) {
+    for (const order of filteredOrders) {
       const amount = Number(order.total_amount) || 0;
       const status = String(order.payment_status || '').toLowerCase();
       const method = String(order.payment_method || 'outros').toLowerCase();
+      const buyerKey = String(order.customer_name || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ');
+      if (buyerKey) uniqueBuyersSet.add(buyerKey);
 
       if (status === 'pago') {
         totalPaid += amount;
@@ -43,6 +57,7 @@ router.get('/', async (req, res) => {
         pendingCount += 1;
         pendingOrders.push({
           id: order.id,
+          event_id: order.event_id || null,
           customer_name: order.customer_name,
           payment_method: order.payment_method,
           payment_status: order.payment_status,
@@ -52,6 +67,18 @@ router.get('/', async (req, res) => {
         });
       }
     }
+
+    // Pendências de outros eventos (para alerta geral)
+    const otherPendingOrders = hasEventFilter
+      ? allOrders.filter(
+          (o) =>
+            String(o.payment_status || '').toLowerCase() === 'pendente' &&
+            Number(o.event_id) !== Number(event_id)
+        )
+      : [];
+    const otherPendingTotal = Number(
+      otherPendingOrders.reduce((acc, o) => acc + (Number(o.total_amount) || 0), 0).toFixed(2)
+    );
 
     totalPaid = Number(totalPaid.toFixed(2));
     totalPending = Number(totalPending.toFixed(2));
@@ -64,14 +91,18 @@ router.get('/', async (req, res) => {
         total_general: totalGeneral,
         paid_count: paidCount,
         pending_count: pendingCount,
-        total_orders: allOrders.length
+        total_orders: filteredOrders.length,
+        unique_buyers_count: uniqueBuyersSet.size
       },
       total_paid: totalPaid,
       by_payment_method: byPaymentMethod,
       total_pending: totalPending,
       paid_count: paidCount,
       pending_count: pendingCount,
-      pending_orders: pendingOrders
+      unique_buyers_count: uniqueBuyersSet.size,
+      pending_orders: pendingOrders,
+      other_events_pending_count: otherPendingOrders.length,
+      other_events_pending_total: otherPendingTotal
     });
   } catch (err) {
     return res.status(500).json({

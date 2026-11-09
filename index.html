@@ -33,7 +33,7 @@
       background-color: var(--bg);
       color: var(--text);
       line-height: 1.45;
-      padding: 1.25rem;
+      padding: 1.15rem;
       max-width: 1280px;
       margin: 0 auto;
     }
@@ -43,8 +43,8 @@
       justify-content: space-between;
       align-items: center;
       gap: 0.85rem;
-      margin-bottom: 1.25rem;
-      padding-bottom: 0.95rem;
+      margin-bottom: 1.15rem;
+      padding-bottom: 0.9rem;
       border-bottom: 1px solid var(--border);
     }
     .brand-box {
@@ -61,19 +61,19 @@
       flex-shrink: 0;
     }
     header h1 {
-      font-size: 1.35rem;
+      font-size: 1.3rem;
       font-weight: 700;
       letter-spacing: -0.02em;
     }
     header p {
       color: var(--muted);
-      font-size: 0.84rem;
+      font-size: 0.82rem;
     }
     .nav-tabs {
       display: flex;
-      gap: 0.4rem;
+      gap: 0.35rem;
       background: var(--surface);
-      padding: 0.3rem;
+      padding: 0.28rem;
       border-radius: 0.65rem;
       border: 1px solid var(--border);
     }
@@ -81,9 +81,9 @@
       background: transparent;
       border: none;
       color: var(--muted);
-      padding: 0.5rem 0.95rem;
+      padding: 0.48rem 0.85rem;
       border-radius: 0.45rem;
-      font-size: 0.88rem;
+      font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.15s ease;
@@ -109,71 +109,112 @@
       from { opacity: 0; transform: translateY(3px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    /* Barra do Evento Ativo na Tela de Pedidos */
+    .event-banner {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--primary);
+      border-radius: 0.75rem;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .event-banner-left {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem;
+      flex: 1;
+    }
+    .event-banner-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.82rem;
+    }
+    .metric-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 0.3rem 0.65rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
     .stats-row {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 0.85rem;
-      margin-bottom: 1.15rem;
+      margin-bottom: 1.1rem;
     }
     .stat-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 0.7rem;
-      padding: 0.9rem 1.1rem;
+      padding: 0.85rem 1.05rem;
     }
     .stat-card span {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--muted);
       display: block;
     }
     .stat-card strong {
       display: block;
-      font-size: 1.45rem;
+      font-size: 1.4rem;
       margin-top: 0.15rem;
       line-height: 1.2;
     }
     .stat-card small {
-      font-size: 0.76rem;
+      font-size: 0.75rem;
       color: var(--muted);
     }
     .text-success { color: var(--success); }
     .text-warning { color: var(--warning); }
+    .text-primary { color: #60a5fa; }
+
     .grid-2 {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-      gap: 1.1rem;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 1rem;
       align-items: start;
     }
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 0.75rem;
-      padding: 1.15rem;
+      padding: 1.1rem;
     }
     .card h2 {
-      font-size: 1.02rem;
-      margin-bottom: 0.9rem;
+      font-size: 1rem;
+      margin-bottom: 0.85rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 0.55rem;
+      padding-bottom: 0.5rem;
     }
-    form { display: flex; flex-direction: column; gap: 0.75rem; }
+    form { display: flex; flex-direction: column; gap: 0.7rem; }
     label {
-      font-size: 0.8rem;
+      font-size: 0.79rem;
       color: var(--muted);
       display: block;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.22rem;
       font-weight: 500;
     }
     input, select, button {
-      padding: 0.58rem 0.75rem;
+      padding: 0.55rem 0.72rem;
       border-radius: 0.5rem;
       border: 1px solid var(--border);
       background: var(--bg);
       color: var(--text);
-      font-size: 0.9rem;
+      font-size: 0.88rem;
     }
     input:focus, select:focus {
       outline: none;
@@ -185,7 +226,7 @@
       color: #fff;
       font-weight: 600;
       cursor: pointer;
-      padding: 0.65rem 0.95rem;
+      padding: 0.62rem 0.9rem;
       transition: background 0.15s;
     }
     button.btn-primary:hover { background: var(--primary-hover); }
@@ -195,7 +236,7 @@
       color: var(--text);
       font-weight: 600;
       cursor: pointer;
-      padding: 0.65rem 0.95rem;
+      padding: 0.5rem 0.8rem;
     }
     button.btn-success {
       background: var(--success);
@@ -204,13 +245,20 @@
       font-weight: 600;
       cursor: pointer;
     }
+    button.btn-warning {
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      color: #fbbf24;
+      font-weight: 600;
+      cursor: pointer;
+    }
     button.btn-edit {
       background: rgba(59, 130, 246, 0.16);
       border: 1px solid rgba(59, 130, 246, 0.4);
       color: #60a5fa;
       font-weight: 600;
-      padding: 0.28rem 0.6rem;
-      font-size: 0.78rem;
+      padding: 0.26rem 0.55rem;
+      font-size: 0.76rem;
       cursor: pointer;
     }
     .table-wrap {
@@ -221,45 +269,140 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.86rem;
-      margin-top: 0.25rem;
+      font-size: 0.84rem;
+      margin-top: 0.2rem;
     }
     th, td {
       text-align: left;
-      padding: 0.55rem 0.4rem;
+      padding: 0.5rem 0.38rem;
       border-bottom: 1px solid var(--border);
     }
     th {
       color: var(--muted);
       font-weight: 600;
-      font-size: 0.76rem;
+      font-size: 0.74rem;
       text-transform: uppercase;
       letter-spacing: 0.03em;
     }
     .tag {
       display: inline-block;
-      padding: 0.15rem 0.5rem;
+      padding: 0.14rem 0.48rem;
       border-radius: 0.35rem;
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 600;
       text-transform: uppercase;
     }
-    .tag-pago { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-    .tag-pendente { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .tag-pago, .tag-aberto { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .tag-pendente, .tag-agendado { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .tag-encerrado { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+
+    /* Cards de Evento e Barra de Adesão */
+    .events-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+    .event-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      padding: 0.9rem;
+    }
+    .event-item.active-event {
+      border-color: var(--success);
+    }
+    .event-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin-bottom: 0.65rem;
+    }
+    .event-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.45rem;
+      margin-bottom: 0.65rem;
+    }
+    .event-metric-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.45rem;
+      padding: 0.45rem 0.55rem;
+    }
+    .event-metric-box small {
+      font-size: 0.68rem;
+      color: var(--muted);
+      display: block;
+    }
+    .event-metric-box strong {
+      font-size: 0.92rem;
+      display: block;
+      margin-top: 0.1rem;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--surface);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 0.7rem;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--success));
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+    .event-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+    .event-actions button {
+      font-size: 0.78rem;
+      padding: 0.38rem 0.68rem;
+    }
+
     .cat-pills {
       display: flex;
       flex-wrap: wrap;
       gap: 0.4rem;
-      margin-top: 0.65rem;
+      margin-top: 0.6rem;
     }
     .cat-pill {
       background: rgba(255, 255, 255, 0.06);
       border: 1px solid var(--border);
-      padding: 0.2rem 0.6rem;
+      padding: 0.2rem 0.58rem;
       border-radius: 999px;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       color: var(--text);
     }
+    .closed-order-notice {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 0.55rem;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.82rem;
+      color: #fde68a;
+      display: none;
+    }
+    .other-pending-alert {
+      background: rgba(245, 158, 11, 0.14);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      border-radius: 0.55rem;
+      padding: 0.6rem 0.8rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.8rem;
+      color: #fbbf24;
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
     #toast {
       position: fixed;
       bottom: 1rem;
@@ -275,30 +418,30 @@
       z-index: 100;
       box-shadow: 0 10px 25px rgba(0,0,0,0.5);
       text-align: center;
-      font-size: 0.88rem;
+      font-size: 0.86rem;
     }
 
     /* Ajustes específicos para Celular (Mobile) */
     @media (max-width: 768px) {
       body {
-        padding: 0.65rem;
+        padding: 0.6rem;
       }
       header {
         flex-direction: column;
         align-items: stretch;
-        gap: 0.65rem;
-        margin-bottom: 0.85rem;
-        padding-bottom: 0.7rem;
+        gap: 0.6rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.65rem;
       }
       .brand-logo {
-        width: 38px;
-        height: 38px;
+        width: 36px;
+        height: 36px;
       }
       header h1 {
-        font-size: 1.15rem;
+        font-size: 1.12rem;
       }
       header p {
-        font-size: 0.78rem;
+        font-size: 0.76rem;
       }
       .nav-tabs {
         width: 100%;
@@ -307,47 +450,54 @@
       .nav-tab {
         flex: 1;
         text-align: center;
-        padding: 0.48rem 0.4rem;
-        font-size: 0.8rem;
+        padding: 0.45rem 0.25rem;
+        font-size: 0.76rem;
+      }
+      .event-banner {
+        padding: 0.65rem 0.75rem;
+        gap: 0.5rem;
       }
       .stats-row {
         grid-template-columns: 1fr 1fr;
-        gap: 0.55rem;
-        margin-bottom: 0.85rem;
+        gap: 0.5rem;
+        margin-bottom: 0.8rem;
       }
       .stats-row .stat-card:nth-child(3) {
         grid-column: 1 / -1;
       }
       .stat-card {
-        padding: 0.65rem 0.8rem;
-        border-radius: 0.6rem;
+        padding: 0.6rem 0.75rem;
+        border-radius: 0.55rem;
       }
       .stat-card span {
-        font-size: 0.74rem;
+        font-size: 0.72rem;
       }
       .stat-card strong {
-        font-size: 1.18rem;
+        font-size: 1.15rem;
       }
       .grid-2 {
         grid-template-columns: 1fr;
-        gap: 0.8rem;
+        gap: 0.75rem;
       }
       .card {
-        padding: 0.85rem;
+        padding: 0.8rem;
         border-radius: 0.65rem;
       }
       .card h2 {
-        font-size: 0.95rem;
-        margin-bottom: 0.7rem;
-        padding-bottom: 0.45rem;
+        font-size: 0.94rem;
+        margin-bottom: 0.65rem;
+        padding-bottom: 0.42rem;
+      }
+      .event-metrics-grid {
+        grid-template-columns: 1fr 1fr;
       }
       input, select, button {
-        padding: 0.5rem 0.65rem;
-        font-size: 0.86rem;
+        padding: 0.48rem 0.62rem;
+        font-size: 0.84rem;
       }
       th, td {
-        padding: 0.45rem 0.3rem;
-        font-size: 0.8rem;
+        padding: 0.42rem 0.28rem;
+        font-size: 0.78rem;
       }
     }
   </style>
@@ -358,26 +508,108 @@
       <img src="./icon-192.png?v=3" alt="Detroit Jovens" class="brand-logo" />
       <div>
         <h1>Controle Social Jovens</h1>
-        <p>Gestão de Pedidos, Caixa e Produtos</p>
+        <p>Eventos, Adesão, Pedidos e Produtos</p>
       </div>
     </div>
     <nav class="nav-tabs" aria-label="Navegação Principal">
+      <button type="button" class="nav-tab" id="tab-events" onclick="switchScreen('events')">
+        📅 Eventos & Adesão
+      </button>
       <button type="button" class="nav-tab active" id="tab-orders" onclick="switchScreen('orders')">
-        🛒 Registrar Pedido
+        🛒 Caixa / Pedidos
       </button>
       <button type="button" class="nav-tab" id="tab-products" onclick="switchScreen('products')">
-        📦 Produtos & Categorias
+        📦 Produtos
       </button>
       <button type="button" class="nav-tab" id="btn-install-pwa" onclick="installPwaApp()" style="display: none; color: #34d399;">
-        📲 Instalar
+        📲 App
       </button>
     </nav>
   </header>
 
+  <!-- Datalist de Autocomplete para Nomes de Clientes (evita duplicar nomes na contagem de adesão) -->
+  <datalist id="customers-datalist"></datalist>
+
   <!-- ====================================================================== -->
-  <!-- TELA 1: REGISTRAR PEDIDO, PENDÊNCIAS E RESUMO DO CAIXA                 -->
+  <!-- TELA 0: EVENTOS & ADESÃO (AGENDAR DIA, INICIAR VENDAS, PÚBLICO)        -->
+  <!-- ====================================================================== -->
+  <section id="screen-events" class="screen">
+    <div class="stats-row">
+      <div class="stat-card">
+        <span>Eventos Cadastrados</span>
+        <strong id="ev-stat-count">0</strong>
+        <small id="ev-stat-open">0 em andamento</small>
+      </div>
+      <div class="stat-card">
+        <span>Média de Adesão nas Sociais</span>
+        <strong class="text-primary" id="ev-stat-adherence">0%</strong>
+        <small id="ev-stat-buyers">0 compradores únicos no total</small>
+      </div>
+      <div class="stat-card">
+        <span>Total Movimentado (Histórico Geral)</span>
+        <strong class="text-success" id="ev-stat-revenue">R$ 0,00</strong>
+        <small id="ev-stat-orders">Soma de todos os eventos</small>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Formulário para Agendar / Criar Dia de Evento -->
+      <div class="card">
+        <h2>Agendar / Criar Dia de Evento</h2>
+        <form id="event-form">
+          <div>
+            <label for="ev-name">Nome ou Tema do Evento / Social</label>
+            <input type="text" id="ev-name" placeholder="Ex: Social Pós-Culto / Noite do Hot Dog" required style="width: 100%;" />
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+            <div>
+              <label for="ev-date">Data do Evento</label>
+              <input type="date" id="ev-date" required style="width: 100%;" />
+            </div>
+            <div>
+              <label for="ev-attendance">Jovens Presentes (Público)</label>
+              <input type="number" id="ev-attendance" min="0" placeholder="Ex: 40 (pode editar depois)" style="width: 100%;" />
+            </div>
+          </div>
+          <div>
+            <label for="ev-status">Status Inicial</label>
+            <select id="ev-status" style="width: 100%;">
+              <option value="aberto">Já iniciar vendas agora (Em Andamento)</option>
+              <option value="agendado">Apenas Agendar Dia (Iniciar vendas depois)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-primary">Salvar Evento</button>
+        </form>
+      </div>
+
+      <!-- Lista de Eventos e Controle de Adesão -->
+      <div class="card">
+        <h2>Histórico de Eventos & Adesão</h2>
+        <div class="events-list" id="events-list-container"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================== -->
+  <!-- TELA 1: CAIXA / REGISTRAR PEDIDO E PENDÊNCIAS DO EVENTO                -->
   <!-- ====================================================================== -->
   <main id="screen-orders" class="screen active">
+    <!-- Barra de Controle do Evento Ativo -->
+    <div class="event-banner">
+      <div class="event-banner-left">
+        <div>
+          <label for="active-event-select" style="margin-bottom: 0.15rem; font-size: 0.72rem;">Evento / Dia Selecionado:</label>
+          <select id="active-event-select" onchange="onChangeActiveEvent(this.value)" style="font-weight: 600; min-width: 220px;"></select>
+        </div>
+        <span id="active-event-badge" class="tag tag-aberto">-</span>
+      </div>
+      <div class="event-banner-metrics" id="active-event-metrics">
+        <span class="metric-chip">👥 Presentes: <strong id="banner-attendance">0</strong> <button type="button" class="btn-edit" onclick="promptUpdateAttendance()" style="margin-left:0.25rem;">Editar</button></span>
+        <span class="metric-chip">🛒 Compraram: <strong id="banner-buyers">0</strong></span>
+        <span class="metric-chip">📈 Adesão: <strong class="text-primary" id="banner-adherence">-</strong></span>
+      </div>
+    </div>
+
     <section class="stats-row">
       <div class="stat-card">
         <span>Total Recebido (Pagos)</span>
@@ -391,7 +623,7 @@
       </div>
       <div class="stat-card">
         <span>Recebido por Forma de Pagamento</span>
-        <div id="stat-methods" style="font-size: 0.85rem; margin-top: 0.35rem; color: var(--text);">-</div>
+        <div id="stat-methods" style="font-size: 0.84rem; margin-top: 0.35rem; color: var(--text);">-</div>
       </div>
     </section>
 
@@ -399,10 +631,17 @@
       <!-- Formulário de Novo Pedido + Últimos Pedidos -->
       <div class="card">
         <h2>Novo Pedido</h2>
+        <div id="closed-order-notice" class="closed-order-notice">
+          <div style="margin-bottom: 0.45rem;" id="closed-order-text">As vendas deste evento não estão abertas no momento.</div>
+          <button type="button" class="btn-success" onclick="openSelectedEventSales()" style="padding: 0.38rem 0.75rem; font-size: 0.8rem;">
+            ▶ Iniciar / Reabrir Vendas deste Evento
+          </button>
+        </div>
+
         <form id="order-form">
           <div>
-            <label for="order-customer">Nome do Cliente / Jovem</label>
-            <input type="text" id="order-customer" placeholder="Ex: Lucas Mendes" required style="width: 100%;" />
+            <label for="order-customer">Nome do Cliente / Jovem <span style="font-weight:400;">(Sugere nomes já cadastrados)</span></label>
+            <input type="text" id="order-customer" list="customers-datalist" autocomplete="off" placeholder="Ex: Lucas Mendes" required style="width: 100%;" />
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
             <div>
@@ -431,10 +670,10 @@
               <input type="number" id="order-qty" value="1" min="1" required style="width: 100%;" />
             </div>
           </div>
-          <button type="submit" class="btn-primary">Finalizar Pedido</button>
+          <button type="submit" class="btn-primary" id="order-submit-btn">Finalizar Pedido</button>
         </form>
 
-        <h2 style="margin-top: 1.35rem;">Últimos Pedidos Registrados</h2>
+        <h2 style="margin-top: 1.35rem;">Pedidos Registrados</h2>
         <div class="table-wrap">
           <table>
             <thead>
@@ -454,8 +693,14 @@
       <!-- Pedidos Pendentes para Dar Baixa -->
       <div class="card">
         <h2>Pedidos Pendentes — Dar Baixa</h2>
-        <p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.55rem;">
-          Pedidos marcados como <strong>pendente</strong> ficam listados abaixo até o pagamento ser confirmado:
+        <div id="other-pending-alert" class="other-pending-alert">
+          <span id="other-pending-text">Há pendências de eventos anteriores!</span>
+          <button type="button" class="btn-warning" onclick="onChangeActiveEvent('all')" style="padding: 0.25rem 0.55rem; font-size: 0.75rem;">
+            Ver Todos os Eventos
+          </button>
+        </div>
+        <p style="font-size: 0.78rem; color: var(--muted); margin-bottom: 0.55rem;">
+          Você pode dar baixa em pedidos pendentes a qualquer momento, mesmo após encerrar o evento:
         </p>
         <div class="table-wrap">
           <table>
@@ -481,7 +726,6 @@
   <section id="screen-products" class="screen">
     <div class="grid-2">
       <div style="display: flex; flex-direction: column; gap: 1rem;">
-        <!-- Card 1: Cadastrar / Editar Produto -->
         <div class="card">
           <h2 id="product-form-title">Cadastrar Novo Produto</h2>
           <form id="product-form">
@@ -511,7 +755,6 @@
           </form>
         </div>
 
-        <!-- Card 2: Criar Categoria -->
         <div class="card">
           <h2>Categorias de Produtos</h2>
           <form id="category-form" style="flex-direction: row; gap: 0.5rem; align-items: end;">
@@ -525,7 +768,6 @@
         </div>
       </div>
 
-      <!-- Listagem de Produtos com botão Editar -->
       <div class="card">
         <h2>Produtos Cadastrados & Estoque</h2>
         <div class="table-wrap">
@@ -551,18 +793,40 @@
   <script>
     const SCHEMA_NAME = 'controle-social-jovens';
     const STORAGE_KEY = 'csj_db_v1';
+    const EVENTS_BRIDGE_KEY = 'csj_events_bridge_v1';
     const DEFAULT_SUPABASE_URL = 'https://irlxktcyucvckejrxunk.supabase.co';
     const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlybHhrdGN5dWN2Y2tlanJ4dW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNTMzNTcsImV4cCI6MjA3MzcyOTM1N30.9JqCS8cN_Lzrc1BYGYmVIpF9JPyLNUmxD0hKoNhStVA';
 
     const fmtBRL = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    function fmtDateBR(isoDate) {
+      if (!isoDate) return '-';
+      const parts = String(isoDate).slice(0, 10).split('-');
+      if (parts.length !== 3) return isoDate;
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    function normalizeCustomerKey(name) {
+      return String(name || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ');
+    }
+
     let cachedProducts = [];
+    let cachedEvents = [];
+    let selectedEventId = localStorage.getItem('csj_selected_event_id') || '';
+
+    // Preenche a data de hoje por padrão no formulário de evento
+    document.getElementById('ev-date').value = new Date().toISOString().slice(0, 10);
 
     function switchScreen(screenName) {
-      const isOrders = screenName === 'orders';
-      document.getElementById('screen-orders').classList.toggle('active', isOrders);
-      document.getElementById('screen-products').classList.toggle('active', !isOrders);
-      document.getElementById('tab-orders').classList.toggle('active', isOrders);
-      document.getElementById('tab-products').classList.toggle('active', !isOrders);
+      ['events', 'orders', 'products'].forEach((s) => {
+        document.getElementById(`screen-${s}`).classList.toggle('active', s === screenName);
+        document.getElementById(`tab-${s}`).classList.toggle('active', s === screenName);
+      });
     }
 
     function showToast(msg) {
@@ -573,6 +837,7 @@
     }
 
     function getDefaultSeed() {
+      const today = new Date().toISOString().slice(0, 10);
       return {
         categories: [
           { id: 1, name: 'Lanches' },
@@ -585,6 +850,9 @@
           { id: 3, name: 'Refrigerante Lata 350ml', category_id: 2, price: 6.00, stock_quantity: 48 },
           { id: 4, name: 'Brigadeiro Gourmet', category_id: 3, price: 4.50, stock_quantity: 30 }
         ],
+        events: [
+          { id: 1, name: 'Social de Jovens', event_date: today, status: 'aberto', attendance_count: 35 }
+        ],
         orders: [],
         order_items: []
       };
@@ -593,7 +861,13 @@
     function loadLocalDb() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (!parsed.events) {
+            parsed.events = [{ id: 1, name: 'Social de Jovens', event_date: new Date().toISOString().slice(0, 10), status: 'aberto', attendance_count: 35 }];
+          }
+          return parsed;
+        }
       } catch (_) {}
       const seed = getDefaultSeed();
       saveLocalDb(seed);
@@ -604,8 +878,59 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
     }
 
+    // Bridge local para Eventos caso a tabela events ainda não tenha sido criada no Supabase SQL Editor
+    function loadEventsBridge() {
+      try {
+        const raw = localStorage.getItem(EVENTS_BRIDGE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (_) {}
+      const initial = {
+        events: [
+          { id: 1, name: 'Social de Jovens', event_date: new Date().toISOString().slice(0, 10), status: 'aberto', attendance_count: 30 }
+        ],
+        orderEventMap: {}
+      };
+      localStorage.setItem(EVENTS_BRIDGE_KEY, JSON.stringify(initial));
+      return initial;
+    }
+
+    function saveEventsBridge(bridge) {
+      localStorage.setItem(EVENTS_BRIDGE_KEY, JSON.stringify(bridge));
+    }
+
+    function computeEventMetrics(ev, evOrders) {
+      const uniqueMap = new Map();
+      let totalPaid = 0;
+      let totalPending = 0;
+      for (const o of evOrders) {
+        const k = normalizeCustomerKey(o.customer_name);
+        if (k && !uniqueMap.has(k)) uniqueMap.set(k, String(o.customer_name).trim());
+        const amt = Number(o.total_amount) || 0;
+        if (o.payment_status === 'pago') totalPaid += amt;
+        else totalPending += amt;
+      }
+      const uniqueBuyersCount = uniqueMap.size;
+      const attendanceCount = Number(ev.attendance_count || 0);
+      const totalSales = Number((totalPaid + totalPending).toFixed(2));
+      const adherenceRate = attendanceCount > 0 ? Number(((uniqueBuyersCount / attendanceCount) * 100).toFixed(1)) : null;
+      const avgTicket = uniqueBuyersCount > 0 ? Number((totalSales / uniqueBuyersCount).toFixed(2)) : 0;
+      return {
+        ...ev,
+        attendance_count: attendanceCount,
+        unique_buyers_count: uniqueBuyersCount,
+        unique_buyers: Array.from(uniqueMap.values()),
+        adherence_rate: adherenceRate,
+        avg_ticket: avgTicket,
+        orders_count: evOrders.length,
+        total_sales: totalSales,
+        total_paid: Number(totalPaid.toFixed(2)),
+        total_pending: Number(totalPending.toFixed(2))
+      };
+    }
+
     let backendMode = null;
     let sbClient = null;
+    let supabaseHasEventsTable = null;
 
     function initSupabaseClient() {
       try {
@@ -637,6 +962,8 @@
           const { error } = await sbClient.from('categories').select('id').limit(1);
           if (!error) {
             backendMode = 'supabase';
+            const evCheck = await sbClient.from('events').select('id').limit(1);
+            supabaseHasEventsTable = !evCheck.error;
             return backendMode;
           }
         } catch (_) {}
@@ -647,6 +974,115 @@
     }
 
     const DataService = {
+      async getEvents(allOrders = null) {
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch('/events');
+          if (r.ok) return r.json();
+        }
+        const orders = allOrders || (await this.getOrders());
+        if (mode === 'supabase' && supabaseHasEventsTable) {
+          const { data, error } = await sbClient.from('events').select('*').order('id', { ascending: false });
+          if (!error && data) {
+            return data.map((ev) => {
+              const evOrders = orders.filter((o) => Number(o.event_id) === Number(ev.id));
+              return computeEventMetrics(ev, evOrders);
+            });
+          }
+        }
+        if (mode === 'supabase') {
+          const bridge = loadEventsBridge();
+          return [...bridge.events]
+            .sort((a, b) => b.id - a.id)
+            .map((ev) => {
+              const evOrders = orders.filter((o) => Number(bridge.orderEventMap[o.id] || o.event_id || 1) === Number(ev.id));
+              return computeEventMetrics(ev, evOrders);
+            });
+        }
+        const db = loadLocalDb();
+        return [...(db.events || [])]
+          .sort((a, b) => b.id - a.id)
+          .map((ev) => {
+            const evOrders = orders.filter((o) => Number(o.event_id || 1) === Number(ev.id));
+            return computeEventMetrics(ev, evOrders);
+          });
+      },
+
+      async createEvent({ name, event_date, attendance_count, status }) {
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch('/events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, event_date, attendance_count, status })
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao criar evento');
+          return data;
+        }
+        if (mode === 'supabase' && supabaseHasEventsTable) {
+          const { data, error } = await sbClient
+            .from('events')
+            .insert([{ name, event_date, attendance_count: Number(attendance_count || 0), status: status || 'aberto' }])
+            .select()
+            .single();
+          if (error) throw new Error(error.message);
+          return computeEventMetrics(data, []);
+        }
+        if (mode === 'supabase') {
+          const bridge = loadEventsBridge();
+          const nextId = bridge.events.reduce((m, e) => Math.max(m, e.id), 0) + 1;
+          const ev = { id: nextId, name, event_date, status: status || 'aberto', attendance_count: Number(attendance_count || 0) };
+          bridge.events.push(ev);
+          saveEventsBridge(bridge);
+          return computeEventMetrics(ev, []);
+        }
+        const db = loadLocalDb();
+        const nextId = (db.events || []).reduce((m, e) => Math.max(m, e.id), 0) + 1;
+        const ev = { id: nextId, name, event_date, status: status || 'aberto', attendance_count: Number(attendance_count || 0) };
+        db.events.push(ev);
+        saveLocalDb(db);
+        return computeEventMetrics(ev, []);
+      },
+
+      async updateEvent(id, payload) {
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch(`/events/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao atualizar evento');
+          return data;
+        }
+        if (mode === 'supabase' && supabaseHasEventsTable) {
+          const { data, error } = await sbClient
+            .from('events')
+            .update(payload)
+            .eq('id', Number(id))
+            .select()
+            .single();
+          if (error) throw new Error(error.message);
+          return data;
+        }
+        if (mode === 'supabase') {
+          const bridge = loadEventsBridge();
+          const ev = bridge.events.find((e) => Number(e.id) === Number(id));
+          if (!ev) throw new Error('Evento não encontrado');
+          Object.assign(ev, payload);
+          saveEventsBridge(bridge);
+          return ev;
+        }
+        const db = loadLocalDb();
+        const ev = (db.events || []).find((e) => Number(e.id) === Number(id));
+        if (!ev) throw new Error('Evento não encontrado');
+        Object.assign(ev, payload);
+        saveLocalDb(db);
+        return ev;
+      },
+
       async getCategories() {
         const mode = await detectBackend();
         if (mode === 'express') {
@@ -799,13 +1235,18 @@
             .select('*, order_items(*, products(name))')
             .order('id', { ascending: false });
           if (error) throw new Error(error.message);
-          return data || [];
+          const bridge = loadEventsBridge();
+          return (data || []).map((o) => ({
+            ...o,
+            event_id: o.event_id || bridge.orderEventMap[o.id] || 1
+          }));
         }
         const db = loadLocalDb();
         return [...db.orders]
           .sort((a, b) => b.id - a.id)
           .map((o) => ({
             ...o,
+            event_id: o.event_id || 1,
             order_items: db.order_items
               .filter((i) => i.order_id === o.id)
               .map((i) => ({
@@ -815,13 +1256,13 @@
           }));
       },
 
-      async createOrder({ customer_name, payment_method, payment_status, items }) {
+      async createOrder({ customer_name, payment_method, payment_status, items, event_id }) {
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch('/orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ customer_name, payment_method, payment_status, items })
+            body: JSON.stringify({ customer_name, payment_method, payment_status, items, event_id })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao criar pedido');
@@ -842,12 +1283,23 @@
             total += Number(prod.price) * Number(item.quantity);
           }
 
+          const insertPayload = { customer_name, payment_method, payment_status, total_amount: Number(total.toFixed(2)) };
+          if (supabaseHasEventsTable && event_id) {
+            insertPayload.event_id = Number(event_id);
+          }
+
           const { data: ord, error: oErr } = await sbClient
             .from('orders')
-            .insert([{ customer_name, payment_method, payment_status, total_amount: Number(total.toFixed(2)) }])
+            .insert([insertPayload])
             .select()
             .single();
           if (oErr) throw new Error(oErr.message);
+
+          if (!supabaseHasEventsTable && event_id) {
+            const bridge = loadEventsBridge();
+            bridge.orderEventMap[ord.id] = Number(event_id);
+            saveEventsBridge(bridge);
+          }
 
           for (const item of items) {
             const prod = prods.find((p) => Number(p.id) === Number(item.product_id));
@@ -878,6 +1330,7 @@
         const nextOrderId = db.orders.reduce((m, o) => Math.max(m, o.id), 0) + 1;
         const newOrder = {
           id: nextOrderId,
+          event_id: event_id ? Number(event_id) : 1,
           customer_name,
           payment_method,
           payment_status,
@@ -931,43 +1384,6 @@
         ord.payment_status = 'pago';
         saveLocalDb(db);
         return ord;
-      },
-
-      async getCashClosing() {
-        const mode = await detectBackend();
-        if (mode === 'express') {
-          const r = await fetch('/cash-closing');
-          return r.json();
-        }
-        const orders = await this.getOrders();
-        let total_paid = 0;
-        let total_pending = 0;
-        let paid_count = 0;
-        let pending_count = 0;
-        const by_payment_method = {};
-        const pending_orders = [];
-
-        for (const o of orders) {
-          const amt = Number(o.total_amount) || 0;
-          if (o.payment_status === 'pago') {
-            total_paid += amt;
-            paid_count++;
-            const m = (o.payment_method || 'outros').toLowerCase();
-            by_payment_method[m] = Number(((by_payment_method[m] || 0) + amt).toFixed(2));
-          } else {
-            total_pending += amt;
-            pending_count++;
-            pending_orders.push(o);
-          }
-        }
-        return {
-          total_paid: Number(total_paid.toFixed(2)),
-          total_pending: Number(total_pending.toFixed(2)),
-          paid_count,
-          pending_count,
-          by_payment_method,
-          pending_orders
-        };
       }
     };
 
@@ -998,16 +1414,283 @@
       document.getElementById('prod-cancel-btn').style.display = 'none';
     }
 
+    function onChangeActiveEvent(val) {
+      selectedEventId = String(val);
+      localStorage.setItem('csj_selected_event_id', selectedEventId);
+      loadDashboard();
+    }
+
+    async function setEventStatus(eventId, newStatus, openCashScreen = false) {
+      try {
+        await DataService.updateEvent(eventId, { status: newStatus });
+        selectedEventId = String(eventId);
+        localStorage.setItem('csj_selected_event_id', selectedEventId);
+        if (newStatus === 'aberto') {
+          showToast('Vendas iniciadas para o evento!');
+        } else if (newStatus === 'encerrado') {
+          showToast('Evento encerrado! O histórico e a baixa de pendências continuam disponíveis.');
+        }
+        await loadDashboard();
+        if (openCashScreen) switchScreen('orders');
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
+
+    function openSelectedEventSales() {
+      if (!selectedEventId || selectedEventId === 'all') return;
+      setEventStatus(Number(selectedEventId), 'aberto', false);
+    }
+
+    async function promptUpdateAttendance(eventIdParam) {
+      const targetId = eventIdParam || (selectedEventId !== 'all' ? Number(selectedEventId) : null);
+      const ev = cachedEvents.find((e) => Number(e.id) === Number(targetId));
+      if (!ev) {
+        showToast('Selecione um evento específico primeiro.');
+        return;
+      }
+      const input = window.prompt(
+        `Quantos jovens participaram/estiveram presentes no evento "${ev.name}"?`,
+        String(ev.attendance_count || 0)
+      );
+      if (input === null) return;
+      const num = Number(input);
+      if (!Number.isInteger(num) || num < 0) {
+        showToast('Informe um número inteiro válido maior ou igual a zero.');
+        return;
+      }
+      try {
+        await DataService.updateEvent(ev.id, { attendance_count: num });
+        showToast(`Público presente atualizado para ${num} jovens!`);
+        loadDashboard();
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
+
+    function selectEventAndOpenCash(eventId) {
+      selectedEventId = String(eventId);
+      localStorage.setItem('csj_selected_event_id', selectedEventId);
+      loadDashboard();
+      switchScreen('orders');
+    }
+
     async function loadDashboard() {
       try {
-        const [categories, products, orders, closing] = await Promise.all([
+        const [categories, products, allOrders] = await Promise.all([
           DataService.getCategories(),
           DataService.getProducts(),
-          DataService.getOrders(),
-          DataService.getCashClosing()
+          DataService.getOrders()
         ]);
+        const events = await DataService.getEvents(allOrders);
 
         cachedProducts = products || [];
+        cachedEvents = events || [];
+
+        // Garantir que haja ao menos 1 evento selecionado
+        if (!selectedEventId || (selectedEventId !== 'all' && !cachedEvents.some((e) => String(e.id) === String(selectedEventId)))) {
+          const openEv = cachedEvents.find((e) => e.status === 'aberto') || cachedEvents[0];
+          selectedEventId = openEv ? String(openEv.id) : 'all';
+          localStorage.setItem('csj_selected_event_id', selectedEventId);
+        }
+
+        // Autocomplete de Nomes de Clientes (unificando nomes já digitados)
+        const datalist = document.getElementById('customers-datalist');
+        datalist.innerHTML = '';
+        const knownNamesMap = new Map();
+        (allOrders || []).forEach((o) => {
+          const k = normalizeCustomerKey(o.customer_name);
+          if (k && !knownNamesMap.has(k)) knownNamesMap.set(k, o.customer_name.trim());
+        });
+        knownNamesMap.forEach((displayName) => {
+          const opt = document.createElement('option');
+          opt.value = displayName;
+          datalist.appendChild(opt);
+        });
+
+        // Renderizar Tela 0: Eventos & Adesão
+        const openEventsCount = cachedEvents.filter((e) => e.status === 'aberto').length;
+        const totalRevenueAll = cachedEvents.reduce((s, e) => s + (e.total_sales || 0), 0);
+        const eventsWithAdherence = cachedEvents.filter((e) => e.adherence_rate !== null);
+        const avgAdherence = eventsWithAdherence.length
+          ? Number((eventsWithAdherence.reduce((s, e) => s + e.adherence_rate, 0) / eventsWithAdherence.length).toFixed(1))
+          : 0;
+
+        document.getElementById('ev-stat-count').textContent = String(cachedEvents.length);
+        document.getElementById('ev-stat-open').textContent = `${openEventsCount} em andamento`;
+        document.getElementById('ev-stat-adherence').textContent = `${avgAdherence}%`;
+        document.getElementById('ev-stat-buyers').textContent = `${knownNamesMap.size} jovens compradores únicos`;
+        document.getElementById('ev-stat-revenue').textContent = fmtBRL(totalRevenueAll);
+
+        const evListEl = document.getElementById('events-list-container');
+        evListEl.innerHTML = '';
+        if (cachedEvents.length === 0) {
+          evListEl.innerHTML = '<p style="color:var(--muted);text-align:center;padding:1rem;">Nenhum evento cadastrado ainda. Crie o primeiro ao lado!</p>';
+        } else {
+          cachedEvents.forEach((ev) => {
+            const isSelected = String(ev.id) === String(selectedEventId);
+            const statusLabel = ev.status === 'aberto' ? 'Em Andamento' : ev.status === 'agendado' ? 'Agendado' : 'Encerrado';
+            const adherenceText = ev.adherence_rate !== null ? `${ev.adherence_rate}%` : 'Definir público';
+            const pctWidth = ev.adherence_rate !== null ? Math.min(100, Math.round(ev.adherence_rate)) : 0;
+
+            let actionsHtml = '';
+            if (ev.status === 'agendado') {
+              actionsHtml = `
+                <button type="button" class="btn-success" onclick="setEventStatus(${ev.id}, 'aberto', true)">▶ Iniciar Vendas</button>
+                <button type="button" class="btn-secondary" onclick="promptUpdateAttendance(${ev.id})">👥 Informar Presentes</button>
+              `;
+            } else if (ev.status === 'aberto') {
+              actionsHtml = `
+                <button type="button" class="btn-primary" onclick="selectEventAndOpenCash(${ev.id})">🛒 Abrir Caixa</button>
+                <button type="button" class="btn-secondary" onclick="promptUpdateAttendance(${ev.id})">👥 Presentes (${ev.attendance_count})</button>
+                <button type="button" class="btn-warning" onclick="setEventStatus(${ev.id}, 'encerrado', false)">⏹ Encerrar Evento</button>
+              `;
+            } else {
+              actionsHtml = `
+                <button type="button" class="btn-secondary" onclick="selectEventAndOpenCash(${ev.id})">👁 Ver Caixa / Pendências</button>
+                <button type="button" class="btn-secondary" onclick="promptUpdateAttendance(${ev.id})">👥 Presentes (${ev.attendance_count})</button>
+                <button type="button" class="btn-edit" onclick="setEventStatus(${ev.id}, 'aberto', true)">🔄 Reabrir Vendas</button>
+              `;
+            }
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = `event-item ${ev.status === 'aberto' ? 'active-event' : ''}`;
+            itemDiv.innerHTML = `
+              <div class="event-header">
+                <div>
+                  <strong style="font-size:0.98rem;">${ev.name}</strong>
+                  <div style="font-size:0.78rem;color:var(--muted);">📅 Data: ${fmtDateBR(ev.event_date)} ${isSelected ? ' • (Selecionado no Caixa)' : ''}</div>
+                </div>
+                <span class="tag tag-${ev.status}">${statusLabel}</span>
+              </div>
+              <div class="event-metrics-grid">
+                <div class="event-metric-box">
+                  <small>Jovens Presentes</small>
+                  <strong>${ev.attendance_count || 0}</strong>
+                </div>
+                <div class="event-metric-box">
+                  <small>Compraram (Únicos)</small>
+                  <strong>${ev.unique_buyers_count || 0}</strong>
+                </div>
+                <div class="event-metric-box">
+                  <small>% de Adesão</small>
+                  <strong class="text-primary">${adherenceText}</strong>
+                </div>
+                <div class="event-metric-box">
+                  <small>Ticket Médio</small>
+                  <strong>${fmtBRL(ev.avg_ticket)}</strong>
+                </div>
+              </div>
+              <div class="progress-bar" title="Taxa de Adesão: ${adherenceText}">
+                <div class="progress-fill" style="width: ${pctWidth}%;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+                <div style="font-size:0.78rem;color:var(--muted);">
+                  Pago: <strong class="text-success">${fmtBRL(ev.total_paid)}</strong> &nbsp;|&nbsp;
+                  Pendente: <strong class="text-warning">${fmtBRL(ev.total_pending)}</strong>
+                </div>
+                <div class="event-actions">${actionsHtml}</div>
+              </div>
+            `;
+            evListEl.appendChild(itemDiv);
+          });
+        }
+
+        // Renderizar Seletor de Evento Ativo na Tela 1 (Caixa / Pedidos)
+        const evSelect = document.getElementById('active-event-select');
+        evSelect.innerHTML = '';
+        cachedEvents.forEach((ev) => {
+          const opt = document.createElement('option');
+          opt.value = String(ev.id);
+          const st = ev.status === 'aberto' ? '🟢' : ev.status === 'agendado' ? '🟡' : '⚪';
+          opt.textContent = `${st} ${ev.name} (${fmtDateBR(ev.event_date)})`;
+          evSelect.appendChild(opt);
+        });
+        const allOpt = document.createElement('option');
+        allOpt.value = 'all';
+        allOpt.textContent = '📊 Todos os Eventos (Geral)';
+        evSelect.appendChild(allOpt);
+        evSelect.value = String(selectedEventId);
+
+        const activeEv = cachedEvents.find((e) => String(e.id) === String(selectedEventId));
+        const badgeEl = document.getElementById('active-event-badge');
+        const closedNotice = document.getElementById('closed-order-notice');
+        const submitBtn = document.getElementById('order-submit-btn');
+
+        if (activeEv) {
+          const stLabel = activeEv.status === 'aberto' ? 'Em Andamento' : activeEv.status === 'agendado' ? 'Agendado' : 'Encerrado';
+          badgeEl.className = `tag tag-${activeEv.status}`;
+          badgeEl.textContent = stLabel;
+          document.getElementById('banner-attendance').textContent = String(activeEv.attendance_count || 0);
+          document.getElementById('banner-buyers').textContent = String(activeEv.unique_buyers_count || 0);
+          document.getElementById('banner-adherence').textContent =
+            activeEv.adherence_rate !== null ? `${activeEv.adherence_rate}%` : 'Definir presentes';
+
+          if (activeEv.status !== 'aberto') {
+            closedNotice.style.display = 'block';
+            document.getElementById('closed-order-text').textContent =
+              activeEv.status === 'agendado'
+                ? `O evento "${activeEv.name}" está agendado para ${fmtDateBR(activeEv.event_date)}. Inicie as vendas para lançar pedidos.`
+                : `O evento "${activeEv.name}" já foi encerrado. Você ainda pode dar baixa nas pendências ao lado ou reabrir as vendas.`;
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+          } else {
+            closedNotice.style.display = 'none';
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+          }
+        } else {
+          badgeEl.className = 'tag tag-aberto';
+          badgeEl.textContent = 'Visão Geral';
+          document.getElementById('banner-attendance').textContent = '-';
+          document.getElementById('banner-buyers').textContent = String(knownNamesMap.size);
+          document.getElementById('banner-adherence').textContent = `${avgAdherence}%`;
+          closedNotice.style.display = 'none';
+          submitBtn.disabled = false;
+          submitBtn.style.opacity = '1';
+        }
+
+        // Filtrar pedidos pelo Evento Selecionado
+        const filteredOrders =
+          selectedEventId === 'all'
+            ? allOrders
+            : allOrders.filter((o) => String(o.event_id || 1) === String(selectedEventId));
+
+        let totalPaid = 0;
+        let totalPending = 0;
+        let paidCount = 0;
+        let pendingCount = 0;
+        const byMethod = {};
+        const pendingOrders = [];
+
+        filteredOrders.forEach((o) => {
+          const amt = Number(o.total_amount) || 0;
+          if (o.payment_status === 'pago') {
+            totalPaid += amt;
+            paidCount++;
+            const m = (o.payment_method || 'outros').toLowerCase();
+            byMethod[m] = Number(((byMethod[m] || 0) + amt).toFixed(2));
+          } else {
+            totalPending += amt;
+            pendingCount++;
+            pendingOrders.push(o);
+          }
+        });
+
+        // Verificar pendências de outros eventos
+        const otherPending =
+          selectedEventId === 'all'
+            ? []
+            : allOrders.filter((o) => o.payment_status === 'pendente' && String(o.event_id || 1) !== String(selectedEventId));
+        const otherAlertEl = document.getElementById('other-pending-alert');
+        if (otherPending.length > 0) {
+          const otherSum = otherPending.reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+          document.getElementById('other-pending-text').textContent =
+            `⚠ Há ${otherPending.length} pedido(s) pendente(s) de outros eventos (${fmtBRL(otherSum)}).`;
+          otherAlertEl.style.display = 'flex';
+        } else {
+          otherAlertEl.style.display = 'none';
+        }
 
         // Preencher Select e Pills de Categorias (Tela 2)
         const catSelect = document.getElementById('prod-category');
@@ -1058,42 +1741,42 @@
         });
 
         // Preencher Resumo do Caixa (Tela 1)
-        document.getElementById('stat-paid').textContent = fmtBRL(closing.total_paid);
-        document.getElementById('stat-paid-count').textContent = `${closing.paid_count || 0} pedido(s) pago(s)`;
-        document.getElementById('stat-pending').textContent = fmtBRL(closing.total_pending);
-        document.getElementById('stat-pending-count').textContent = `${closing.pending_count || 0} pedido(s) pendente(s)`;
+        document.getElementById('stat-paid').textContent = fmtBRL(totalPaid);
+        document.getElementById('stat-paid-count').textContent = `${paidCount} pedido(s) pago(s)`;
+        document.getElementById('stat-pending').textContent = fmtBRL(totalPending);
+        document.getElementById('stat-pending-count').textContent = `${pendingCount} pedido(s) pendente(s)`;
 
-        const methodsEntries = Object.entries(closing.by_payment_method || {});
+        const methodsEntries = Object.entries(byMethod);
         document.getElementById('stat-methods').innerHTML = methodsEntries.length
           ? methodsEntries.map(([m, val]) => `<strong>${m.toUpperCase()}:</strong> ${fmtBRL(val)}`).join(' &nbsp;|&nbsp; ')
-          : 'Nenhum pagamento confirmado ainda';
+          : 'Nenhum pagamento confirmado neste filtro';
 
         // Preencher Pedidos Pendentes (Tela 1)
         const pendingTbody = document.getElementById('pending-tbody');
         pendingTbody.innerHTML = '';
-        if (!closing.pending_orders || closing.pending_orders.length === 0) {
+        if (pendingOrders.length === 0) {
           pendingTbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido pendente!</td></tr>';
         } else {
-          closing.pending_orders.forEach((o) => {
+          pendingOrders.forEach((o) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td>#${o.id}</td>
               <td><strong>${o.customer_name}</strong></td>
               <td>${(o.payment_method || '').toUpperCase()}</td>
               <td class="text-warning"><strong>${fmtBRL(o.total_amount)}</strong></td>
-              <td><button class="btn-success" onclick="handlePayOrder(${o.id})" style="padding:0.3rem 0.6rem;font-size:0.78rem;">Dar Baixa</button></td>
+              <td><button class="btn-success" onclick="handlePayOrder(${o.id})" style="padding:0.28rem 0.58rem;font-size:0.76rem;">Dar Baixa</button></td>
             `;
             pendingTbody.appendChild(tr);
           });
         }
 
-        // Preencher Últimos Pedidos (Tela 1)
+        // Preencher Pedidos Registrados (Tela 1)
         const ordersTbody = document.getElementById('orders-tbody');
         ordersTbody.innerHTML = '';
-        if (!orders || orders.length === 0) {
-          ordersTbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido registrado ainda.</td></tr>';
+        if (filteredOrders.length === 0) {
+          ordersTbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido registrado neste evento ainda.</td></tr>';
         } else {
-          orders.slice(0, 10).forEach((o) => {
+          filteredOrders.slice(0, 12).forEach((o) => {
             const itemsDesc = (o.order_items || [])
               .map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`)
               .join(', ');
@@ -1102,7 +1785,7 @@
             tr.innerHTML = `
               <td>#${o.id}</td>
               <td>${o.customer_name}</td>
-              <td style="font-size:0.78rem;color:var(--muted);">${itemsDesc || '-'}</td>
+              <td style="font-size:0.76rem;color:var(--muted);">${itemsDesc || '-'}</td>
               <td>${fmtBRL(o.total_amount)}</td>
               <td><span class="tag ${badgeClass}">${o.payment_status}</span></td>
             `;
@@ -1124,10 +1807,41 @@
       }
     }
 
+    document.getElementById('event-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const name = document.getElementById('ev-name').value.trim();
+        const event_date = document.getElementById('ev-date').value;
+        const attRaw = document.getElementById('ev-attendance').value.trim();
+        const status = document.getElementById('ev-status').value;
+
+        const created = await DataService.createEvent({
+          name,
+          event_date,
+          attendance_count: attRaw === '' ? 0 : Number(attRaw),
+          status
+        });
+
+        document.getElementById('ev-name').value = '';
+        document.getElementById('ev-attendance').value = '';
+        selectedEventId = String(created.id);
+        localStorage.setItem('csj_selected_event_id', selectedEventId);
+        showToast(`Evento "${created.name}" criado!`);
+        await loadDashboard();
+        if (status === 'aberto') {
+          switchScreen('orders');
+        }
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+
     document.getElementById('order-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {
+        const targetEvId = selectedEventId === 'all' ? (cachedEvents[0] ? cachedEvents[0].id : 1) : Number(selectedEventId);
         const payload = {
+          event_id: targetEvId,
           customer_name: document.getElementById('order-customer').value.trim(),
           payment_method: document.getElementById('order-method').value,
           payment_status: document.getElementById('order-status').value,

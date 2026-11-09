@@ -5,6 +5,7 @@ const { DB_SCHEMA } = require('./config/supabase');
 
 const categoriesRoutes = require('./routes/categoriesRoutes');
 const productsRoutes = require('./routes/productsRoutes');
+const eventsRoutes = require('./routes/eventsRoutes');
 const ordersRoutes = require('./routes/ordersRoutes');
 const cashClosingRoutes = require('./routes/cashClosingRoutes');
 
@@ -55,6 +56,7 @@ app.get('/health', (req, res) => {
 // Rotas REST principais
 app.use('/categories', categoriesRoutes);
 app.use('/products', productsRoutes);
+app.use('/events', eventsRoutes);
 app.use('/orders', ordersRoutes);
 app.use('/cash-closing', cashClosingRoutes);
 

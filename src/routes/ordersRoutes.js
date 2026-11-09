@@ -10,7 +10,7 @@ const VALID_STATUSES = ['pago', 'pendente'];
  */
 router.get('/', async (req, res) => {
   try {
-    const { payment_status } = req.query;
+    const { payment_status, event_id } = req.query;
 
     let query = supabase
       .from('orders')
@@ -23,6 +23,10 @@ router.get('/', async (req, res) => {
         return res.status(400).json({ error: 'Filtro payment_status inválido. Use "pago" ou "pendente".' });
       }
       query = query.eq('payment_status', normalizedStatus);
+    }
+
+    if (event_id !== undefined && event_id !== '' && event_id !== 'all') {
+      query = query.eq('event_id', Number(event_id));
     }
 
     const { data, error } = await query;
@@ -57,10 +61,29 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { customer_name, payment_method, payment_status, items } = req.body || {};
+    const { customer_name, payment_method, payment_status, items, event_id } = req.body || {};
 
     if (!customer_name || typeof customer_name !== 'string' || !customer_name.trim()) {
       return res.status(400).json({ error: 'O nome do cliente (customer_name) é obrigatório.' });
+    }
+
+    let parsedEventId = null;
+    if (event_id !== undefined && event_id !== null && event_id !== '') {
+      parsedEventId = Number(event_id);
+      if (Number.isNaN(parsedEventId)) {
+        return res.status(400).json({ error: 'ID do evento (event_id) inválido.' });
+      }
+      const { data: evData, error: evErr } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', parsedEventId)
+        .maybeSingle();
+
+      if (!evErr && evData && String(evData.status).toLowerCase() !== 'aberto') {
+        return res.status(400).json({
+          error: `As vendas do evento "${evData.name}" não estão abertas (status atual: ${evData.status}). Inicie as vendas do evento primeiro.`
+        });
+      }
     }
 
     if (!payment_method || typeof payment_method !== 'string' || !payment_method.trim()) {
@@ -148,17 +171,20 @@ router.post('/', async (req, res) => {
     totalAmount = Number(totalAmount.toFixed(2));
 
     // 1. Inserir o Pedido na tabela orders
+    const orderRowPayload = {
+      customer_name: customer_name.trim(),
+      payment_method: payment_method.trim().toLowerCase(),
+      payment_status: normalizedStatus,
+      total_amount: totalAmount,
+      paid_at: normalizedStatus === 'pago' ? new Date().toISOString() : null
+    };
+    if (parsedEventId !== null) {
+      orderRowPayload.event_id = parsedEventId;
+    }
+
     const { data: createdOrder, error: orderError } = await supabase
       .from('orders')
-      .insert([
-        {
-          customer_name: customer_name.trim(),
-          payment_method: payment_method.trim().toLowerCase(),
-          payment_status: normalizedStatus,
-          total_amount: totalAmount,
-          paid_at: normalizedStatus === 'pago' ? new Date().toISOString() : null
-        }
-      ])
+      .insert([orderRowPayload])
       .select('*')
       .single();
 
