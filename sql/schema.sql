@@ -72,6 +72,30 @@ GRANT ALL ON ALL TABLES IN SCHEMA "controle-social-jovens" TO anon, authenticate
 GRANT ALL ON ALL SEQUENCES IN SCHEMA "controle-social-jovens" TO anon, authenticated, service_role;
 
 -- ============================================================================
+-- 4.1. POLÍTICAS DE ROW LEVEL SECURITY (RLS) PARA ACESSO VIA ANON / API
+-- ============================================================================
+ALTER TABLE "controle-social-jovens".categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "controle-social-jovens".products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "controle-social-jovens".orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "controle-social-jovens".order_items ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "allow_all_categories" ON "controle-social-jovens".categories;
+CREATE POLICY "allow_all_categories" ON "controle-social-jovens".categories
+    FOR ALL TO anon, authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_all_products" ON "controle-social-jovens".products;
+CREATE POLICY "allow_all_products" ON "controle-social-jovens".products
+    FOR ALL TO anon, authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_all_orders" ON "controle-social-jovens".orders;
+CREATE POLICY "allow_all_orders" ON "controle-social-jovens".orders
+    FOR ALL TO anon, authenticated, service_role USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "allow_all_order_items" ON "controle-social-jovens".order_items;
+CREATE POLICY "allow_all_order_items" ON "controle-social-jovens".order_items
+    FOR ALL TO anon, authenticated, service_role USING (true) WITH CHECK (true);
+
+-- ============================================================================
 -- 5. FUNÇÃO RPC TRANSACIONAL (Opcional para chamada via supabase.rpc)
 -- ============================================================================
 CREATE OR REPLACE FUNCTION "controle-social-jovens".create_order_with_items(
