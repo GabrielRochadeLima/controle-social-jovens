@@ -1,0 +1,17 @@
+{
+  "name": "controle-social-jovens",
+  "version": "1.0.0",
+  "description": "Sistema Web de Frente de Caixa, Controle de Estoque e Fechamento Financeiro para Social de Jovens",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2"
+  }
+}
