@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Controle Social Jovens — Frente de Caixa & Fechamento</title>
+  <title>Controle Social Jovens</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -25,8 +25,8 @@
       background-color: var(--bg);
       color: var(--text);
       line-height: 1.5;
-      padding: 1.25rem;
-      max-width: 1400px;
+      padding: 1.5rem;
+      max-width: 1320px;
       margin: 0 auto;
     }
     header {
@@ -35,92 +35,128 @@
       justify-content: space-between;
       align-items: center;
       gap: 1rem;
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
+      margin-bottom: 1.75rem;
+      padding-bottom: 1.1rem;
       border-bottom: 1px solid var(--border);
     }
-    header h1 { font-size: 1.5rem; font-weight: 700; }
-    .header-badges { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-    .badge-schema {
-      background: rgba(59, 130, 246, 0.15);
-      color: #60a5fa;
-      border: 1px solid rgba(59, 130, 246, 0.4);
-      padding: 0.25rem 0.75rem;
-      border-radius: 999px;
-      font-size: 0.8rem;
-      font-family: monospace;
+    header h1 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
     }
-    .badge-mode {
-      background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.4);
-      padding: 0.25rem 0.75rem;
-      border-radius: 999px;
-      font-size: 0.8rem;
+    .nav-tabs {
+      display: flex;
+      gap: 0.6rem;
+      background: var(--surface);
+      padding: 0.35rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--border);
+    }
+    .nav-tab {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 0.6rem 1.15rem;
+      border-radius: 0.5rem;
+      font-size: 0.92rem;
+      font-weight: 600;
       cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .nav-tab:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .nav-tab.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.35);
+    }
+    .screen {
+      display: none;
+      animation: fadeIn 0.18s ease-out;
+    }
+    .screen.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.1rem;
       margin-bottom: 1.5rem;
     }
     .stat-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 0.75rem;
-      padding: 1rem 1.25rem;
+      padding: 1.1rem 1.35rem;
     }
     .stat-card span { font-size: 0.85rem; color: var(--muted); }
-    .stat-card strong { display: block; font-size: 1.6rem; margin-top: 0.25rem; }
+    .stat-card strong { display: block; font-size: 1.65rem; margin-top: 0.25rem; }
     .text-success { color: var(--success); }
     .text-warning { color: var(--warning); }
-    .grid {
+    .grid-2 {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 1.35rem;
+      align-items: start;
     }
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 0.75rem;
-      padding: 1.25rem;
+      border-radius: 0.85rem;
+      padding: 1.4rem;
     }
     .card h2 {
-      font-size: 1.1rem;
-      margin-bottom: 1rem;
+      font-size: 1.12rem;
+      margin-bottom: 1.1rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 0.5rem;
+      padding-bottom: 0.65rem;
     }
-    form { display: flex; flex-direction: column; gap: 0.75rem; }
-    label { font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 0.2rem; }
+    form { display: flex; flex-direction: column; gap: 0.9rem; }
+    label { font-size: 0.84rem; color: var(--muted); display: block; margin-bottom: 0.3rem; font-weight: 500; }
     input, select, button {
-      padding: 0.55rem 0.75rem;
-      border-radius: 0.5rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: 0.55rem;
       border: 1px solid var(--border);
       background: var(--bg);
       color: var(--text);
-      font-size: 0.92rem;
+      font-size: 0.95rem;
     }
-    button {
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    button.btn-primary {
       background: var(--primary);
       border-color: var(--primary);
+      color: #fff;
       font-weight: 600;
       cursor: pointer;
-      transition: opacity 0.15s, background 0.15s;
+      padding: 0.75rem 1rem;
+      transition: background 0.15s;
     }
-    button:hover { background: var(--primary-hover); }
-    button.btn-success { background: var(--success); border-color: var(--success); }
-    button.btn-secondary { background: var(--surface-hover); border-color: var(--border); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 0.5rem; }
-    th, td { text-align: left; padding: 0.55rem 0.45rem; border-bottom: 1px solid var(--border); }
-    th { color: var(--muted); font-weight: 600; }
+    button.btn-primary:hover { background: var(--primary-hover); }
+    button.btn-success {
+      background: var(--success);
+      border-color: var(--success);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 0.5rem; }
+    th, td { text-align: left; padding: 0.65rem 0.5rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; }
     .tag {
       display: inline-block;
-      padding: 0.15rem 0.5rem;
+      padding: 0.18rem 0.55rem;
       border-radius: 0.375rem;
       font-size: 0.75rem;
       font-weight: 600;
@@ -128,25 +164,22 @@
     }
     .tag-pago { background: rgba(16, 185, 129, 0.2); color: #34d399; }
     .tag-pendente { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-    #config-panel {
-      display: none;
-      background: var(--surface);
-      border: 1px solid var(--primary);
-      border-radius: 0.75rem;
-      padding: 1rem;
-      margin-bottom: 1.5rem;
-    }
     #toast {
       position: fixed;
-      bottom: 1.25rem;
-      right: 1.25rem;
+      bottom: 1.5rem;
+      right: 1.5rem;
       background: #1e293b;
       border: 1px solid var(--primary);
-      padding: 0.75rem 1rem;
-      border-radius: 0.5rem;
+      padding: 0.85rem 1.15rem;
+      border-radius: 0.6rem;
       display: none;
       z-index: 100;
       box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    @media (max-width: 600px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: stretch; }
+      .nav-tabs { justify-content: center; }
     }
   </style>
 </head>
@@ -154,179 +187,181 @@
   <header>
     <div>
       <h1>Controle Social Jovens</h1>
-      <p style="color: var(--muted); font-size: 0.9rem;">Frente de Caixa, Controle de Estoque e Fechamento Financeiro</p>
+      <p style="color: var(--muted); font-size: 0.9rem;">Gestão de Pedidos, Caixa e Produtos</p>
     </div>
-    <div class="header-badges">
-      <span class="badge-schema">schema: "controle-social-jovens"</span>
-      <span class="badge-mode" id="mode-indicator" onclick="toggleConfig()">Configurar Supabase</span>
-    </div>
+    <nav class="nav-tabs" aria-label="Navegação Principal">
+      <button type="button" class="nav-tab active" id="tab-orders" onclick="switchScreen('orders')">
+        🛒 Registrar Pedido
+      </button>
+      <button type="button" class="nav-tab" id="tab-products" onclick="switchScreen('products')">
+        📦 Cadastro de Produtos
+      </button>
+    </nav>
   </header>
 
-  <!-- Painel Opcional de Conexão Direta Supabase (para GitHub Pages) -->
-  <section id="config-panel">
-    <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Conexão Supabase (Schema: <code>controle-social-jovens</code>)</h3>
-    <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0.75rem;">
-      Para conectar seu GitHub Pages diretamente ao banco Supabase, informe sua URL e Anon Key abaixo (ou deixe em branco para usar o modo demonstração local no navegador):
-    </p>
-    <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; align-items: end;">
-      <div>
-        <label>SUPABASE_URL</label>
-        <input type="text" id="cfg-url" placeholder="https://xyz.supabase.co" style="width:100%;" />
+  <!-- ====================================================================== -->
+  <!-- TELA 1: REGISTRAR PEDIDO, PENDÊNCIAS E RESUMO DO CAIXA                 -->
+  <!-- ====================================================================== -->
+  <main id="screen-orders" class="screen active">
+    <section class="stats-row">
+      <div class="stat-card">
+        <span>Total Recebido (Pagos)</span>
+        <strong class="text-success" id="stat-paid">R$ 0,00</strong>
+        <small id="stat-paid-count" style="color: var(--muted);">0 pedidos pagos</small>
       </div>
-      <div>
-        <label>SUPABASE_ANON_KEY</label>
-        <input type="password" id="cfg-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5c..." style="width:100%;" />
+      <div class="stat-card">
+        <span>Total Pendente ("Na Rua")</span>
+        <strong class="text-warning" id="stat-pending">R$ 0,00</strong>
+        <small id="stat-pending-count" style="color: var(--muted);">0 pedidos pendentes</small>
       </div>
-      <div style="display:flex; gap:0.4rem;">
-        <button type="button" onclick="saveSupabaseConfig()">Salvar & Conectar</button>
-        <button type="button" class="btn-secondary" onclick="resetDemoData()">Resetar Demo</button>
+      <div class="stat-card">
+        <span>Recebido por Forma de Pagamento</span>
+        <div id="stat-methods" style="font-size: 0.92rem; margin-top: 0.5rem; color: var(--text);">-</div>
+      </div>
+    </section>
+
+    <div class="grid-2">
+      <!-- Formulário de Novo Pedido + Últimos Pedidos -->
+      <div class="card">
+        <h2>Novo Pedido</h2>
+        <form id="order-form">
+          <div>
+            <label for="order-customer">Nome do Cliente / Jovem</label>
+            <input type="text" id="order-customer" placeholder="Ex: Lucas Mendes" required style="width: 100%;" />
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div>
+              <label for="order-method">Forma de Pagamento</label>
+              <select id="order-method" style="width: 100%;">
+                <option value="pix">Pix</option>
+                <option value="dinheiro">Dinheiro</option>
+                <option value="cartao">Cartão</option>
+              </select>
+            </div>
+            <div>
+              <label for="order-status">Status do Pagamento</label>
+              <select id="order-status" style="width: 100%;">
+                <option value="pago">Pago na hora</option>
+                <option value="pendente">Pendente ("Na Rua")</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 2.2fr 1fr; gap: 0.75rem;">
+            <div>
+              <label for="order-product">Produto</label>
+              <select id="order-product" style="width: 100%;"></select>
+            </div>
+            <div>
+              <label for="order-qty">Quantidade</label>
+              <input type="number" id="order-qty" value="1" min="1" required style="width: 100%;" />
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">Finalizar Pedido</button>
+        </form>
+
+        <h2 style="margin-top: 1.75rem;">Últimos Pedidos Registrados</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cliente</th>
+              <th>Itens</th>
+              <th>Total</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="orders-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Pedidos Pendentes ("Na Rua") para Dar Baixa -->
+      <div class="card">
+        <h2>Pendências ("Na Rua") — Dar Baixa</h2>
+        <p style="font-size: 0.84rem; color: var(--muted); margin-bottom: 0.75rem;">
+          Pedidos marcados como <strong>pendente</strong> ficam listados abaixo até o pagamento ser confirmado:
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cliente</th>
+              <th>Forma</th>
+              <th>Valor</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="pending-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- ====================================================================== -->
+  <!-- TELA 2: CADASTRO DE PRODUTOS E CONTROLE DE ESTOQUE                     -->
+  <!-- ====================================================================== -->
+  <section id="screen-products" class="screen">
+    <div class="grid-2">
+      <!-- Formulário de Cadastro de Produto -->
+      <div class="card">
+        <h2>Cadastrar Novo Produto</h2>
+        <form id="product-form">
+          <div>
+            <label for="prod-name">Nome do Produto</label>
+            <input type="text" id="prod-name" placeholder="Ex: Refrigerante Lata 350ml" required style="width: 100%;" />
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div>
+              <label for="prod-category">Categoria</label>
+              <select id="prod-category" style="width: 100%;"></select>
+            </div>
+            <div>
+              <label for="prod-price">Preço Unitário (R$)</label>
+              <input type="number" id="prod-price" step="0.50" min="0" placeholder="Ex: 6.00" required style="width: 100%;" />
+            </div>
+          </div>
+          <div>
+            <label for="prod-stock">Quantidade em Estoque <span style="font-weight:400;">(Deixe em branco para produtos feitos na hora / sem controle)</span></label>
+            <input type="number" id="prod-stock" min="0" placeholder="Livre / Sem controle de estoque" style="width: 100%;" />
+          </div>
+          <button type="submit" class="btn-primary">Salvar Produto</button>
+        </form>
+      </div>
+
+      <!-- Listagem de Produtos e Estoque Atual -->
+      <div class="card">
+        <h2>Produtos Cadastrados & Estoque Atual</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Categoria</th>
+              <th>Preço</th>
+              <th>Estoque Disponível</th>
+            </tr>
+          </thead>
+          <tbody id="products-tbody"></tbody>
+        </table>
       </div>
     </div>
   </section>
-
-  <!-- Indicadores de Fechamento de Caixa -->
-  <section class="stats-row">
-    <div class="stat-card">
-      <span>Total Recebido ( Apenas Pagos )</span>
-      <strong class="text-success" id="stat-paid">R$ 0,00</strong>
-      <small id="stat-paid-count" style="color: var(--muted);">0 pedidos pagos</small>
-    </div>
-    <div class="stat-card">
-      <span>Total Pendente ( "Na Rua" / Fiado )</span>
-      <strong class="text-warning" id="stat-pending">R$ 0,00</strong>
-      <small id="stat-pending-count" style="color: var(--muted);">0 pedidos pendentes</small>
-    </div>
-    <div class="stat-card">
-      <span>Consolidado por Forma de Pagamento (Pagos)</span>
-      <div id="stat-methods" style="font-size: 0.9rem; margin-top: 0.45rem; color: var(--text);">-</div>
-    </div>
-  </section>
-
-  <div class="grid">
-    <!-- 1. Frente de Caixa: Novo Pedido -->
-    <div class="card">
-      <h2>1. Registrar Pedido (Frente de Caixa)</h2>
-      <form id="order-form">
-        <div>
-          <label>Nome do Cliente / Jovem</label>
-          <input type="text" id="order-customer" placeholder="Ex: Lucas Mendes" required style="width: 100%;" />
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-          <div>
-            <label>Forma de Pagamento</label>
-            <select id="order-method" style="width: 100%;">
-              <option value="pix">Pix</option>
-              <option value="dinheiro">Dinheiro</option>
-              <option value="cartao">Cartão</option>
-            </select>
-          </div>
-          <div>
-            <label>Status do Pagamento</label>
-            <select id="order-status" style="width: 100%;">
-              <option value="pago">Pago na hora</option>
-              <option value="pendente">Pendente ("Na Rua")</option>
-            </select>
-          </div>
-        </div>
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.5rem;">
-          <div>
-            <label>Produto</label>
-            <select id="order-product" style="width: 100%;"></select>
-          </div>
-          <div>
-            <label>Quantidade</label>
-            <input type="number" id="order-qty" value="1" min="1" required style="width: 100%;" />
-          </div>
-        </div>
-        <button type="submit">Finalizar Pedido</button>
-      </form>
-
-      <h2 style="margin-top: 1.5rem;">Últimos Pedidos Registrados</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Cliente</th>
-            <th>Itens</th>
-            <th>Total</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="orders-tbody"></tbody>
-      </table>
-    </div>
-
-    <!-- 2. Produtos & Controle de Estoque -->
-    <div class="card">
-      <h2>2. Produtos & Estoque</h2>
-      <form id="product-form" style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
-        <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.5rem;">
-          <div>
-            <label>Nome do Produto</label>
-            <input type="text" id="prod-name" placeholder="Ex: Refrigerante Lata" required style="width: 100%;" />
-          </div>
-          <div>
-            <label>Categoria</label>
-            <select id="prod-category" style="width: 100%;"></select>
-          </div>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; align-items: end;">
-          <div>
-            <label>Preço (R$)</label>
-            <input type="number" id="prod-price" step="0.50" min="0" placeholder="6.00" required style="width: 100%;" />
-          </div>
-          <div>
-            <label>Estoque (Vazio = Sem controle)</label>
-            <input type="number" id="prod-stock" min="0" placeholder="Livre / Feito na hora" style="width: 100%;" />
-          </div>
-          <button type="submit">Cadastrar</button>
-        </div>
-      </form>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Produto</th>
-            <th>Categoria</th>
-            <th>Preço</th>
-            <th>Estoque Atual</th>
-          </tr>
-        </thead>
-        <tbody id="products-tbody"></tbody>
-      </table>
-    </div>
-
-    <!-- 3. Pendências ("Na Rua") & Baixa Rápida -->
-    <div class="card">
-      <h2>3. Pendências ("Na Rua") — Dar Baixa</h2>
-      <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;">
-        Pedidos com status <code>pendente</code> não entram no saldo recebido até que seja dada a baixa abaixo:
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Cliente</th>
-            <th>Forma</th>
-            <th>Valor</th>
-            <th>Ação</th>
-          </tr>
-        </thead>
-        <tbody id="pending-tbody"></tbody>
-      </table>
-    </div>
-  </div>
 
   <div id="toast"></div>
 
   <script>
     const SCHEMA_NAME = 'controle-social-jovens';
     const STORAGE_KEY = 'csj_db_v1';
-    const CFG_KEY = 'csj_supabase_cfg';
     const DEFAULT_SUPABASE_URL = 'https://irlxktcyucvckejrxunk.supabase.co';
     const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlybHhrdGN5dWN2Y2tlanJ4dW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNTMzNTcsImV4cCI6MjA3MzcyOTM1N30.9JqCS8cN_Lzrc1BYGYmVIpF9JPyLNUmxD0hKoNhStVA';
 
     const fmtBRL = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    function switchScreen(screenName) {
+      const isOrders = screenName === 'orders';
+      document.getElementById('screen-orders').classList.toggle('active', isOrders);
+      document.getElementById('screen-products').classList.toggle('active', !isOrders);
+      document.getElementById('tab-orders').classList.toggle('active', isOrders);
+      document.getElementById('tab-products').classList.toggle('active', !isOrders);
+    }
 
     function showToast(msg) {
       const el = document.getElementById('toast');
@@ -335,12 +370,6 @@
       setTimeout(() => { el.style.display = 'none'; }, 3200);
     }
 
-    function toggleConfig() {
-      const panel = document.getElementById('config-panel');
-      panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-    }
-
-    // Seed inicial para funcionamento imediato no GitHub Pages
     function getDefaultSeed() {
       return {
         categories: [
@@ -349,35 +378,13 @@
           { id: 3, name: 'Doces' }
         ],
         products: [
-          { id: 1, name: 'Cachorro-Quente na Chapa', category_id: 1, price: 12.00, stock_quantity: null },
-          { id: 2, name: 'Pastel Assado', category_id: 1, price: 10.00, stock_quantity: null },
+          { id: 1, name: 'Cachorro-Quente Completo', category_id: 1, price: 12.00, stock_quantity: null },
+          { id: 2, name: 'Pastel de Carne', category_id: 1, price: 10.00, stock_quantity: null },
           { id: 3, name: 'Refrigerante Lata 350ml', category_id: 2, price: 6.00, stock_quantity: 48 },
           { id: 4, name: 'Brigadeiro Gourmet', category_id: 3, price: 4.50, stock_quantity: 30 }
         ],
-        orders: [
-          {
-            id: 1,
-            customer_name: 'Lucas Mendes',
-            payment_method: 'pix',
-            payment_status: 'pago',
-            total_amount: 24.00,
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 2,
-            customer_name: 'Gabriel Oliveira',
-            payment_method: 'pix',
-            payment_status: 'pendente',
-            total_amount: 18.00,
-            created_at: new Date().toISOString()
-          }
-        ],
-        order_items: [
-          { id: 1, order_id: 1, product_id: 1, quantity: 1, unit_price: 12.00 },
-          { id: 2, order_id: 1, product_id: 3, quantity: 2, unit_price: 6.00 },
-          { id: 3, order_id: 2, product_id: 1, quantity: 1, unit_price: 12.00 },
-          { id: 4, order_id: 2, product_id: 3, quantity: 1, unit_price: 6.00 }
-        ]
+        orders: [],
+        order_items: []
       };
     }
 
@@ -395,49 +402,19 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
     }
 
-    function resetDemoData() {
-      saveLocalDb(getDefaultSeed());
-      showToast('Dados de demonstração restaurados!');
-      loadDashboard();
-    }
-
-    // Detecta se existe backend Express ativo (quando rodando via npm start)
     let backendMode = null; // 'express' | 'supabase' | 'local'
     let sbClient = null;
 
-    function initSupabaseFromConfig() {
+    function initSupabaseClient() {
       try {
-        const saved = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
-        const url = saved.url || DEFAULT_SUPABASE_URL;
-        const key = saved.key || DEFAULT_SUPABASE_KEY;
-        if (url && key && window.supabase) {
-          document.getElementById('cfg-url').value = url;
-          document.getElementById('cfg-key').value = key;
-          sbClient = window.supabase.createClient(url, key, {
+        if (DEFAULT_SUPABASE_URL && DEFAULT_SUPABASE_KEY && window.supabase) {
+          sbClient = window.supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY, {
             db: { schema: SCHEMA_NAME }
           });
           return true;
         }
       } catch (_) {}
       return false;
-    }
-
-    function saveSupabaseConfig() {
-      const url = document.getElementById('cfg-url').value.trim();
-      const key = document.getElementById('cfg-key').value.trim();
-      if (!url || !key) {
-        localStorage.removeItem(CFG_KEY);
-        sbClient = null;
-        backendMode = 'local';
-        showToast('Modo Local (Navegador) ativado.');
-      } else {
-        localStorage.setItem(CFG_KEY, JSON.stringify({ url, key }));
-        initSupabaseFromConfig();
-        backendMode = 'supabase';
-        showToast('Conectado ao Supabase (schema: controle-social-jovens)!');
-      }
-      document.getElementById('config-panel').style.display = 'none';
-      loadDashboard();
     }
 
     async function detectBackend() {
@@ -453,26 +430,20 @@
         }
       } catch (_) {}
 
-      if (initSupabaseFromConfig()) {
+      if (initSupabaseClient()) {
         try {
           const { error } = await sbClient.from('categories').select('id').limit(1);
           if (!error) {
             backendMode = 'supabase';
             return backendMode;
-          } else {
-            console.warn('Aviso Supabase:', error.message);
-            showToast(`Aviso Supabase: ${error.message} (Exponha o schema "controle-social-jovens" em Settings > API no Supabase. Usando modo local temporariamente.)`);
           }
-        } catch (err) {
-          console.warn('Falha ao conectar Supabase:', err);
-        }
+        } catch (_) {}
       }
 
       backendMode = 'local';
       return backendMode;
     }
 
-    // Camada de Dados Unificada (Express API -> Supabase Client -> LocalStorage Fallback para GitHub Pages)
     const DataService = {
       async getCategories() {
         const mode = await detectBackend();
@@ -586,7 +557,6 @@
           return data;
         }
         if (mode === 'supabase') {
-          // Busca produtos, valida estoque, grava pedido e abate estoque no schema controle-social-jovens
           const ids = items.map((i) => Number(i.product_id));
           const { data: prods, error: pErr } = await sbClient.from('products').select('*').in('id', ids);
           if (pErr) throw new Error(pErr.message);
@@ -623,7 +593,6 @@
           return ord;
         }
 
-        // Modo Local (GitHub Pages sem backend externo)
         const db = loadLocalDb();
         let total = 0;
         for (const item of items) {
@@ -733,16 +702,6 @@
 
     async function loadDashboard() {
       try {
-        const mode = await detectBackend();
-        const modeBadge = document.getElementById('mode-indicator');
-        if (mode === 'express') {
-          modeBadge.textContent = 'Modo: API Express + Supabase';
-        } else if (mode === 'supabase') {
-          modeBadge.textContent = 'Modo: Supabase Cloud Direto (⚙ Configurar)';
-        } else {
-          modeBadge.textContent = 'Modo: GitHub Pages / Local (⚙ Conectar Supabase)';
-        }
-
         const [categories, products, orders, closing] = await Promise.all([
           DataService.getCategories(),
           DataService.getProducts(),
@@ -750,7 +709,7 @@
           DataService.getCashClosing()
         ]);
 
-        // Categorias
+        // Preencher Select de Categorias (Tela 2)
         const catSelect = document.getElementById('prod-category');
         catSelect.innerHTML = '';
         categories.forEach((c) => {
@@ -760,7 +719,7 @@
           catSelect.appendChild(opt);
         });
 
-        // Produtos
+        // Preencher Select de Produtos (Tela 1) e Tabela de Produtos (Tela 2)
         const select = document.getElementById('order-product');
         const prodTbody = document.getElementById('products-tbody');
         select.innerHTML = '';
@@ -779,7 +738,7 @@
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${p.name}</td>
+            <td><strong>${p.name}</strong></td>
             <td>${p.category_name || '-'}</td>
             <td>${fmtBRL(p.price)}</td>
             <td>${stockLabel}</td>
@@ -787,7 +746,7 @@
           prodTbody.appendChild(tr);
         });
 
-        // Fechamento de Caixa
+        // Preencher Resumo do Caixa (Tela 1)
         document.getElementById('stat-paid').textContent = fmtBRL(closing.total_paid);
         document.getElementById('stat-paid-count').textContent = `${closing.paid_count || 0} pedido(s) pago(s)`;
         document.getElementById('stat-pending').textContent = fmtBRL(closing.total_pending);
@@ -798,11 +757,11 @@
           ? methodsEntries.map(([m, val]) => `<strong>${m.toUpperCase()}:</strong> ${fmtBRL(val)}`).join(' &nbsp;|&nbsp; ')
           : 'Nenhum pagamento confirmado ainda';
 
-        // Pedidos Pendentes
+        // Preencher Pendências "Na Rua" (Tela 1)
         const pendingTbody = document.getElementById('pending-tbody');
         pendingTbody.innerHTML = '';
         if (!closing.pending_orders || closing.pending_orders.length === 0) {
-          pendingTbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;">Nenhuma pendência na rua!</td></tr>';
+          pendingTbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:1.25rem;">Nenhuma pendência na rua!</td></tr>';
         } else {
           closing.pending_orders.forEach((o) => {
             const tr = document.createElement('tr');
@@ -811,39 +770,43 @@
               <td><strong>${o.customer_name}</strong></td>
               <td>${(o.payment_method || '').toUpperCase()}</td>
               <td class="text-warning"><strong>${fmtBRL(o.total_amount)}</strong></td>
-              <td><button class="btn-success" onclick="handlePayOrder(${o.id})" style="padding:0.25rem 0.6rem;font-size:0.8rem;">Dar Baixa (Pago)</button></td>
+              <td><button class="btn-success" onclick="handlePayOrder(${o.id})" style="padding:0.35rem 0.7rem;font-size:0.82rem;">Dar Baixa</button></td>
             `;
             pendingTbody.appendChild(tr);
           });
         }
 
-        // Últimos Pedidos
+        // Preencher Últimos Pedidos (Tela 1)
         const ordersTbody = document.getElementById('orders-tbody');
         ordersTbody.innerHTML = '';
-        orders.slice(0, 8).forEach((o) => {
-          const itemsDesc = (o.order_items || [])
-            .map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`)
-            .join(', ');
-          const badgeClass = o.payment_status === 'pago' ? 'tag-pago' : 'tag-pendente';
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>#${o.id}</td>
-            <td>${o.customer_name}</td>
-            <td style="font-size:0.8rem;color:var(--muted);">${itemsDesc || '-'}</td>
-            <td>${fmtBRL(o.total_amount)}</td>
-            <td><span class="tag ${badgeClass}">${o.payment_status}</span></td>
-          `;
-          ordersTbody.appendChild(tr);
-        });
+        if (!orders || orders.length === 0) {
+          ordersTbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido registrado ainda.</td></tr>';
+        } else {
+          orders.slice(0, 10).forEach((o) => {
+            const itemsDesc = (o.order_items || [])
+              .map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`)
+              .join(', ');
+            const badgeClass = o.payment_status === 'pago' ? 'tag-pago' : 'tag-pendente';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>#${o.id}</td>
+              <td>${o.customer_name}</td>
+              <td style="font-size:0.82rem;color:var(--muted);">${itemsDesc || '-'}</td>
+              <td>${fmtBRL(o.total_amount)}</td>
+              <td><span class="tag ${badgeClass}">${o.payment_status}</span></td>
+            `;
+            ordersTbody.appendChild(tr);
+          });
+        }
       } catch (err) {
-        showToast(err.message || 'Erro ao carregar painel');
+        showToast(err.message || 'Erro ao carregar dados');
       }
     }
 
     async function handlePayOrder(id) {
       try {
         await DataService.payOrder(id);
-        showToast(`Pedido #${id} quitado com sucesso!`);
+        showToast(`Pedido #${id} marcado como PAGO!`);
         loadDashboard();
       } catch (err) {
         showToast(err.message);
@@ -888,7 +851,7 @@
         document.getElementById('prod-name').value = '';
         document.getElementById('prod-price').value = '';
         document.getElementById('prod-stock').value = '';
-        showToast(`Produto "${created.name}" cadastrado!`);
+        showToast(`Produto "${created.name}" cadastrado com sucesso!`);
         loadDashboard();
       } catch (err) {
         showToast(err.message);

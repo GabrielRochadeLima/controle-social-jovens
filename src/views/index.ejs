@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Controle Social Jovens — Frente de Caixa & Fechamento</title>
+  <title>Controle Social Jovens</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -25,85 +25,137 @@
       color: var(--text);
       line-height: 1.5;
       padding: 1.5rem;
+      max-width: 1320px;
+      margin: 0 auto;
     }
     header {
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+      padding-bottom: 1.1rem;
       border-bottom: 1px solid var(--border);
     }
-    header h1 { font-size: 1.5rem; font-weight: 700; }
-    .badge-schema {
-      background: rgba(59, 130, 246, 0.15);
-      color: #60a5fa;
-      border: 1px solid rgba(59, 130, 246, 0.4);
-      padding: 0.25rem 0.75rem;
-      border-radius: 999px;
-      font-size: 0.85rem;
-      font-family: monospace;
+    header h1 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-      gap: 1.25rem;
-    }
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 0.75rem;
-      padding: 1.25rem;
-    }
-    .card h2 {
-      font-size: 1.15rem;
-      margin-bottom: 1rem;
+    .nav-tabs {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      gap: 0.6rem;
+      background: var(--surface);
+      padding: 0.35rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--border);
+    }
+    .nav-tab {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 0.6rem 1.15rem;
+      border-radius: 0.5rem;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .nav-tab:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .nav-tab.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.35);
+    }
+    .screen {
+      display: none;
+      animation: fadeIn 0.18s ease-out;
+    }
+    .screen.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.1rem;
       margin-bottom: 1.5rem;
     }
     .stat-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 0.75rem;
-      padding: 1rem;
+      padding: 1.1rem 1.35rem;
     }
     .stat-card span { font-size: 0.85rem; color: var(--muted); }
-    .stat-card strong { display: block; font-size: 1.5rem; margin-top: 0.25rem; }
+    .stat-card strong { display: block; font-size: 1.65rem; margin-top: 0.25rem; }
     .text-success { color: var(--success); }
     .text-warning { color: var(--warning); }
-    form { display: flex; flex-direction: column; gap: 0.75rem; }
-    label { font-size: 0.85rem; color: var(--muted); }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 1.35rem;
+      align-items: start;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1.4rem;
+    }
+    .card h2 {
+      font-size: 1.12rem;
+      margin-bottom: 1.1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.65rem;
+    }
+    form { display: flex; flex-direction: column; gap: 0.9rem; }
+    label { font-size: 0.84rem; color: var(--muted); display: block; margin-bottom: 0.3rem; font-weight: 500; }
     input, select, button {
-      padding: 0.6rem 0.75rem;
-      border-radius: 0.5rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: 0.55rem;
       border: 1px solid var(--border);
       background: var(--bg);
       color: var(--text);
       font-size: 0.95rem;
     }
-    button {
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    button.btn-primary {
       background: var(--primary);
       border-color: var(--primary);
+      color: #fff;
       font-weight: 600;
       cursor: pointer;
+      padding: 0.75rem 1rem;
       transition: background 0.15s;
     }
-    button:hover { background: var(--primary-hover); }
-    button.btn-success { background: var(--success); border-color: var(--success); }
+    button.btn-primary:hover { background: var(--primary-hover); }
+    button.btn-success {
+      background: var(--success);
+      border-color: var(--success);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
     table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 0.5rem; }
-    th, td { text-align: left; padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border); }
-    th { color: var(--muted); font-weight: 600; }
+    th, td { text-align: left; padding: 0.65rem 0.5rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; }
     .tag {
       display: inline-block;
-      padding: 0.15rem 0.5rem;
+      padding: 0.18rem 0.55rem;
       border-radius: 0.375rem;
       font-size: 0.75rem;
       font-weight: 600;
@@ -113,13 +165,20 @@
     .tag-pendente { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
     #toast {
       position: fixed;
-      bottom: 1.25rem;
-      right: 1.25rem;
+      bottom: 1.5rem;
+      right: 1.5rem;
       background: #1e293b;
       border: 1px solid var(--primary);
-      padding: 0.75rem 1rem;
-      border-radius: 0.5rem;
+      padding: 0.85rem 1.15rem;
+      border-radius: 0.6rem;
       display: none;
+      z-index: 100;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    @media (max-width: 600px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: stretch; }
+      .nav-tabs { justify-content: center; }
     }
   </style>
 </head>
@@ -127,135 +186,216 @@
   <header>
     <div>
       <h1>Controle Social Jovens</h1>
-      <p style="color: var(--muted); font-size: 0.9rem;">Frente de Caixa, Controle de Estoque e Fechamento Financeiro</p>
+      <p style="color: var(--muted); font-size: 0.9rem;">Gestão de Pedidos, Caixa e Produtos</p>
     </div>
-    <span class="badge-schema">schema: "<%= schema %>"</span>
+    <nav class="nav-tabs" aria-label="Navegação Principal">
+      <button type="button" class="nav-tab active" id="tab-orders" onclick="switchScreen('orders')">
+        🛒 Registrar Pedido
+      </button>
+      <button type="button" class="nav-tab" id="tab-products" onclick="switchScreen('products')">
+        📦 Cadastro de Produtos
+      </button>
+    </nav>
   </header>
 
-  <section class="stats-row" id="closing-stats">
-    <div class="stat-card">
-      <span>Total Recebido (Pago)</span>
-      <strong class="text-success" id="stat-paid">R$ 0,00</strong>
+  <!-- TELA 1: REGISTRAR PEDIDO, PENDÊNCIAS E RESUMO DO CAIXA -->
+  <main id="screen-orders" class="screen active">
+    <section class="stats-row">
+      <div class="stat-card">
+        <span>Total Recebido (Pagos)</span>
+        <strong class="text-success" id="stat-paid">R$ 0,00</strong>
+        <small id="stat-paid-count" style="color: var(--muted);">0 pedidos pagos</small>
+      </div>
+      <div class="stat-card">
+        <span>Total Pendente ("Na Rua")</span>
+        <strong class="text-warning" id="stat-pending">R$ 0,00</strong>
+        <small id="stat-pending-count" style="color: var(--muted);">0 pedidos pendentes</small>
+      </div>
+      <div class="stat-card">
+        <span>Recebido por Forma de Pagamento</span>
+        <div id="stat-methods" style="font-size: 0.92rem; margin-top: 0.5rem; color: var(--text);">-</div>
+      </div>
+    </section>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Novo Pedido</h2>
+        <form id="order-form">
+          <div>
+            <label for="order-customer">Nome do Cliente / Jovem</label>
+            <input type="text" id="order-customer" placeholder="Ex: Lucas Mendes" required style="width: 100%;" />
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div>
+              <label for="order-method">Forma de Pagamento</label>
+              <select id="order-method" style="width: 100%;">
+                <option value="pix">Pix</option>
+                <option value="dinheiro">Dinheiro</option>
+                <option value="cartao">Cartão</option>
+              </select>
+            </div>
+            <div>
+              <label for="order-status">Status do Pagamento</label>
+              <select id="order-status" style="width: 100%;">
+                <option value="pago">Pago na hora</option>
+                <option value="pendente">Pendente ("Na Rua")</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 2.2fr 1fr; gap: 0.75rem;">
+            <div>
+              <label for="order-product">Produto</label>
+              <select id="order-product" style="width: 100%;"></select>
+            </div>
+            <div>
+              <label for="order-qty">Quantidade</label>
+              <input type="number" id="order-qty" value="1" min="1" required style="width: 100%;" />
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">Finalizar Pedido</button>
+        </form>
+
+        <h2 style="margin-top: 1.75rem;">Últimos Pedidos Registrados</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cliente</th>
+              <th>Itens</th>
+              <th>Total</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="orders-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Pendências ("Na Rua") — Dar Baixa</h2>
+        <p style="font-size: 0.84rem; color: var(--muted); margin-bottom: 0.75rem;">
+          Pedidos marcados como <strong>pendente</strong> ficam listados abaixo até o pagamento ser confirmado:
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cliente</th>
+              <th>Forma</th>
+              <th>Valor</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="pending-tbody"></tbody>
+        </table>
+      </div>
     </div>
-    <div class="stat-card">
-      <span>Total Pendente ("Na Rua")</span>
-      <strong class="text-warning" id="stat-pending">R$ 0,00</strong>
-    </div>
-    <div class="stat-card">
-      <span>Por Forma de Pagamento (Pagos)</span>
-      <div id="stat-methods" style="font-size: 0.85rem; margin-top: 0.35rem; color: var(--text);">-</div>
+  </main>
+
+  <!-- TELA 2: CADASTRO DE PRODUTOS E CONTROLE DE ESTOQUE -->
+  <section id="screen-products" class="screen">
+    <div class="grid-2">
+      <div class="card">
+        <h2>Cadastrar Novo Produto</h2>
+        <form id="product-form">
+          <div>
+            <label for="prod-name">Nome do Produto</label>
+            <input type="text" id="prod-name" placeholder="Ex: Refrigerante Lata 350ml" required style="width: 100%;" />
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div>
+              <label for="prod-category">Categoria</label>
+              <select id="prod-category" style="width: 100%;"></select>
+            </div>
+            <div>
+              <label for="prod-price">Preço Unitário (R$)</label>
+              <input type="number" id="prod-price" step="0.50" min="0" placeholder="Ex: 6.00" required style="width: 100%;" />
+            </div>
+          </div>
+          <div>
+            <label for="prod-stock">Quantidade em Estoque <span style="font-weight:400;">(Deixe em branco para produtos feitos na hora / sem controle)</span></label>
+            <input type="number" id="prod-stock" min="0" placeholder="Livre / Sem controle de estoque" style="width: 100%;" />
+          </div>
+          <button type="submit" class="btn-primary">Salvar Produto</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Produtos Cadastrados & Estoque Atual</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Categoria</th>
+              <th>Preço</th>
+              <th>Estoque Disponível</th>
+            </tr>
+          </thead>
+          <tbody id="products-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </section>
-
-  <div class="grid">
-    <!-- Novo Pedido -->
-    <div class="card">
-      <h2>Novo Pedido</h2>
-      <form id="order-form">
-        <div>
-          <label>Nome do Cliente / Jovem</label>
-          <input type="text" id="order-customer" placeholder="Ex: Gabriel Silva" required style="width: 100%;" />
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-          <div>
-            <label>Pagamento</label>
-            <select id="order-method" style="width: 100%;">
-              <option value="pix">Pix</option>
-              <option value="dinheiro">Dinheiro</option>
-              <option value="cartao">Cartão</option>
-            </select>
-          </div>
-          <div>
-            <label>Status</label>
-            <select id="order-status" style="width: 100%;">
-              <option value="pago">Pago na hora</option>
-              <option value="pendente">Pendente (Pagar depois)</option>
-            </select>
-          </div>
-        </div>
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.5rem;">
-          <div>
-            <label>Produto</label>
-            <select id="order-product" style="width: 100%;"></select>
-          </div>
-          <div>
-            <label>Qtd</label>
-            <input type="number" id="order-qty" value="1" min="1" required style="width: 100%;" />
-          </div>
-        </div>
-        <button type="submit">Registrar Pedido</button>
-      </form>
-    </div>
-
-    <!-- Produtos e Estoque -->
-    <div class="card">
-      <h2>Produtos & Estoque</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Produto</th>
-            <th>Categoria</th>
-            <th>Preço</th>
-            <th>Estoque</th>
-          </tr>
-        </thead>
-        <tbody id="products-tbody"></tbody>
-      </table>
-    </div>
-
-    <!-- Pedidos Pendentes (Para cobrar / dar baixa) -->
-    <div class="card">
-      <h2>Pedidos Pendentes ("Na Rua")</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Cliente</th>
-            <th>Valor</th>
-            <th>Ação</th>
-          </tr>
-        </thead>
-        <tbody id="pending-tbody"></tbody>
-      </table>
-    </div>
-  </div>
 
   <div id="toast"></div>
 
   <script>
+    const SCHEMA_NAME = '<%= schema %>';
     const fmtBRL = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    function switchScreen(screenName) {
+      const isOrders = screenName === 'orders';
+      document.getElementById('screen-orders').classList.toggle('active', isOrders);
+      document.getElementById('screen-products').classList.toggle('active', !isOrders);
+      document.getElementById('tab-orders').classList.toggle('active', isOrders);
+      document.getElementById('tab-products').classList.toggle('active', !isOrders);
+    }
 
     function showToast(msg) {
       const el = document.getElementById('toast');
       el.textContent = msg;
       el.style.display = 'block';
-      setTimeout(() => { el.style.display = 'none'; }, 3000);
+      setTimeout(() => { el.style.display = 'none'; }, 3200);
     }
 
     async function loadDashboard() {
-      const [prodRes, closeRes] = await Promise.all([
+      const [catRes, prodRes, ordRes, closeRes] = await Promise.all([
+        fetch('/categories'),
         fetch('/products'),
+        fetch('/orders'),
         fetch('/cash-closing')
       ]);
+      const categories = await catRes.json();
       const products = await prodRes.json();
+      const orders = await ordRes.json();
       const closing = await closeRes.json();
 
-      // Preencher select e tabela de produtos
+      const catSelect = document.getElementById('prod-category');
+      catSelect.innerHTML = '';
+      (categories || []).forEach((c) => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        catSelect.appendChild(opt);
+      });
+
       const select = document.getElementById('order-product');
       const prodTbody = document.getElementById('products-tbody');
       select.innerHTML = '';
       prodTbody.innerHTML = '';
 
-      products.forEach((p) => {
-        const stockLabel = p.stock_quantity === null ? 'Livre (Sem controle)' : `${p.stock_quantity} un.`;
+      (products || []).forEach((p) => {
+        const stockLabel =
+          p.stock_quantity === null || p.stock_quantity === undefined
+            ? '<span style="color:var(--muted)">Livre (Sem controle)</span>'
+            : `<strong>${p.stock_quantity} un.</strong>`;
         const opt = document.createElement('option');
         opt.value = p.id;
-        opt.textContent = `${p.name} (${fmtBRL(p.price)})`;
+        opt.textContent = `${p.name} — ${fmtBRL(p.price)}${p.stock_quantity !== null ? ` (Est: ${p.stock_quantity})` : ''}`;
         select.appendChild(opt);
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${p.name}</td>
+          <td><strong>${p.name}</strong></td>
           <td>${p.category_name || '-'}</td>
           <td>${fmtBRL(p.price)}</td>
           <td>${stockLabel}</td>
@@ -263,28 +403,55 @@
         prodTbody.appendChild(tr);
       });
 
-      // Preencher Fechamento de Caixa
       document.getElementById('stat-paid').textContent = fmtBRL(closing.total_paid);
+      document.getElementById('stat-paid-count').textContent = `${closing.paid_count || 0} pedido(s) pago(s)`;
       document.getElementById('stat-pending').textContent = fmtBRL(closing.total_pending);
+      document.getElementById('stat-pending-count').textContent = `${closing.pending_count || 0} pedido(s) na rua`;
 
       const methodsEntries = Object.entries(closing.by_payment_method || {});
       document.getElementById('stat-methods').innerHTML = methodsEntries.length
-        ? methodsEntries.map(([m, val]) => `<strong>${m.toUpperCase()}:</strong> ${fmtBRL(val)}`).join(' | ')
+        ? methodsEntries.map(([m, val]) => `<strong>${m.toUpperCase()}:</strong> ${fmtBRL(val)}`).join(' &nbsp;|&nbsp; ')
         : 'Nenhum pagamento confirmado ainda';
 
-      // Preencher Pedidos Pendentes
       const pendingTbody = document.getElementById('pending-tbody');
       pendingTbody.innerHTML = '';
-      (closing.pending_orders || []).forEach((o) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>#${o.id}</td>
-          <td>${o.customer_name} <small style="color:var(--muted)">(${o.payment_method})</small></td>
-          <td>${fmtBRL(o.total_amount)}</td>
-          <td><button class="btn-success" onclick="payOrder(${o.id})" style="padding:0.25rem 0.5rem;font-size:0.8rem;">Dar Baixa</button></td>
-        `;
-        pendingTbody.appendChild(tr);
-      });
+      if (!closing.pending_orders || closing.pending_orders.length === 0) {
+        pendingTbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:1.25rem;">Nenhuma pendência na rua!</td></tr>';
+      } else {
+        closing.pending_orders.forEach((o) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>#${o.id}</td>
+            <td><strong>${o.customer_name}</strong></td>
+            <td>${(o.payment_method || '').toUpperCase()}</td>
+            <td class="text-warning"><strong>${fmtBRL(o.total_amount)}</strong></td>
+            <td><button class="btn-success" onclick="payOrder(${o.id})" style="padding:0.35rem 0.7rem;font-size:0.82rem;">Dar Baixa</button></td>
+          `;
+          pendingTbody.appendChild(tr);
+        });
+      }
+
+      const ordersTbody = document.getElementById('orders-tbody');
+      ordersTbody.innerHTML = '';
+      if (!orders || orders.length === 0) {
+        ordersTbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido registrado ainda.</td></tr>';
+      } else {
+        orders.slice(0, 10).forEach((o) => {
+          const itemsDesc = (o.order_items || [])
+            .map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`)
+            .join(', ');
+          const badgeClass = o.payment_status === 'pago' ? 'tag-pago' : 'tag-pendente';
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>#${o.id}</td>
+            <td>${o.customer_name}</td>
+            <td style="font-size:0.82rem;color:var(--muted);">${itemsDesc || '-'}</td>
+            <td>${fmtBRL(o.total_amount)}</td>
+            <td><span class="tag ${badgeClass}">${o.payment_status}</span></td>
+          `;
+          ordersTbody.appendChild(tr);
+        });
+      }
     }
 
     async function payOrder(id) {
@@ -319,10 +486,37 @@
       const data = await res.json();
       if (res.ok) {
         document.getElementById('order-customer').value = '';
+        document.getElementById('order-qty').value = '1';
         showToast(`Pedido #${data.id} registrado (${fmtBRL(data.total_amount)})!`);
         loadDashboard();
       } else {
         showToast(data.error || 'Erro ao registrar pedido');
+      }
+    });
+
+    document.getElementById('product-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const stockRaw = document.getElementById('prod-stock').value.trim();
+      const payload = {
+        name: document.getElementById('prod-name').value.trim(),
+        category_id: Number(document.getElementById('prod-category').value),
+        price: Number(document.getElementById('prod-price').value),
+        stock_quantity: stockRaw === '' ? null : Number(stockRaw)
+      };
+      const res = await fetch('/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('prod-name').value = '';
+        document.getElementById('prod-price').value = '';
+        document.getElementById('prod-stock').value = '';
+        showToast(`Produto "${data.name}" cadastrado com sucesso!`);
+        loadDashboard();
+      } else {
+        showToast(data.error || 'Erro ao cadastrar produto');
       }
     });
 
