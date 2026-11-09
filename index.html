@@ -378,6 +378,60 @@
       font-size: 0.76rem;
       color: var(--text);
     }
+
+    /* Carrinho / Múltiplos Itens no Pedido */
+    .cart-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 0.55rem;
+      padding: 0.65rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .cart-item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.45rem;
+      font-size: 0.82rem;
+    }
+    .cart-item-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .cart-qty-btn {
+      padding: 0.15rem 0.48rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: var(--surface-hover);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 0.35rem;
+      cursor: pointer;
+    }
+    .cart-remove-btn {
+      padding: 0.15rem 0.45rem;
+      font-size: 0.76rem;
+      background: rgba(239, 68, 68, 0.18);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+      border-radius: 0.35rem;
+      cursor: pointer;
+    }
+    .cart-total-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 0.45rem;
+      border-top: 1px dashed var(--border);
+      font-size: 0.9rem;
+    }
     .closed-order-notice {
       background: rgba(245, 158, 11, 0.12);
       border: 1px solid rgba(245, 158, 11, 0.4);
@@ -660,16 +714,29 @@
               </select>
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: 2.2fr 1fr; gap: 0.6rem;">
+          <div style="display: grid; grid-template-columns: 1fr 78px auto; gap: 0.45rem; align-items: end;">
             <div>
-              <label for="order-product">Produto</label>
+              <label for="order-product">Adicionar Produto</label>
               <select id="order-product" style="width: 100%;"></select>
             </div>
             <div>
               <label for="order-qty">Qtd</label>
-              <input type="number" id="order-qty" value="1" min="1" required style="width: 100%;" />
+              <input type="number" id="order-qty" value="1" min="1" style="width: 100%;" />
+            </div>
+            <button type="button" class="btn-secondary" onclick="addItemToOrderCart()" style="white-space: nowrap; height: 37px;">
+              + Incluir
+            </button>
+          </div>
+
+          <!-- Lista de Itens do Pedido Atual -->
+          <div class="cart-box" id="order-cart-box">
+            <div id="order-cart-items" style="display: flex; flex-direction: column; gap: 0.35rem;"></div>
+            <div class="cart-total-bar">
+              <span style="color: var(--muted); font-size: 0.8rem;" id="order-cart-count">0 item(ns) no pedido</span>
+              <span>Total: <strong class="text-success" id="order-cart-total">R$ 0,00</strong></span>
             </div>
           </div>
+
           <button type="submit" class="btn-primary" id="order-submit-btn">Finalizar Pedido</button>
         </form>
 
@@ -817,7 +884,117 @@
 
     let cachedProducts = [];
     let cachedEvents = [];
+    let orderCart = [];
     let selectedEventId = localStorage.getItem('csj_selected_event_id') || '';
+
+    function renderOrderCart() {
+      const itemsContainer = document.getElementById('order-cart-items');
+      const countEl = document.getElementById('order-cart-count');
+      const totalEl = document.getElementById('order-cart-total');
+      if (!itemsContainer) return;
+
+      itemsContainer.innerHTML = '';
+
+      if (orderCart.length === 0) {
+        // Se o carrinho estiver vazio, mostra a prévia do item selecionado no select para compra rápida
+        const selEl = document.getElementById('order-product');
+        const qtyEl = document.getElementById('order-qty');
+        const selProd = cachedProducts.find((p) => Number(p.id) === Number(selEl && selEl.value));
+        const previewQty = Math.max(1, Number((qtyEl && qtyEl.value) || 1));
+        const previewTotal = selProd ? selProd.price * previewQty : 0;
+
+        itemsContainer.innerHTML = `<div style="color:var(--muted);font-size:0.78rem;text-align:center;padding:0.2rem 0;">Toque em <strong>+ Incluir</strong> para adicionar vários produtos, ou finalize direto com o produto selecionado acima.</div>`;
+        countEl.textContent = selProd ? `1 item selecionado (${previewQty}x ${selProd.name})` : '0 itens';
+        totalEl.textContent = fmtBRL(previewTotal);
+        return;
+      }
+
+      let totalAmount = 0;
+      let totalUnits = 0;
+
+      orderCart.forEach((item, idx) => {
+        const subtotal = item.price * item.quantity;
+        totalAmount += subtotal;
+        totalUnits += item.quantity;
+
+        const row = document.createElement('div');
+        row.className = 'cart-item-row';
+        row.innerHTML = `
+          <div style="flex:1;">
+            <strong>${item.quantity}x ${item.name}</strong>
+            <div style="font-size:0.74rem;color:var(--muted);">${fmtBRL(item.price)} un. = <strong style="color:var(--text);">${fmtBRL(subtotal)}</strong></div>
+          </div>
+          <div class="cart-item-controls">
+            <button type="button" class="cart-qty-btn" onclick="changeCartItemQty(${idx}, -1)">-</button>
+            <button type="button" class="cart-qty-btn" onclick="changeCartItemQty(${idx}, 1)">+</button>
+            <button type="button" class="cart-remove-btn" onclick="removeCartItem(${idx})">✕</button>
+          </div>
+        `;
+        itemsContainer.appendChild(row);
+      });
+
+      countEl.textContent = `${orderCart.length} produto(s) (${totalUnits} un.)`;
+      totalEl.textContent = fmtBRL(totalAmount);
+    }
+
+    function addItemToOrderCart() {
+      const prodSelect = document.getElementById('order-product');
+      const qtyInput = document.getElementById('order-qty');
+      const prodId = Number(prodSelect.value);
+      const qty = Number(qtyInput.value);
+
+      if (!prodId || !Number.isInteger(qty) || qty <= 0) {
+        showToast('Selecione um produto e uma quantidade válida.');
+        return;
+      }
+
+      const prod = cachedProducts.find((p) => Number(p.id) === prodId);
+      if (!prod) return;
+
+      const existing = orderCart.find((i) => Number(i.product_id) === prodId);
+      const newTotalQty = (existing ? existing.quantity : 0) + qty;
+
+      if (prod.stock_quantity !== null && prod.stock_quantity !== undefined && newTotalQty > prod.stock_quantity) {
+        showToast(`Estoque insuficiente para "${prod.name}". Disponível: ${prod.stock_quantity} un.`);
+        return;
+      }
+
+      if (existing) {
+        existing.quantity = newTotalQty;
+      } else {
+        orderCart.push({
+          product_id: prod.id,
+          name: prod.name,
+          price: Number(prod.price),
+          stock_quantity: prod.stock_quantity,
+          quantity: qty
+        });
+      }
+
+      qtyInput.value = '1';
+      renderOrderCart();
+    }
+
+    function changeCartItemQty(index, delta) {
+      const item = orderCart[index];
+      if (!item) return;
+      const nextQty = item.quantity + delta;
+      if (nextQty <= 0) {
+        orderCart.splice(index, 1);
+      } else {
+        if (item.stock_quantity !== null && item.stock_quantity !== undefined && nextQty > item.stock_quantity) {
+          showToast(`Estoque máximo disponível para "${item.name}": ${item.stock_quantity} un.`);
+          return;
+        }
+        item.quantity = nextQty;
+      }
+      renderOrderCart();
+    }
+
+    function removeCartItem(index) {
+      orderCart.splice(index, 1);
+      renderOrderCart();
+    }
 
     // Preenche a data de hoje por padrão no formulário de evento
     document.getElementById('ev-date').value = new Date().toISOString().slice(0, 10);
@@ -1792,6 +1969,8 @@
             ordersTbody.appendChild(tr);
           });
         }
+        // Atualizar prévia do carrinho
+        renderOrderCart();
       } catch (err) {
         showToast(err.message || 'Erro ao carregar dados');
       }
@@ -1836,25 +2015,35 @@
       }
     });
 
+    document.getElementById('order-product').addEventListener('change', renderOrderCart);
+    document.getElementById('order-qty').addEventListener('input', renderOrderCart);
+
     document.getElementById('order-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {
         const targetEvId = selectedEventId === 'all' ? (cachedEvents[0] ? cachedEvents[0].id : 1) : Number(selectedEventId);
+        const itemsToSend =
+          orderCart.length > 0
+            ? orderCart.map((i) => ({ product_id: Number(i.product_id), quantity: Number(i.quantity) }))
+            : [
+                {
+                  product_id: Number(document.getElementById('order-product').value),
+                  quantity: Math.max(1, Number(document.getElementById('order-qty').value || 1))
+                }
+              ];
+
         const payload = {
           event_id: targetEvId,
           customer_name: document.getElementById('order-customer').value.trim(),
           payment_method: document.getElementById('order-method').value,
           payment_status: document.getElementById('order-status').value,
-          items: [
-            {
-              product_id: Number(document.getElementById('order-product').value),
-              quantity: Number(document.getElementById('order-qty').value)
-            }
-          ]
+          items: itemsToSend
         };
         const created = await DataService.createOrder(payload);
         document.getElementById('order-customer').value = '';
         document.getElementById('order-qty').value = '1';
+        orderCart = [];
+        renderOrderCart();
         showToast(`Pedido #${created.id} registrado (${fmtBRL(created.total_amount)})!`);
         loadDashboard();
       } catch (err) {
