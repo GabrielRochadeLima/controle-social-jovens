@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle Social Jovens — Frente de Caixa & Fechamento</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #334155;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 1.25rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    .header-badges { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .badge-schema {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-family: monospace;
+    }
+    .badge-mode {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem 1.25rem;
+    }
+    .stat-card span { font-size: 0.85rem; color: var(--muted); }
+    .stat-card strong { display: block; font-size: 1.6rem; margin-top: 0.25rem; }
+    .text-success { color: var(--success); }
+    .text-warning { color: var(--warning); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 1.25rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+    form { display: flex; flex-direction: column; gap: 0.75rem; }
+    label { font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 0.2rem; }
+    input, select, button {
+      padding: 0.55rem 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.92rem;
+    }
+    button {
+      background: var(--primary);
+      border-color: var(--primary);
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    button:hover { background: var(--primary-hover); }
+    button.btn-success { background: var(--success); border-color: var(--success); }
+    button.btn-secondary { background: var(--surface-hover); border-color: var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 0.5rem; }
+    th, td { text-align: left; padding: 0.55rem 0.45rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; }
+    .tag {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 0.375rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .tag-pago { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .tag-pendente { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    #config-panel {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--primary);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    #toast {
+      position: fixed;
+      bottom: 1.25rem;
+      right: 1.25rem;
+      background: #1e293b;
+      border: 1px solid var(--primary);
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      display: none;
+      z-index: 100;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Controle Social Jovens</h1>
+      <p style="color: var(--muted); font-size: 0.9rem;">Frente de Caixa, Controle de Estoque e Fechamento Financeiro</p>
+    </div>
+    <div class="header-badges">
+      <span class="badge-schema">schema: "controle-social-jovens"</span>
+      <span class="badge-mode" id="mode-indicator" onclick="toggleConfig()">Configurar Supabase</span>
+    </div>
+  </header>
+
+  <!-- Painel Opcional de Conexão Direta Supabase (para GitHub Pages) -->
+  <section id="config-panel">
+    <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Conexão Supabase (Schema: <code>controle-social-jovens</code>)</h3>
+    <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0.75rem;">
+      Para conectar seu GitHub Pages diretamente ao banco Supabase, informe sua URL e Anon Key abaixo (ou deixe em branco para usar o modo demonstração local no navegador):
+    </p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; align-items: end;">
+      <div>
+        <label>SUPABASE_URL</label>
+        <input type="text" id="cfg-url" placeholder="https://xyz.supabase.co" style="width:100%;" />
+      </div>
+      <div>
+        <label>SUPABASE_ANON_KEY</label>
+        <input type="password" id="cfg-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5c..." style="width:100%;" />
+      </div>
+      <div style="display:flex; gap:0.4rem;">
+        <button type="button" onclick="saveSupabaseConfig()">Salvar & Conectar</button>
+        <button type="button" class="btn-secondary" onclick="resetDemoData()">Resetar Demo</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Indicadores de Fechamento de Caixa -->
+  <section class="stats-row">
+    <div class="stat-card">
+      <span>Total Recebido ( Apenas Pagos )</span>
+      <strong class="text-success" id="stat-paid">R$ 0,00</strong>
+      <small id="stat-paid-count" style="color: var(--muted);">0 pedidos pagos</small>
+    </div>
+    <div class="stat-card">
+      <span>Total Pendente ( "Na Rua" / Fiado )</span>
+      <strong class="text-warning" id="stat-pending">R$ 0,00</strong>
+      <small id="stat-pending-count" style="color: var(--muted);">0 pedidos pendentes</small>
+    </div>
+    <div class="stat-card">
+      <span>Consolidado por Forma de Pagamento (Pagos)</span>
+      <div id="stat-methods" style="font-size: 0.9rem; margin-top: 0.45rem; color: var(--text);">-</div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <!-- 1. Frente de Caixa: Novo Pedido -->
+    <div class="card">
+      <h2>1. Registrar Pedido (Frente de Caixa)</h2>
+      <form id="order-form">
+        <div>
+          <label>Nome do Cliente / Jovem</label>
+          <input type="text" id="order-customer" placeholder="Ex: Lucas Mendes" required style="width: 100%;" />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+          <div>
+            <label>Forma de Pagamento</label>
+            <select id="order-method" style="width: 100%;">
+              <option value="pix">Pix</option>
+              <option value="dinheiro">Dinheiro</option>
+              <option value="cartao">Cartão</option>
+            </select>
+          </div>
+          <div>
+            <label>Status do Pagamento</label>
+            <select id="order-status" style="width: 100%;">
+              <option value="pago">Pago na hora</option>
+              <option value="pendente">Pendente ("Na Rua")</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.5rem;">
+          <div>
+            <label>Produto</label>
+            <select id="order-product" style="width: 100%;"></select>
+          </div>
+          <div>
+            <label>Quantidade</label>
+            <input type="number" id="order-qty" value="1" min="1" required style="width: 100%;" />
+          </div>
+        </div>
+        <button type="submit">Finalizar Pedido</button>
+      </form>
+
+      <h2 style="margin-top: 1.5rem;">Últimos Pedidos Registrados</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>Itens</th>
+            <th>Total</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="orders-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- 2. Produtos & Controle de Estoque -->
+    <div class="card">
+      <h2>2. Produtos & Estoque</h2>
+      <form id="product-form" style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
+        <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.5rem;">
+          <div>
+            <label>Nome do Produto</label>
+            <input type="text" id="prod-name" placeholder="Ex: Refrigerante Lata" required style="width: 100%;" />
+          </div>
+          <div>
+            <label>Categoria</label>
+            <select id="prod-category" style="width: 100%;"></select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; align-items: end;">
+          <div>
+            <label>Preço (R$)</label>
+            <input type="number" id="prod-price" step="0.50" min="0" placeholder="6.00" required style="width: 100%;" />
+          </div>
+          <div>
+            <label>Estoque (Vazio = Sem controle)</label>
+            <input type="number" id="prod-stock" min="0" placeholder="Livre / Feito na hora" style="width: 100%;" />
+          </div>
+          <button type="submit">Cadastrar</button>
+        </div>
+      </form>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Categoria</th>
+            <th>Preço</th>
+            <th>Estoque Atual</th>
+          </tr>
+        </thead>
+        <tbody id="products-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- 3. Pendências ("Na Rua") & Baixa Rápida -->
+    <div class="card">
+      <h2>3. Pendências ("Na Rua") — Dar Baixa</h2>
+      <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem;">
+        Pedidos com status <code>pendente</code> não entram no saldo recebido até que seja dada a baixa abaixo:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>Forma</th>
+            <th>Valor</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="pending-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    const SCHEMA_NAME = 'controle-social-jovens';
+    const STORAGE_KEY = 'csj_db_v1';
+    const CFG_KEY = 'csj_supabase_cfg';
+
+    const fmtBRL = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 3200);
+    }
+
+    function toggleConfig() {
+      const panel = document.getElementById('config-panel');
+      panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // Seed inicial para funcionamento imediato no GitHub Pages
+    function getDefaultSeed() {
+      return {
+        categories: [
+          { id: 1, name: 'Lanches' },
+          { id: 2, name: 'Bebidas' },
+          { id: 3, name: 'Doces' }
+        ],
+        products: [
+          { id: 1, name: 'Cachorro-Quente na Chapa', category_id: 1, price: 12.00, stock_quantity: null },
+          { id: 2, name: 'Pastel Assado', category_id: 1, price: 10.00, stock_quantity: null },
+          { id: 3, name: 'Refrigerante Lata 350ml', category_id: 2, price: 6.00, stock_quantity: 48 },
+          { id: 4, name: 'Brigadeiro Gourmet', category_id: 3, price: 4.50, stock_quantity: 30 }
+        ],
+        orders: [
+          {
+            id: 1,
+            customer_name: 'Lucas Mendes',
+            payment_method: 'pix',
+            payment_status: 'pago',
+            total_amount: 24.00,
+            created_at: new Date().toISOString()
+          },
+          {
+            id: 2,
+            customer_name: 'Gabriel Oliveira',
+            payment_method: 'pix',
+            payment_status: 'pendente',
+            total_amount: 18.00,
+            created_at: new Date().toISOString()
+          }
+        ],
+        order_items: [
+          { id: 1, order_id: 1, product_id: 1, quantity: 1, unit_price: 12.00 },
+          { id: 2, order_id: 1, product_id: 3, quantity: 2, unit_price: 6.00 },
+          { id: 3, order_id: 2, product_id: 1, quantity: 1, unit_price: 12.00 },
+          { id: 4, order_id: 2, product_id: 3, quantity: 1, unit_price: 6.00 }
+        ]
+      };
+    }
+
+    function loadLocalDb() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (_) {}
+      const seed = getDefaultSeed();
+      saveLocalDb(seed);
+      return seed;
+    }
+
+    function saveLocalDb(db) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    }
+
+    function resetDemoData() {
+      saveLocalDb(getDefaultSeed());
+      showToast('Dados de demonstração restaurados!');
+      loadDashboard();
+    }
+
+    // Detecta se existe backend Express ativo (quando rodando via npm start)
+    let backendMode = null; // 'express' | 'supabase' | 'local'
+    let sbClient = null;
+
+    function initSupabaseFromConfig() {
+      try {
+        const cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
+        if (cfg.url && cfg.key && window.supabase) {
+          document.getElementById('cfg-url').value = cfg.url;
+          document.getElementById('cfg-key').value = cfg.key;
+          sbClient = window.supabase.createClient(cfg.url, cfg.key, {
+            db: { schema: SCHEMA_NAME }
+          });
+          return true;
+        }
+      } catch (_) {}
+      return false;
+    }
+
+    function saveSupabaseConfig() {
+      const url = document.getElementById('cfg-url').value.trim();
+      const key = document.getElementById('cfg-key').value.trim();
+      if (!url || !key) {
+        localStorage.removeItem(CFG_KEY);
+        sbClient = null;
+        backendMode = 'local';
+        showToast('Modo Local (Navegador) ativado.');
+      } else {
+        localStorage.setItem(CFG_KEY, JSON.stringify({ url, key }));
+        initSupabaseFromConfig();
+        backendMode = 'supabase';
+        showToast('Conectado ao Supabase (schema: controle-social-jovens)!');
+      }
+      document.getElementById('config-panel').style.display = 'none';
+      loadDashboard();
+    }
+
+    async function detectBackend() {
+      if (backendMode) return backendMode;
+      try {
+        const res = await fetch('/health', { method: 'GET' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.schema === SCHEMA_NAME) {
+            backendMode = 'express';
+            return backendMode;
+          }
+        }
+      } catch (_) {}
+
+      if (initSupabaseFromConfig()) {
+        backendMode = 'supabase';
+        return backendMode;
+      }
+
+      backendMode = 'local';
+      return backendMode;
+    }
+
+    // Camada de Dados Unificada (Express API -> Supabase Client -> LocalStorage Fallback para GitHub Pages)
+    const DataService = {
+      async getCategories() {
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch('/categories');
+          return r.json();
+        }
+        if (mode === 'supabase') {
+          const { data, error } = await sbClient.from('categories').select('*').order('id');
+          if (error) throw new Error(error.message);
+          return data;
+        }
+        return loadLocalDb().categories;
+      },
+
+      async getProducts() {
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch('/products');
+          return r.json();
+        }
+        if (mode === 'supabase') {
+          const { data, error } = await sbClient.from('products').select('*, categories(id, name)').order('id');
+          if (error) throw new Error(error.message);
+          return (data || []).map((p) => ({
+            ...p,
+            price: Number(p.price),
+            category_name: p.categories ? p.categories.name : '-'
+          }));
+        }
+        const db = loadLocalDb();
+        return db.products.map((p) => {
+          const cat = db.categories.find((c) => Number(c.id) === Number(p.category_id));
+          return { ...p, category_name: cat ? cat.name : '-' };
+        });
+      },
+
+      async createProduct({ name, category_id, price, stock_quantity }) {
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch('/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, category_id, price, stock_quantity })
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao cadastrar produto');
+          return data;
+        }
+        if (mode === 'supabase') {
+          const { data, error } = await sbClient
+            .from('products')
+            .insert([{ name, category_id: Number(category_id), price: Number(price), stock_quantity }])
+            .select()
+            .single();
+          if (error) throw new Error(error.message);
+          return data;
+        }
+        const db = loadLocalDb();
+        const nextId = db.products.reduce((m, p) => Math.max(m, p.id), 0) + 1;
+        const newProd = {
+          id: nextId,
+          name,
+          category_id: Number(category_id),
+          price: Number(price),
+          stock_quantity: stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity)
+        };
+        db.products.push(newProd);
+        saveLocalDb(db);
+        return newProd;
+      },
+
+      async getOrders() {
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch('/orders');
+          return r.json();
+        }
+        if (mode === 'supabase') {
+          const { data, error } = await sbClient
+            .from('orders')
+            .select('*, order_items(*, products(name))')
+            .order('id', { ascending: false });
+          if (error) throw new Error(error.message);
+          return data || [];
+        }
+        const db = loadLocalDb();
+        return [...db.orders]
+          .sort((a, b) => b.id - a.id)
+          .map((o) => ({
+            ...o,
+            order_items: db.order_items
+              .filter((i) => i.order_id === o.id)
+              .map((i) => ({
+                ...i,
+                products: db.products.find((p) => p.id === i.product_id) || { name: 'Item' }
+              }))
+          }));
+      },
+
+      async createOrder({ customer_name, payment_method, payment_status, items }) {
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch('/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customer_name, payment_method, payment_status, items })
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao criar pedido');
+          return data;
+        }
+        if (mode === 'supabase') {
+          // Busca produtos, valida estoque, grava pedido e abate estoque no schema controle-social-jovens
+          const ids = items.map((i) => Number(i.product_id));
+          const { data: prods, error: pErr } = await sbClient.from('products').select('*').in('id', ids);
+          if (pErr) throw new Error(pErr.message);
+
+          let total = 0;
+          for (const item of items) {
+            const prod = (prods || []).find((p) => Number(p.id) === Number(item.product_id));
+            if (!prod) throw new Error('Produto não encontrado');
+            if (prod.stock_quantity !== null && prod.stock_quantity < item.quantity) {
+              throw new Error(`Estoque insuficiente para "${prod.name}" (Disponível: ${prod.stock_quantity})`);
+            }
+            total += Number(prod.price) * Number(item.quantity);
+          }
+
+          const { data: ord, error: oErr } = await sbClient
+            .from('orders')
+            .insert([{ customer_name, payment_method, payment_status, total_amount: Number(total.toFixed(2)) }])
+            .select()
+            .single();
+          if (oErr) throw new Error(oErr.message);
+
+          for (const item of items) {
+            const prod = prods.find((p) => Number(p.id) === Number(item.product_id));
+            await sbClient.from('order_items').insert([
+              { order_id: ord.id, product_id: prod.id, quantity: item.quantity, unit_price: prod.price }
+            ]);
+            if (prod.stock_quantity !== null) {
+              await sbClient
+                .from('products')
+                .update({ stock_quantity: prod.stock_quantity - item.quantity })
+                .eq('id', prod.id);
+            }
+          }
+          return ord;
+        }
+
+        // Modo Local (GitHub Pages sem backend externo)
+        const db = loadLocalDb();
+        let total = 0;
+        for (const item of items) {
+          const prod = db.products.find((p) => Number(p.id) === Number(item.product_id));
+          if (!prod) throw new Error('Produto não encontrado.');
+          if (prod.stock_quantity !== null && prod.stock_quantity < item.quantity) {
+            throw new Error(`Estoque insuficiente para "${prod.name}". Disponível: ${prod.stock_quantity}`);
+          }
+          total += Number(prod.price) * Number(item.quantity);
+        }
+
+        const nextOrderId = db.orders.reduce((m, o) => Math.max(m, o.id), 0) + 1;
+        const newOrder = {
+          id: nextOrderId,
+          customer_name,
+          payment_method,
+          payment_status,
+          total_amount: Number(total.toFixed(2)),
+          created_at: new Date().toISOString()
+        };
+        db.orders.push(newOrder);
+
+        let nextItemId = db.order_items.reduce((m, i) => Math.max(m, i.id), 0) + 1;
+        for (const item of items) {
+          const prod = db.products.find((p) => Number(p.id) === Number(item.product_id));
+          db.order_items.push({
+            id: nextItemId++,
+            order_id: nextOrderId,
+            product_id: prod.id,
+            quantity: Number(item.quantity),
+            unit_price: Number(prod.price)
+          });
+          if (prod.stock_quantity !== null) {
+            prod.stock_quantity -= Number(item.quantity);
+          }
+        }
+        saveLocalDb(db);
+        return newOrder;
+      },
+
+      async payOrder(orderId) {
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch(`/orders/${orderId}/pay`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao dar baixa');
+          return data;
+        }
+        if (mode === 'supabase') {
+          const { data, error } = await sbClient
+            .from('orders')
+            .update({ payment_status: 'pago' })
+            .eq('id', Number(orderId))
+            .select()
+            .single();
+          if (error) throw new Error(error.message);
+          return data;
+        }
+        const db = loadLocalDb();
+        const ord = db.orders.find((o) => Number(o.id) === Number(orderId));
+        if (!ord) throw new Error('Pedido não encontrado');
+        ord.payment_status = 'pago';
+        saveLocalDb(db);
+        return ord;
+      },
+
+      async getCashClosing() {
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch('/cash-closing');
+          return r.json();
+        }
+        const orders = await this.getOrders();
+        let total_paid = 0;
+        let total_pending = 0;
+        let paid_count = 0;
+        let pending_count = 0;
+        const by_payment_method = {};
+        const pending_orders = [];
+
+        for (const o of orders) {
+          const amt = Number(o.total_amount) || 0;
+          if (o.payment_status === 'pago') {
+            total_paid += amt;
+            paid_count++;
+            const m = (o.payment_method || 'outros').toLowerCase();
+            by_payment_method[m] = Number(((by_payment_method[m] || 0) + amt).toFixed(2));
+          } else {
+            total_pending += amt;
+            pending_count++;
+            pending_orders.push(o);
+          }
+        }
+        return {
+          total_paid: Number(total_paid.toFixed(2)),
+          total_pending: Number(total_pending.toFixed(2)),
+          paid_count,
+          pending_count,
+          by_payment_method,
+          pending_orders
+        };
+      }
+    };
+
+    async function loadDashboard() {
+      try {
+        const mode = await detectBackend();
+        const modeBadge = document.getElementById('mode-indicator');
+        if (mode === 'express') {
+          modeBadge.textContent = 'Modo: API Express + Supabase';
+        } else if (mode === 'supabase') {
+          modeBadge.textContent = 'Modo: Supabase Cloud Direto (⚙ Configurar)';
+        } else {
+          modeBadge.textContent = 'Modo: GitHub Pages / Local (⚙ Conectar Supabase)';
+        }
+
+        const [categories, products, orders, closing] = await Promise.all([
+          DataService.getCategories(),
+          DataService.getProducts(),
+          DataService.getOrders(),
+          DataService.getCashClosing()
+        ]);
+
+        // Categorias
+        const catSelect = document.getElementById('prod-category');
+        catSelect.innerHTML = '';
+        categories.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name;
+          catSelect.appendChild(opt);
+        });
+
+        // Produtos
+        const select = document.getElementById('order-product');
+        const prodTbody = document.getElementById('products-tbody');
+        select.innerHTML = '';
+        prodTbody.innerHTML = '';
+
+        products.forEach((p) => {
+          const stockLabel =
+            p.stock_quantity === null || p.stock_quantity === undefined
+              ? '<span style="color:var(--muted)">Livre (Sem controle)</span>'
+              : `<strong>${p.stock_quantity} un.</strong>`;
+
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = `${p.name} — ${fmtBRL(p.price)}${p.stock_quantity !== null ? ` (Est: ${p.stock_quantity})` : ''}`;
+          select.appendChild(opt);
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${p.name}</td>
+            <td>${p.category_name || '-'}</td>
+            <td>${fmtBRL(p.price)}</td>
+            <td>${stockLabel}</td>
+          `;
+          prodTbody.appendChild(tr);
+        });
+
+        // Fechamento de Caixa
+        document.getElementById('stat-paid').textContent = fmtBRL(closing.total_paid);
+        document.getElementById('stat-paid-count').textContent = `${closing.paid_count || 0} pedido(s) pago(s)`;
+        document.getElementById('stat-pending').textContent = fmtBRL(closing.total_pending);
+        document.getElementById('stat-pending-count').textContent = `${closing.pending_count || 0} pedido(s) na rua`;
+
+        const methodsEntries = Object.entries(closing.by_payment_method || {});
+        document.getElementById('stat-methods').innerHTML = methodsEntries.length
+          ? methodsEntries.map(([m, val]) => `<strong>${m.toUpperCase()}:</strong> ${fmtBRL(val)}`).join(' &nbsp;|&nbsp; ')
+          : 'Nenhum pagamento confirmado ainda';
+
+        // Pedidos Pendentes
+        const pendingTbody = document.getElementById('pending-tbody');
+        pendingTbody.innerHTML = '';
+        if (!closing.pending_orders || closing.pending_orders.length === 0) {
+          pendingTbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;">Nenhuma pendência na rua!</td></tr>';
+        } else {
+          closing.pending_orders.forEach((o) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>#${o.id}</td>
+              <td><strong>${o.customer_name}</strong></td>
+              <td>${(o.payment_method || '').toUpperCase()}</td>
+              <td class="text-warning"><strong>${fmtBRL(o.total_amount)}</strong></td>
+              <td><button class="btn-success" onclick="handlePayOrder(${o.id})" style="padding:0.25rem 0.6rem;font-size:0.8rem;">Dar Baixa (Pago)</button></td>
+            `;
+            pendingTbody.appendChild(tr);
+          });
+        }
+
+        // Últimos Pedidos
+        const ordersTbody = document.getElementById('orders-tbody');
+        ordersTbody.innerHTML = '';
+        orders.slice(0, 8).forEach((o) => {
+          const itemsDesc = (o.order_items || [])
+            .map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`)
+            .join(', ');
+          const badgeClass = o.payment_status === 'pago' ? 'tag-pago' : 'tag-pendente';
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>#${o.id}</td>
+            <td>${o.customer_name}</td>
+            <td style="font-size:0.8rem;color:var(--muted);">${itemsDesc || '-'}</td>
+            <td>${fmtBRL(o.total_amount)}</td>
+            <td><span class="tag ${badgeClass}">${o.payment_status}</span></td>
+          `;
+          ordersTbody.appendChild(tr);
+        });
+      } catch (err) {
+        showToast(err.message || 'Erro ao carregar painel');
+      }
+    }
+
+    async function handlePayOrder(id) {
+      try {
+        await DataService.payOrder(id);
+        showToast(`Pedido #${id} quitado com sucesso!`);
+        loadDashboard();
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
+
+    document.getElementById('order-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const payload = {
+          customer_name: document.getElementById('order-customer').value.trim(),
+          payment_method: document.getElementById('order-method').value,
+          payment_status: document.getElementById('order-status').value,
+          items: [
+            {
+              product_id: Number(document.getElementById('order-product').value),
+              quantity: Number(document.getElementById('order-qty').value)
+            }
+          ]
+        };
+        const created = await DataService.createOrder(payload);
+        document.getElementById('order-customer').value = '';
+        document.getElementById('order-qty').value = '1';
+        showToast(`Pedido #${created.id} registrado (${fmtBRL(created.total_amount)})!`);
+        loadDashboard();
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+
+    document.getElementById('product-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const stockRaw = document.getElementById('prod-stock').value.trim();
+        const payload = {
+          name: document.getElementById('prod-name').value.trim(),
+          category_id: Number(document.getElementById('prod-category').value),
+          price: Number(document.getElementById('prod-price').value),
+          stock_quantity: stockRaw === '' ? null : Number(stockRaw)
+        };
+        const created = await DataService.createProduct(payload);
+        document.getElementById('prod-name').value = '';
+        document.getElementById('prod-price').value = '';
+        document.getElementById('prod-stock').value = '';
+        showToast(`Produto "${created.name}" cadastrado!`);
+        loadDashboard();
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+
+    loadDashboard();
+  </script>
+</body>
+</html>

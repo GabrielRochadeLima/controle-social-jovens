@@ -124,26 +124,9 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
   before(async () => {
     // Limpa o banco em memória sem seed para testar o ciclo completo do zero
     resetMockDb(false);
-    await new Promise((resolve) => {
-      server = app.listen(0, '127.0.0.1', () => {
-        const address = server.address();
-        if (address && typeof address === 'object') {
-          baseUrl = `http://127.0.0.1:${address.port}`;
-        }
-        resolve();
-      });
-      server.on('error', () => {
-        server = null;
-        resolve();
-      });
-    });
   });
 
-  after(async () => {
-    if (server && server.listening) {
-      await new Promise((resolve) => server.close(resolve));
-    }
-  });
+  after(async () => {});
 
   test('Teste 0: Configuração estrita do Schema "controle-social-jovens"', async () => {
     assert.equal(DB_SCHEMA, 'controle-social-jovens', 'DB_SCHEMA deve ser estritamente "controle-social-jovens"');
