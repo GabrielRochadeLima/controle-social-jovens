@@ -225,7 +225,33 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
     assert.equal(groupedProds.body.Lanches.length, 1);
     assert.equal(groupedProds.body.Lanches[0].stock_quantity, null);
 
-    console.log('✔ [Teste 1] Produtos cadastrados:', listProds.body.map((p) => ({
+    // 1.5 Editar produto cadastrado (PUT /products/:id) e restaurar valores para o próximo teste
+    const editRes = await apiRequest(`/products/${prodRefriId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: 'Refrigerante Lata 350ml',
+        category_id: catBebidasId,
+        price: 6.5,
+        stock_quantity: 25
+      })
+    });
+    assert.equal(editRes.status, 200);
+    assert.equal(editRes.body.name, 'Refrigerante Lata 350ml');
+    assert.equal(editRes.body.price, 6.5);
+    assert.equal(editRes.body.stock_quantity, 25);
+
+    // Restaurar para price: 6.0 e stock_quantity: 20 para manter valores exatos dos testes seguintes
+    await apiRequest(`/products/${prodRefriId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: 'Refrigerante Lata',
+        category_id: catBebidasId,
+        price: 6.0,
+        stock_quantity: 20
+      })
+    });
+
+    console.log('✔ [Teste 1] Produtos cadastrados e edição validada:', listProds.body.map((p) => ({
       id: p.id,
       name: p.name,
       price: p.price,

@@ -113,4 +113,72 @@ router.post('/', async (req, res) => {
   }
 });
 
+/**
+ * PUT /products/:id e PATCH /products/:id
+ * Atualiza um produto cadastrado (nome, categoria, preço e controle de estoque).
+ */
+async function updateProductHandler(req, res) {
+  try {
+    const productId = Number(req.params.id);
+    if (!productId || Number.isNaN(productId)) {
+      return res.status(400).json({ error: 'ID do produto inválido.' });
+    }
+
+    const { name, category_id, price, stock_quantity } = req.body || {};
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'O nome do produto é obrigatório.' });
+    }
+
+    if (category_id === undefined || category_id === null || category_id === '' || Number.isNaN(Number(category_id))) {
+      return res.status(400).json({ error: 'A categoria (category_id) é obrigatória e deve ser válida.' });
+    }
+
+    const numericPrice = Number(price);
+    if (price === undefined || price === null || price === '' || Number.isNaN(numericPrice) || numericPrice < 0) {
+      return res.status(400).json({ error: 'O preço (price) deve ser um número maior ou igual a zero.' });
+    }
+
+    let parsedStock = null;
+    if (stock_quantity !== null && stock_quantity !== undefined && stock_quantity !== '') {
+      parsedStock = Number(stock_quantity);
+      if (!Number.isInteger(parsedStock) || parsedStock < 0) {
+        return res.status(400).json({
+          error: 'A quantidade em estoque (stock_quantity) deve ser nula (sem controle) ou um número inteiro maior ou igual a zero.'
+        });
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .update({
+        name: name.trim(),
+        category_id: Number(category_id),
+        price: Number(numericPrice.toFixed(2)),
+        stock_quantity: parsedStock
+      })
+      .eq('id', productId)
+      .select('*, categories ( id, name )')
+      .single();
+
+    if (error) {
+      const status = error.code === 'PGRST116' ? 404 : 400;
+      return res.status(status).json({ error: error.message });
+    }
+
+    return res.status(200).json({
+      ...data,
+      price: Number(data.price),
+      stock_quantity: data.stock_quantity === null || data.stock_quantity === undefined ? null : Number(data.stock_quantity),
+      has_stock_control: data.stock_quantity !== null && data.stock_quantity !== undefined,
+      category_name: data.categories ? data.categories.name : null
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro interno ao atualizar produto.', details: err.message });
+  }
+}
+
+router.put('/:id', updateProductHandler);
+router.patch('/:id', updateProductHandler);
+
 module.exports = router;
