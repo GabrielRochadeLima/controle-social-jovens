@@ -4,7 +4,7 @@ dotenv.config();
 const app = require('./app');
 const { DB_SCHEMA, supabase } = require('./config/supabase');
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3200;
 
 app.listen(PORT, () => {
   const mode = supabase.isMock ? 'Modo Local (In-Memory Mock)' : 'Conectado ao Supabase';
