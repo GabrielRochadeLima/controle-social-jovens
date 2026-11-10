@@ -555,6 +555,73 @@
         font-size: 0.78rem;
       }
     }
+
+    /* Estilos do Modo Teste e Badges de Ambiente */
+    .test-mode-banner {
+      background: linear-gradient(90deg, #b45309, #d97706);
+      color: #fff;
+      padding: 0.65rem 0.95rem;
+      border-radius: 0.65rem;
+      margin-bottom: 0.85rem;
+      box-shadow: 0 4px 14px rgba(217, 119, 6, 0.28);
+      border: 1px solid rgba(251, 191, 36, 0.45);
+    }
+    .test-banner-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      font-size: 0.84rem;
+    }
+    .test-banner-actions {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+    .btn-test-action {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      color: #fff;
+      padding: 0.32rem 0.65rem;
+      font-size: 0.78rem;
+      border-radius: 0.4rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .btn-test-action:hover {
+      background: rgba(0, 0, 0, 0.55);
+    }
+    .btn-test-exit {
+      background: #0f172a;
+      border-color: #fbbf24;
+      color: #fde68a;
+    }
+    .btn-test-exit:hover {
+      background: #1e293b;
+    }
+    .env-pill {
+      font-size: 0.64rem;
+      padding: 0.12rem 0.44rem;
+      border-radius: 999px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-left: 0.35rem;
+      vertical-align: middle;
+      display: inline-block;
+    }
+    .env-pill-prod {
+      background: rgba(16, 185, 129, 0.18);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.45);
+    }
+    .env-pill-test {
+      background: rgba(245, 158, 11, 0.25);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.6);
+    }
   </style>
 </head>
 <body>
@@ -562,7 +629,10 @@
     <div class="brand-box">
       <img src="./icon-192.png?v=3" alt="Detroit Jovens" class="brand-logo" />
       <div>
-        <h1>Controle Social Jovens</h1>
+        <h1 style="display:flex;align-items:center;flex-wrap:wrap;gap:0.35rem;">
+          Controle Social Jovens
+          <span id="brand-env-badge" class="env-pill env-pill-prod">PROD</span>
+        </h1>
         <p>Eventos, Adesão, Pedidos e Produtos</p>
       </div>
     </div>
@@ -576,11 +646,25 @@
       <button type="button" class="nav-tab" id="tab-products" onclick="switchScreen('products')">
         📦 Produtos
       </button>
+      <button type="button" class="nav-tab" id="btn-env-toggle" onclick="toggleAppEnvironment()" style="color: #fbbf24; font-weight: 600;">
+        🧪 Modo Teste
+      </button>
       <button type="button" class="nav-tab" id="btn-install-pwa" onclick="installPwaApp()" style="display: none; color: #34d399;">
         📲 App
       </button>
     </nav>
   </header>
+
+  <!-- Faixa de Alerta do Ambiente de Testes -->
+  <aside id="test-mode-banner" class="test-mode-banner" style="display: none;">
+    <div class="test-banner-content">
+      <span>🧪 <strong>AMBIENTE DE TESTES ATIVO</strong> — Os pedidos e caixas aqui ficam isolados e NÃO alteram o banco de produção!</span>
+      <div class="test-banner-actions">
+        <button type="button" class="btn-test-action" onclick="resetTestDatabase()">🗑 Limpar / Resetar Testes</button>
+        <button type="button" class="btn-test-action btn-test-exit" onclick="setAppEnvironment('production')">⬅ Voltar para Produção</button>
+      </div>
+    </div>
+  </aside>
 
   <!-- Datalist de Autocomplete para Nomes de Clientes (evita duplicar nomes na contagem de adesão) -->
   <datalist id="customers-datalist"></datalist>
@@ -867,6 +951,10 @@
     const SCHEMA_NAME = 'controle-social-jovens';
     const STORAGE_KEY = 'csj_db_v1';
     const EVENTS_BRIDGE_KEY = 'csj_events_bridge_v1';
+    const TEST_STORAGE_KEY = 'csj_test_sandbox_v1';
+    const ENV_STORAGE_KEY = 'csj_app_env';
+    let currentEnv = localStorage.getItem(ENV_STORAGE_KEY) || 'production';
+
     const DEFAULT_SUPABASE_URL = 'https://irlxktcyucvckejrxunk.supabase.co';
     const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlybHhrdGN5dWN2Y2tlanJ4dW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNTMzNTcsImV4cCI6MjA3MzcyOTM1N30.9JqCS8cN_Lzrc1BYGYmVIpF9JPyLNUmxD0hKoNhStVA';
 
@@ -889,6 +977,7 @@
     }
 
     let cachedProducts = [];
+    let cachedCategories = [];
     let cachedEvents = [];
     let orderCart = [];
     let selectedEventId = localStorage.getItem('csj_selected_event_id') || '';
@@ -1142,6 +1231,122 @@
       };
     }
 
+    function isTestEnv() {
+      return currentEnv === 'test';
+    }
+
+    function loadTestDb() {
+      try {
+        const raw = localStorage.getItem(TEST_STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (_) {}
+      return null;
+    }
+
+    function saveTestDb(db) {
+      localStorage.setItem(TEST_STORAGE_KEY, JSON.stringify(db));
+    }
+
+    function initTestDbFromProduction(prodCategories = [], prodProducts = []) {
+      const cats = (prodCategories && prodCategories.length > 0)
+        ? JSON.parse(JSON.stringify(prodCategories))
+        : getDefaultSeed().categories;
+      const prods = (prodProducts && prodProducts.length > 0)
+        ? JSON.parse(JSON.stringify(prodProducts))
+        : getDefaultSeed().products;
+      const today = new Date().toISOString().slice(0, 10);
+      const testDb = {
+        categories: cats,
+        products: prods,
+        events: [
+          { id: 1, name: 'Social de Teste', event_date: today, status: 'aberto', attendance_count: 25 }
+        ],
+        orders: [],
+        order_items: []
+      };
+      saveTestDb(testDb);
+      return testDb;
+    }
+
+    function updateEnvUi() {
+      const banner = document.getElementById('test-mode-banner');
+      const envBtn = document.getElementById('btn-env-toggle');
+      const envBadge = document.getElementById('brand-env-badge');
+      if (isTestEnv()) {
+        if (banner) banner.style.display = 'block';
+        if (envBtn) {
+          envBtn.textContent = '🟢 Ir p/ Produção';
+          envBtn.style.color = '#34d399';
+        }
+        if (envBadge) {
+          envBadge.textContent = 'TESTE';
+          envBadge.className = 'env-pill env-pill-test';
+        }
+      } else {
+        if (banner) banner.style.display = 'none';
+        if (envBtn) {
+          envBtn.textContent = '🧪 Modo Teste';
+          envBtn.style.color = '#fbbf24';
+        }
+        if (envBadge) {
+          envBadge.textContent = 'PROD';
+          envBadge.className = 'env-pill env-pill-prod';
+        }
+      }
+    }
+
+    async function setAppEnvironment(target) {
+      if (target === 'test') {
+        let testDb = loadTestDb();
+        if (!testDb) {
+          initTestDbFromProduction(cachedCategories, cachedProducts);
+        }
+        currentEnv = 'test';
+        localStorage.setItem(ENV_STORAGE_KEY, 'test');
+        orderCart = [];
+        selectedEventId = '1';
+        localStorage.setItem('csj_selected_event_id', '1');
+        showToast('🧪 Modo Teste ATIVADO! Seus testes não alteram o banco real.');
+      } else {
+        currentEnv = 'production';
+        localStorage.setItem(ENV_STORAGE_KEY, 'production');
+        orderCart = [];
+        selectedEventId = localStorage.getItem('csj_selected_event_id') || '';
+        showToast('🟢 Modo Produção ATIVADO! Conectado aos dados oficiais.');
+      }
+      updateEnvUi();
+      await loadDashboard();
+    }
+
+    function toggleAppEnvironment() {
+      setAppEnvironment(currentEnv === 'test' ? 'production' : 'test');
+    }
+
+    async function resetTestDatabase() {
+      if (!window.confirm('Deseja realmente limpar todos os pedidos e eventos de teste? Os produtos de produção serão mantidos para novos testes.')) {
+        return;
+      }
+      let prodCats = cachedCategories;
+      let prodProds = cachedProducts;
+      try {
+        if (sbClient && backendMode === 'supabase') {
+          const [{ data: cData }, { data: pData }] = await Promise.all([
+            sbClient.from('categories').select('*').order('id'),
+            sbClient.from('products').select('*').order('id')
+          ]);
+          if (cData && cData.length) prodCats = cData;
+          if (pData && pData.length) prodProds = pData.map((p) => ({ ...p, price: Number(p.price) }));
+        }
+      } catch (_) {}
+
+      initTestDbFromProduction(prodCats, prodProds);
+      orderCart = [];
+      selectedEventId = '1';
+      localStorage.setItem('csj_selected_event_id', '1');
+      showToast('Ambiente de testes resetado com sucesso!');
+      await loadDashboard();
+    }
+
     let backendMode = null;
     let sbClient = null;
     let supabaseHasEventsTable = null;
@@ -1189,6 +1394,16 @@
 
     const DataService = {
       async getEvents(allOrders = null) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const orders = allOrders || (await this.getOrders());
+          return [...(testDb.events || [])]
+            .sort((a, b) => b.id - a.id)
+            .map((ev) => {
+              const evOrders = orders.filter((o) => Number(o.event_id || 1) === Number(ev.id));
+              return computeEventMetrics(ev, evOrders);
+            });
+        }
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch('/events');
@@ -1223,6 +1438,14 @@
       },
 
       async createEvent({ name, event_date, attendance_count, status }) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const nextId = (testDb.events || []).reduce((m, e) => Math.max(m, e.id), 0) + 1;
+          const ev = { id: nextId, name, event_date, status: status || 'aberto', attendance_count: Number(attendance_count || 0) };
+          testDb.events.push(ev);
+          saveTestDb(testDb);
+          return computeEventMetrics(ev, []);
+        }
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch('/events', {
@@ -1260,6 +1483,14 @@
       },
 
       async updateEvent(id, payload) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const ev = (testDb.events || []).find((e) => Number(e.id) === Number(id));
+          if (!ev) throw new Error('Evento de teste não encontrado');
+          Object.assign(ev, payload);
+          saveTestDb(testDb);
+          return ev;
+        }
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch(`/events/${id}`, {
@@ -1298,6 +1529,10 @@
       },
 
       async getCategories() {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          return testDb.categories || [];
+        }
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch('/categories');
@@ -1312,6 +1547,16 @@
       },
 
       async createCategory({ name }) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const exists = (testDb.categories || []).some((c) => c.name.toLowerCase() === name.toLowerCase());
+          if (exists) throw new Error('Já existe uma categoria com este nome.');
+          const nextId = (testDb.categories || []).reduce((m, c) => Math.max(m, c.id), 0) + 1;
+          const created = { id: nextId, name };
+          testDb.categories.push(created);
+          saveTestDb(testDb);
+          return created;
+        }
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch('/categories', {
@@ -1343,6 +1588,13 @@
       },
 
       async getProducts() {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          return (testDb.products || []).map((p) => {
+            const cat = (testDb.categories || []).find((c) => Number(c.id) === Number(p.category_id));
+            return { ...p, price: Number(p.price), category_name: cat ? cat.name : '-' };
+          });
+        }
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch('/products');
@@ -1365,6 +1617,20 @@
       },
 
       async createProduct({ name, category_id, price, stock_quantity }) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const nextId = (testDb.products || []).reduce((m, p) => Math.max(m, p.id), 0) + 1;
+          const newProd = {
+            id: nextId,
+            name,
+            category_id: Number(category_id),
+            price: Number(price),
+            stock_quantity: stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity)
+          };
+          testDb.products.push(newProd);
+          saveTestDb(testDb);
+          return newProd;
+        }
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch('/products', {
@@ -1400,6 +1666,17 @@
       },
 
       async updateProduct(id, { name, category_id, price, stock_quantity }) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const prod = (testDb.products || []).find((p) => Number(p.id) === Number(id));
+          if (!prod) throw new Error('Produto de teste não encontrado');
+          prod.name = name;
+          prod.category_id = Number(category_id);
+          prod.price = Number(price);
+          prod.stock_quantity = stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity);
+          saveTestDb(testDb);
+          return prod;
+        }
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch(`/products/${id}`, {
@@ -1438,6 +1715,23 @@
       },
 
       async getOrders() {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          return [...(testDb.orders || [])]
+            .sort((a, b) => b.id - a.id)
+            .map((o) =>
+              enrichOrderFinancials({
+                ...o,
+                event_id: o.event_id || 1,
+                order_items: (testDb.order_items || [])
+                  .filter((i) => Number(i.order_id) === Number(o.id))
+                  .map((i) => ({
+                    ...i,
+                    products: (testDb.products || []).find((p) => Number(p.id) === Number(i.product_id)) || { name: 'Item' }
+                  }))
+              })
+            );
+        }
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch('/orders');
@@ -1479,6 +1773,61 @@
       },
 
       async createOrder({ customer_name, payment_method, payment_status, paid_amount, items, event_id }) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          let total = 0;
+          for (const item of items) {
+            const prod = (testDb.products || []).find((p) => Number(p.id) === Number(item.product_id));
+            if (!prod) throw new Error('Produto não encontrado.');
+            if (prod.stock_quantity !== null && prod.stock_quantity !== undefined && prod.stock_quantity < item.quantity) {
+              throw new Error(`Estoque insuficiente para "${prod.name}". Disponível: ${prod.stock_quantity}`);
+            }
+            total += Number(prod.price) * Number(item.quantity);
+          }
+
+          const finalTotal = Number(total.toFixed(2));
+          let finalPaidAmount = payment_status === 'pago' ? finalTotal : 0;
+          if (paid_amount !== undefined && paid_amount !== null && paid_amount !== '') {
+            finalPaidAmount = Number(Number(paid_amount).toFixed(2));
+            if (Number.isNaN(finalPaidAmount) || finalPaidAmount < 0 || finalPaidAmount > finalTotal) {
+              throw new Error(`O valor pago agora deve estar entre R$ 0,00 e ${fmtBRL(finalTotal)}.`);
+            }
+          }
+          if (payment_status === 'parcial' && (finalPaidAmount <= 0 || finalPaidAmount >= finalTotal)) {
+            throw new Error(`Para pagamento parcial, informe um valor maior que R$ 0,00 e menor que ${fmtBRL(finalTotal)}.`);
+          }
+          const dbPaymentStatus = finalPaidAmount >= finalTotal ? 'pago' : 'pendente';
+
+          const nextOrderId = (testDb.orders || []).reduce((m, o) => Math.max(m, o.id), 0) + 1;
+          const newOrder = {
+            id: nextOrderId,
+            event_id: event_id ? Number(event_id) : 1,
+            customer_name,
+            payment_method,
+            payment_status: dbPaymentStatus,
+            total_amount: finalTotal,
+            paid_amount: finalPaidAmount,
+            created_at: new Date().toISOString()
+          };
+          testDb.orders.push(newOrder);
+
+          let nextItemId = (testDb.order_items || []).reduce((m, i) => Math.max(m, i.id), 0) + 1;
+          for (const item of items) {
+            const prod = (testDb.products || []).find((p) => Number(p.id) === Number(item.product_id));
+            testDb.order_items.push({
+              id: nextItemId++,
+              order_id: nextOrderId,
+              product_id: prod.id,
+              quantity: Number(item.quantity),
+              unit_price: Number(prod.price)
+            });
+            if (prod.stock_quantity !== null && prod.stock_quantity !== undefined) {
+              prod.stock_quantity -= Number(item.quantity);
+            }
+          }
+          saveTestDb(testDb);
+          return enrichOrderFinancials(newOrder);
+        }
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch('/orders', {
@@ -1617,6 +1966,21 @@
       },
 
       async payOrder(orderId, amount = null) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const ord = (testDb.orders || []).find((o) => Number(o.id) === Number(orderId));
+          if (!ord) throw new Error('Pedido de teste não encontrado');
+          const fin = enrichOrderFinancials(ord);
+          const addAmount = amount !== null ? Number(Number(amount).toFixed(2)) : fin.remaining_amount;
+          if (Number.isNaN(addAmount) || addAmount <= 0 || addAmount > fin.remaining_amount + 0.001) {
+            throw new Error(`Informe um valor válido entre R$ 0,01 e ${fmtBRL(fin.remaining_amount)}.`);
+          }
+          const newPaid = Number(Math.min(fin.total_amount, fin.paid_amount + addAmount).toFixed(2));
+          ord.paid_amount = newPaid;
+          ord.payment_status = newPaid >= fin.total_amount ? 'pago' : 'pendente';
+          saveTestDb(testDb);
+          return enrichOrderFinancials(ord);
+        }
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch(`/orders/${orderId}/pay`, {
@@ -1783,8 +2147,10 @@
         ]);
         const events = await DataService.getEvents(allOrders);
 
+        cachedCategories = categories || [];
         cachedProducts = products || [];
         cachedEvents = events || [];
+        updateEnvUi();
 
         // Garantir que haja ao menos 1 evento selecionado
         if (!selectedEventId || (selectedEventId !== 'all' && !cachedEvents.some((e) => String(e.id) === String(selectedEventId)))) {
@@ -2269,6 +2635,7 @@
       }
     });
 
+    updateEnvUi();
     loadDashboard();
 
     // Registro do Service Worker e suporte a Instalação PWA no Celular (Android / iOS)
