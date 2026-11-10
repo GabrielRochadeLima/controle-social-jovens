@@ -232,6 +232,12 @@ class MockQueryBuilder {
           }
           if (this.table === 'orders') {
             newRow.total_amount = Number(newRow.total_amount);
+            newRow.paid_amount =
+              newRow.paid_amount !== undefined && newRow.paid_amount !== null
+                ? Number(newRow.paid_amount)
+                : newRow.payment_status === 'pago'
+                  ? Number(newRow.total_amount)
+                  : 0;
             newRow.event_id = newRow.event_id === undefined || newRow.event_id === null || newRow.event_id === '' ? null : Number(newRow.event_id);
           }
           if (this.table === 'order_items') {

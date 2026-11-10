@@ -2,7 +2,24 @@ const express = require('express');
 const router = express.Router();
 const { supabase } = require('../config/supabase');
 
-const VALID_STATUSES = ['pago', 'pendente'];
+const VALID_STATUSES = ['pago', 'pendente', 'parcial'];
+
+function computeOrderFinancials(order) {
+  const total = Number(order.total_amount) || 0;
+  const status = String(order.payment_status || '').toLowerCase();
+  const hasExplicitPaid = order.paid_amount !== undefined && order.paid_amount !== null;
+  const rawPaid = hasExplicitPaid ? Number(order.paid_amount) : status === 'pago' ? total : 0;
+  const paidAmount = status === 'pago' && (!hasExplicitPaid || rawPaid === 0)
+    ? total
+    : Number(Math.min(total, Math.max(0, rawPaid)).toFixed(2));
+  const remainingAmount = Number(Math.max(0, total - paidAmount).toFixed(2));
+  return {
+    total_amount: Number(total.toFixed(2)),
+    paid_amount: paidAmount,
+    remaining_amount: remainingAmount,
+    is_partial: status === 'pendente' && paidAmount > 0 && remainingAmount > 0
+  };
+}
 
 /**
  * GET /orders
@@ -35,16 +52,19 @@ router.get('/', async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
 
-    const formatted = (data || []).map((order) => ({
-      ...order,
-      total_amount: Number(order.total_amount),
-      order_items: (order.order_items || []).map((item) => ({
-        ...item,
-        quantity: Number(item.quantity),
-        unit_price: Number(item.unit_price),
-        subtotal: Number((Number(item.quantity) * Number(item.unit_price)).toFixed(2))
-      }))
-    }));
+    const formatted = (data || []).map((order) => {
+      const fin = computeOrderFinancials(order);
+      return {
+        ...order,
+        ...fin,
+        order_items: (order.order_items || []).map((item) => ({
+          ...item,
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          subtotal: Number((Number(item.quantity) * Number(item.unit_price)).toFixed(2))
+        }))
+      };
+    });
 
     return res.status(200).json(formatted);
   } catch (err) {
@@ -61,7 +81,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { customer_name, payment_method, payment_status, items, event_id } = req.body || {};
+    const { customer_name, payment_method, payment_status, items, event_id, paid_amount } = req.body || {};
 
     if (!customer_name || typeof customer_name !== 'string' || !customer_name.trim()) {
       return res.status(400).json({ error: 'O nome do cliente (customer_name) é obrigatório.' });
@@ -170,13 +190,37 @@ router.post('/', async (req, res) => {
 
     totalAmount = Number(totalAmount.toFixed(2));
 
+    // Calcular paid_amount inicial e status efetivo no banco ('pago' ou 'pendente')
+    let initialPaidAmount = 0;
+    let dbPaymentStatus = normalizedStatus === 'pago' ? 'pago' : 'pendente';
+
+    if (normalizedStatus === 'pago') {
+      initialPaidAmount = totalAmount;
+    } else if (paid_amount !== undefined && paid_amount !== null && paid_amount !== '') {
+      const parsedPaid = Number(paid_amount);
+      if (Number.isNaN(parsedPaid) || parsedPaid < 0) {
+        return res.status(400).json({ error: 'O valor pago inicialmente (paid_amount) deve ser >= 0.' });
+      }
+      if (parsedPaid > totalAmount) {
+        return res.status(400).json({ error: `O valor pago (${parsedPaid}) não pode ser maior que o total do pedido (${totalAmount}).` });
+      }
+      initialPaidAmount = Number(parsedPaid.toFixed(2));
+      if (initialPaidAmount >= totalAmount && totalAmount > 0) {
+        dbPaymentStatus = 'pago';
+        initialPaidAmount = totalAmount;
+      } else {
+        dbPaymentStatus = 'pendente';
+      }
+    }
+
     // 1. Inserir o Pedido na tabela orders
     const orderRowPayload = {
       customer_name: customer_name.trim(),
       payment_method: payment_method.trim().toLowerCase(),
-      payment_status: normalizedStatus,
+      payment_status: dbPaymentStatus,
       total_amount: totalAmount,
-      paid_at: normalizedStatus === 'pago' ? new Date().toISOString() : null
+      paid_amount: initialPaidAmount,
+      paid_at: dbPaymentStatus === 'pago' ? new Date().toISOString() : null
     };
     if (parsedEventId !== null) {
       orderRowPayload.event_id = parsedEventId;
@@ -219,9 +263,10 @@ router.post('/', async (req, res) => {
       }
     }
 
+    const fin = computeOrderFinancials({ ...createdOrder, paid_amount: initialPaidAmount });
     return res.status(201).json({
       ...createdOrder,
-      total_amount: Number(createdOrder.total_amount),
+      ...fin,
       order_items: (insertedItems || []).map((item) => ({
         ...item,
         quantity: Number(item.quantity),
@@ -264,9 +309,36 @@ router.patch('/:id/pay', async (req, res) => {
       return res.status(400).json({ error: `O Pedido #${orderId} já consta como pago.` });
     }
 
+    const currentFin = computeOrderFinancials(existingOrder);
+    const rawAmount = req.body && req.body.amount !== undefined && req.body.amount !== null && req.body.amount !== ''
+      ? Number(req.body.amount)
+      : null;
+
+    let newPaidAmount = currentFin.total_amount;
+    let newStatus = 'pago';
+
+    if (rawAmount !== null) {
+      if (Number.isNaN(rawAmount) || rawAmount <= 0) {
+        return res.status(400).json({ error: 'O valor do pagamento parcial (amount) deve ser maior que zero.' });
+      }
+      if (rawAmount > currentFin.remaining_amount + 0.001) {
+        return res.status(400).json({
+          error: `O valor informado (${rawAmount}) é maior que o saldo restante do pedido (${currentFin.remaining_amount}).`
+        });
+      }
+      newPaidAmount = Number(Math.min(currentFin.total_amount, currentFin.paid_amount + rawAmount).toFixed(2));
+      if (newPaidAmount >= currentFin.total_amount - 0.001) {
+        newPaidAmount = currentFin.total_amount;
+        newStatus = 'pago';
+      } else {
+        newStatus = 'pendente';
+      }
+    }
+
     const updatePayload = {
-      payment_status: 'pago',
-      paid_at: new Date().toISOString()
+      payment_status: newStatus,
+      paid_amount: newPaidAmount,
+      paid_at: newStatus === 'pago' ? new Date().toISOString() : null
     };
 
     if (req.body && req.body.payment_method && String(req.body.payment_method).trim()) {
@@ -284,9 +356,10 @@ router.patch('/:id/pay', async (req, res) => {
       return res.status(400).json({ error: updateError.message });
     }
 
+    const updatedFin = computeOrderFinancials(updatedOrder);
     return res.status(200).json({
       ...updatedOrder,
-      total_amount: Number(updatedOrder.total_amount)
+      ...updatedFin
     });
   } catch (err) {
     return res.status(500).json({ error: 'Erro interno ao dar baixa no pedido.', details: err.message });

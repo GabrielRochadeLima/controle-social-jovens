@@ -56,13 +56,16 @@ CREATE TABLE IF NOT EXISTS "controle-social-jovens".orders (
     payment_method VARCHAR(50) NOT NULL,
     payment_status VARCHAR(20) NOT NULL CHECK (payment_status IN ('pago', 'pendente')),
     total_amount NUMERIC(10, 2) NOT NULL CHECK (total_amount >= 0),
+    paid_amount NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (paid_amount >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     paid_at TIMESTAMPTZ NULL
 );
 
--- Caso a tabela orders já exista sem a coluna event_id:
+-- Caso a tabela orders já exista sem as colunas event_id ou paid_amount:
 ALTER TABLE "controle-social-jovens".orders
     ADD COLUMN IF NOT EXISTS event_id BIGINT NULL REFERENCES "controle-social-jovens".events(id) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "controle-social-jovens".orders
+    ADD COLUMN IF NOT EXISTS paid_amount NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (paid_amount >= 0);
 
 -- 3.4. Tabela de Itens do Pedido (order_items)
 CREATE TABLE IF NOT EXISTS "controle-social-jovens".order_items (

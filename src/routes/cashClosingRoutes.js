@@ -48,12 +48,24 @@ router.get('/', async (req, res) => {
         .replace(/\s+/g, ' ');
       if (buyerKey) uniqueBuyersSet.add(buyerKey);
 
-      if (status === 'pago') {
-        totalPaid += amount;
+      const rawPaid =
+        status === 'pago'
+          ? amount
+          : order.paid_amount !== undefined && order.paid_amount !== null
+          ? Number(order.paid_amount)
+          : 0;
+      const paidAmount = Number(Math.min(amount, Math.max(0, rawPaid)).toFixed(2));
+      const remainingAmount = Number(Math.max(0, amount - paidAmount).toFixed(2));
+
+      if (paidAmount > 0) {
+        totalPaid += paidAmount;
+        byPaymentMethod[method] = Number(((byPaymentMethod[method] || 0) + paidAmount).toFixed(2));
+      }
+
+      if (status === 'pago' || remainingAmount <= 0) {
         paidCount += 1;
-        byPaymentMethod[method] = Number(((byPaymentMethod[method] || 0) + amount).toFixed(2));
-      } else if (status === 'pendente') {
-        totalPending += amount;
+      } else {
+        totalPending += remainingAmount;
         pendingCount += 1;
         pendingOrders.push({
           id: order.id,
@@ -62,6 +74,9 @@ router.get('/', async (req, res) => {
           payment_method: order.payment_method,
           payment_status: order.payment_status,
           total_amount: Number(amount.toFixed(2)),
+          paid_amount: paidAmount,
+          remaining_amount: remainingAmount,
+          is_partial: paidAmount > 0 && remainingAmount > 0,
           created_at: order.created_at,
           order_items: order.order_items || []
         });
@@ -77,7 +92,13 @@ router.get('/', async (req, res) => {
         )
       : [];
     const otherPendingTotal = Number(
-      otherPendingOrders.reduce((acc, o) => acc + (Number(o.total_amount) || 0), 0).toFixed(2)
+      otherPendingOrders
+        .reduce((acc, o) => {
+          const tot = Number(o.total_amount) || 0;
+          const pd = Math.min(tot, Math.max(0, Number(o.paid_amount || 0)));
+          return acc + Math.max(0, tot - pd);
+        }, 0)
+        .toFixed(2)
     );
 
     totalPaid = Number(totalPaid.toFixed(2));

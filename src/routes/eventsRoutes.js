@@ -24,11 +24,11 @@ function enrichEventMetrics(event, eventOrders = []) {
       uniqueMap.set(key, String(order.customer_name).trim());
     }
     const amt = Number(order.total_amount) || 0;
-    if (String(order.payment_status).toLowerCase() === 'pago') {
-      totalPaid += amt;
-    } else {
-      totalPending += amt;
-    }
+    const isPaid = String(order.payment_status).toLowerCase() === 'pago';
+    const paidAmt = isPaid ? amt : Math.min(amt, Math.max(0, Number(order.paid_amount || 0)));
+    const remAmt = Math.max(0, amt - paidAmt);
+    totalPaid += paidAmt;
+    totalPending += remAmt;
   }
 
   const uniqueBuyersCount = uniqueMap.size;

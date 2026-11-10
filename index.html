@@ -294,6 +294,7 @@
     }
     .tag-pago, .tag-aberto { background: rgba(16, 185, 129, 0.2); color: #34d399; }
     .tag-pendente, .tag-agendado { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .tag-parcial { background: rgba(59, 130, 246, 0.22); color: #60a5fa; }
     .tag-encerrado { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
 
     /* Cards de Evento e Barra de Adesão */
@@ -708,11 +709,16 @@
             </div>
             <div>
               <label for="order-status">Status do Pagamento</label>
-              <select id="order-status" style="width: 100%;">
+              <select id="order-status" onchange="onOrderStatusChange()" style="width: 100%;">
                 <option value="pago">Pago na hora</option>
-                <option value="pendente">Pendente</option>
+                <option value="pendente">Pendente (Pagar depois)</option>
+                <option value="parcial">Pagamento Parcial (Entrada)</option>
               </select>
             </div>
+          </div>
+          <div id="partial-entry-box" style="display: none; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.35); padding: 0.6rem; border-radius: 0.5rem;">
+            <label for="order-paid-now" style="color: #93c5fd;">Valor Pago Agora / Entrada (R$)</label>
+            <input type="number" id="order-paid-now" step="0.50" min="0.01" placeholder="Ex: 10.00 (o restante ficará pendente)" style="width: 100%;" />
           </div>
           <div style="display: grid; grid-template-columns: 1fr 78px auto; gap: 0.45rem; align-items: end;">
             <div>
@@ -1055,17 +1061,29 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
     }
 
-    // Bridge local para Eventos caso a tabela events ainda não tenha sido criada no Supabase SQL Editor
+    function onOrderStatusChange() {
+      const statusEl = document.getElementById('order-status');
+      const boxEl = document.getElementById('partial-entry-box');
+      if (!statusEl || !boxEl) return;
+      boxEl.style.display = statusEl.value === 'parcial' ? 'block' : 'none';
+    }
+
+    // Bridge local para Eventos e Pagamentos Parciais caso a coluna paid_amount ainda não tenha sido criada no Supabase SQL Editor
     function loadEventsBridge() {
       try {
         const raw = localStorage.getItem(EVENTS_BRIDGE_KEY);
-        if (raw) return JSON.parse(raw);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (!parsed.paidAmountsMap) parsed.paidAmountsMap = {};
+          return parsed;
+        }
       } catch (_) {}
       const initial = {
         events: [
           { id: 1, name: 'Social de Jovens', event_date: new Date().toISOString().slice(0, 10), status: 'aberto', attendance_count: 30 }
         ],
-        orderEventMap: {}
+        orderEventMap: {},
+        paidAmountsMap: {}
       };
       localStorage.setItem(EVENTS_BRIDGE_KEY, JSON.stringify(initial));
       return initial;
@@ -1075,6 +1093,25 @@
       localStorage.setItem(EVENTS_BRIDGE_KEY, JSON.stringify(bridge));
     }
 
+    function enrichOrderFinancials(order, bridgePaidMap = {}) {
+      const total = Number(Number(order.total_amount || 0).toFixed(2));
+      const isPaid = String(order.payment_status || '').toLowerCase() === 'pago';
+      const rawPaid = isPaid
+        ? total
+        : order.paid_amount !== undefined && order.paid_amount !== null
+        ? Number(order.paid_amount)
+        : Number(bridgePaidMap[order.id] || 0);
+      const paid = Number(Math.min(total, Math.max(0, rawPaid)).toFixed(2));
+      const remaining = Number(Math.max(0, total - paid).toFixed(2));
+      return {
+        ...order,
+        total_amount: total,
+        paid_amount: paid,
+        remaining_amount: remaining,
+        is_partial: paid > 0 && remaining > 0
+      };
+    }
+
     function computeEventMetrics(ev, evOrders) {
       const uniqueMap = new Map();
       let totalPaid = 0;
@@ -1082,9 +1119,9 @@
       for (const o of evOrders) {
         const k = normalizeCustomerKey(o.customer_name);
         if (k && !uniqueMap.has(k)) uniqueMap.set(k, String(o.customer_name).trim());
-        const amt = Number(o.total_amount) || 0;
-        if (o.payment_status === 'pago') totalPaid += amt;
-        else totalPending += amt;
+        const fin = enrichOrderFinancials(o);
+        totalPaid += fin.paid_amount;
+        totalPending += fin.remaining_amount;
       }
       const uniqueBuyersCount = uniqueMap.size;
       const attendanceCount = Number(ev.attendance_count || 0);
@@ -1404,7 +1441,8 @@
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch('/orders');
-          return r.json();
+          const list = await r.json();
+          return (list || []).map((o) => enrichOrderFinancials(o));
         }
         if (mode === 'supabase') {
           const { data, error } = await sbClient
@@ -1413,37 +1451,44 @@
             .order('id', { ascending: false });
           if (error) throw new Error(error.message);
           const bridge = loadEventsBridge();
-          return (data || []).map((o) => ({
-            ...o,
-            event_id: o.event_id || bridge.orderEventMap[o.id] || 1
-          }));
+          return (data || []).map((o) =>
+            enrichOrderFinancials(
+              {
+                ...o,
+                event_id: o.event_id || bridge.orderEventMap[o.id] || 1
+              },
+              bridge.paidAmountsMap
+            )
+          );
         }
         const db = loadLocalDb();
         return [...db.orders]
           .sort((a, b) => b.id - a.id)
-          .map((o) => ({
-            ...o,
-            event_id: o.event_id || 1,
-            order_items: db.order_items
-              .filter((i) => i.order_id === o.id)
-              .map((i) => ({
-                ...i,
-                products: db.products.find((p) => p.id === i.product_id) || { name: 'Item' }
-              }))
-          }));
+          .map((o) =>
+            enrichOrderFinancials({
+              ...o,
+              event_id: o.event_id || 1,
+              order_items: db.order_items
+                .filter((i) => i.order_id === o.id)
+                .map((i) => ({
+                  ...i,
+                  products: db.products.find((p) => p.id === i.product_id) || { name: 'Item' }
+                }))
+            })
+          );
       },
 
-      async createOrder({ customer_name, payment_method, payment_status, items, event_id }) {
+      async createOrder({ customer_name, payment_method, payment_status, paid_amount, items, event_id }) {
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch('/orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ customer_name, payment_method, payment_status, items, event_id })
+            body: JSON.stringify({ customer_name, payment_method, payment_status, paid_amount, items, event_id })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao criar pedido');
-          return data;
+          return enrichOrderFinancials(data);
         }
         if (mode === 'supabase') {
           const ids = items.map((i) => Number(i.product_id));
@@ -1460,23 +1505,52 @@
             total += Number(prod.price) * Number(item.quantity);
           }
 
-          const insertPayload = { customer_name, payment_method, payment_status, total_amount: Number(total.toFixed(2)) };
+          const finalTotal = Number(total.toFixed(2));
+          let finalPaidAmount = payment_status === 'pago' ? finalTotal : 0;
+          if (paid_amount !== undefined && paid_amount !== null && paid_amount !== '') {
+            finalPaidAmount = Number(Number(paid_amount).toFixed(2));
+            if (Number.isNaN(finalPaidAmount) || finalPaidAmount < 0 || finalPaidAmount > finalTotal) {
+              throw new Error(`O valor pago agora deve estar entre R$ 0,00 e ${fmtBRL(finalTotal)}.`);
+            }
+          }
+          if (payment_status === 'parcial' && (finalPaidAmount <= 0 || finalPaidAmount >= finalTotal)) {
+            throw new Error(`Para pagamento parcial, informe um valor maior que R$ 0,00 e menor que ${fmtBRL(finalTotal)}.`);
+          }
+          const dbPaymentStatus = finalPaidAmount >= finalTotal ? 'pago' : 'pendente';
+
+          const insertPayload = {
+            customer_name,
+            payment_method,
+            payment_status: dbPaymentStatus,
+            total_amount: finalTotal,
+            paid_amount: finalPaidAmount
+          };
           if (supabaseHasEventsTable && event_id) {
             insertPayload.event_id = Number(event_id);
           }
 
-          const { data: ord, error: oErr } = await sbClient
+          let { data: ord, error: oErr } = await sbClient
             .from('orders')
             .insert([insertPayload])
             .select()
             .single();
+
+          if (oErr && String(oErr.message || '').includes('paid_amount')) {
+            delete insertPayload.paid_amount;
+            const retry = await sbClient.from('orders').insert([insertPayload]).select().single();
+            ord = retry.data;
+            oErr = retry.error;
+          }
           if (oErr) throw new Error(oErr.message);
 
+          const bridge = loadEventsBridge();
           if (!supabaseHasEventsTable && event_id) {
-            const bridge = loadEventsBridge();
             bridge.orderEventMap[ord.id] = Number(event_id);
-            saveEventsBridge(bridge);
           }
+          if (finalPaidAmount > 0 && finalPaidAmount < finalTotal) {
+            bridge.paidAmountsMap[ord.id] = finalPaidAmount;
+          }
+          saveEventsBridge(bridge);
 
           for (const item of items) {
             const prod = prods.find((p) => Number(p.id) === Number(item.product_id));
@@ -1490,7 +1564,7 @@
                 .eq('id', prod.id);
             }
           }
-          return ord;
+          return enrichOrderFinancials(ord, bridge.paidAmountsMap);
         }
 
         const db = loadLocalDb();
@@ -1504,14 +1578,22 @@
           total += Number(prod.price) * Number(item.quantity);
         }
 
+        const finalTotal = Number(total.toFixed(2));
+        let finalPaidAmount = payment_status === 'pago' ? finalTotal : 0;
+        if (paid_amount !== undefined && paid_amount !== null && paid_amount !== '') {
+          finalPaidAmount = Number(Number(paid_amount).toFixed(2));
+        }
+        const dbPaymentStatus = finalPaidAmount >= finalTotal ? 'pago' : 'pendente';
+
         const nextOrderId = db.orders.reduce((m, o) => Math.max(m, o.id), 0) + 1;
         const newOrder = {
           id: nextOrderId,
           event_id: event_id ? Number(event_id) : 1,
           customer_name,
           payment_method,
-          payment_status,
-          total_amount: Number(total.toFixed(2)),
+          payment_status: dbPaymentStatus,
+          total_amount: finalTotal,
+          paid_amount: finalPaidAmount,
           created_at: new Date().toISOString()
         };
         db.orders.push(newOrder);
@@ -1531,36 +1613,76 @@
           }
         }
         saveLocalDb(db);
-        return newOrder;
+        return enrichOrderFinancials(newOrder);
       },
 
-      async payOrder(orderId) {
+      async payOrder(orderId, amount = null) {
         const mode = await detectBackend();
         if (mode === 'express') {
           const r = await fetch(`/orders/${orderId}/pay`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            body: amount !== null ? JSON.stringify({ amount: Number(amount) }) : JSON.stringify({})
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao dar baixa');
-          return data;
+          return enrichOrderFinancials(data);
         }
         if (mode === 'supabase') {
-          const { data, error } = await sbClient
+          const { data: current, error: gErr } = await sbClient
             .from('orders')
-            .update({ payment_status: 'pago' })
+            .select('*')
+            .eq('id', Number(orderId))
+            .single();
+          if (gErr || !current) throw new Error((gErr && gErr.message) || 'Pedido não encontrado');
+
+          const bridge = loadEventsBridge();
+          const fin = enrichOrderFinancials(current, bridge.paidAmountsMap);
+          const addAmount = amount !== null ? Number(Number(amount).toFixed(2)) : fin.remaining_amount;
+          if (Number.isNaN(addAmount) || addAmount <= 0 || addAmount > fin.remaining_amount + 0.001) {
+            throw new Error(`Informe um valor válido entre R$ 0,01 e ${fmtBRL(fin.remaining_amount)}.`);
+          }
+
+          const newPaidAmount = Number(Math.min(fin.total_amount, fin.paid_amount + addAmount).toFixed(2));
+          const newStatus = newPaidAmount >= fin.total_amount ? 'pago' : 'pendente';
+
+          let { data, error } = await sbClient
+            .from('orders')
+            .update({ payment_status: newStatus, paid_amount: newPaidAmount })
             .eq('id', Number(orderId))
             .select()
             .single();
+
+          if (error && String(error.message || '').includes('paid_amount')) {
+            const retry = await sbClient
+              .from('orders')
+              .update({ payment_status: newStatus })
+              .eq('id', Number(orderId))
+              .select()
+              .single();
+            data = retry.data;
+            error = retry.error;
+          }
           if (error) throw new Error(error.message);
-          return data;
+
+          if (newStatus === 'pago') {
+            delete bridge.paidAmountsMap[orderId];
+          } else {
+            bridge.paidAmountsMap[orderId] = newPaidAmount;
+          }
+          saveEventsBridge(bridge);
+          return enrichOrderFinancials({ ...data, paid_amount: newPaidAmount }, bridge.paidAmountsMap);
         }
         const db = loadLocalDb();
         const ord = db.orders.find((o) => Number(o.id) === Number(orderId));
         if (!ord) throw new Error('Pedido não encontrado');
-        ord.payment_status = 'pago';
+        const fin = enrichOrderFinancials(ord);
+        const addAmount = amount !== null ? Number(Number(amount).toFixed(2)) : fin.remaining_amount;
+        const newPaid = Number(Math.min(fin.total_amount, fin.paid_amount + addAmount).toFixed(2));
+        ord.paid_amount = newPaid;
+        ord.payment_status = newPaid >= fin.total_amount ? 'pago' : 'pendente';
         saveLocalDb(db);
-        return ord;
+        return enrichOrderFinancials(ord);
       }
     };
 
@@ -1841,16 +1963,18 @@
         const pendingOrders = [];
 
         filteredOrders.forEach((o) => {
-          const amt = Number(o.total_amount) || 0;
-          if (o.payment_status === 'pago') {
-            totalPaid += amt;
-            paidCount++;
+          const fin = enrichOrderFinancials(o);
+          if (fin.paid_amount > 0) {
+            totalPaid += fin.paid_amount;
             const m = (o.payment_method || 'outros').toLowerCase();
-            byMethod[m] = Number(((byMethod[m] || 0) + amt).toFixed(2));
+            byMethod[m] = Number(((byMethod[m] || 0) + fin.paid_amount).toFixed(2));
+          }
+          if (o.payment_status === 'pago' || fin.remaining_amount <= 0) {
+            paidCount++;
           } else {
-            totalPending += amt;
+            totalPending += fin.remaining_amount;
             pendingCount++;
-            pendingOrders.push(o);
+            pendingOrders.push(fin);
           }
         });
 
@@ -1861,7 +1985,7 @@
             : allOrders.filter((o) => o.payment_status === 'pendente' && String(o.event_id || 1) !== String(selectedEventId));
         const otherAlertEl = document.getElementById('other-pending-alert');
         if (otherPending.length > 0) {
-          const otherSum = otherPending.reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+          const otherSum = otherPending.reduce((s, o) => s + enrichOrderFinancials(o).remaining_amount, 0);
           document.getElementById('other-pending-text').textContent =
             `⚠ Há ${otherPending.length} pedido(s) pendente(s) de outros eventos (${fmtBRL(otherSum)}).`;
           otherAlertEl.style.display = 'flex';
@@ -1919,9 +2043,9 @@
 
         // Preencher Resumo do Caixa (Tela 1)
         document.getElementById('stat-paid').textContent = fmtBRL(totalPaid);
-        document.getElementById('stat-paid-count').textContent = `${paidCount} pedido(s) pago(s)`;
+        document.getElementById('stat-paid-count').textContent = `${paidCount} pedido(s) quitado(s)`;
         document.getElementById('stat-pending').textContent = fmtBRL(totalPending);
-        document.getElementById('stat-pending-count').textContent = `${pendingCount} pedido(s) pendente(s)`;
+        document.getElementById('stat-pending-count').textContent = `${pendingCount} pedido(s) em aberto`;
 
         const methodsEntries = Object.entries(byMethod);
         document.getElementById('stat-methods').innerHTML = methodsEntries.length
@@ -1936,12 +2060,21 @@
         } else {
           pendingOrders.forEach((o) => {
             const tr = document.createElement('tr');
+            const valHtml = o.is_partial
+              ? `<div class="text-warning"><strong>Falta: ${fmtBRL(o.remaining_amount)}</strong></div>
+                 <div style="font-size:0.7rem;color:var(--muted);">Total ${fmtBRL(o.total_amount)} • Pago ${fmtBRL(o.paid_amount)}</div>`
+              : `<div class="text-warning"><strong>${fmtBRL(o.remaining_amount)}</strong></div>`;
             tr.innerHTML = `
               <td>#${o.id}</td>
               <td><strong>${o.customer_name}</strong></td>
               <td>${(o.payment_method || '').toUpperCase()}</td>
-              <td class="text-warning"><strong>${fmtBRL(o.total_amount)}</strong></td>
-              <td><button class="btn-success" onclick="handlePayOrder(${o.id})" style="padding:0.28rem 0.58rem;font-size:0.76rem;">Dar Baixa</button></td>
+              <td>${valHtml}</td>
+              <td>
+                <div style="display:flex;gap:0.3rem;flex-wrap:wrap;">
+                  <button type="button" class="btn-warning" onclick="handlePartialPayOrder(${o.id}, ${o.remaining_amount})" style="padding:0.26rem 0.5rem;font-size:0.74rem;">Parcial</button>
+                  <button type="button" class="btn-success" onclick="handlePayOrder(${o.id})" style="padding:0.26rem 0.5rem;font-size:0.74rem;">Quitar</button>
+                </div>
+              </td>
             `;
             pendingTbody.appendChild(tr);
           });
@@ -1954,17 +2087,25 @@
           ordersTbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido registrado neste evento ainda.</td></tr>';
         } else {
           filteredOrders.slice(0, 12).forEach((o) => {
+            const fin = enrichOrderFinancials(o);
             const itemsDesc = (o.order_items || [])
               .map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`)
               .join(', ');
-            const badgeClass = o.payment_status === 'pago' ? 'tag-pago' : 'tag-pendente';
+            let statusHtml = '';
+            if (o.payment_status === 'pago' || fin.remaining_amount <= 0) {
+              statusHtml = '<span class="tag tag-pago">pago</span>';
+            } else if (fin.is_partial) {
+              statusHtml = `<span class="tag tag-parcial">parcial (faltam ${fmtBRL(fin.remaining_amount)})</span>`;
+            } else {
+              statusHtml = '<span class="tag tag-pendente">pendente</span>';
+            }
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td>#${o.id}</td>
               <td>${o.customer_name}</td>
               <td style="font-size:0.76rem;color:var(--muted);">${itemsDesc || '-'}</td>
               <td>${fmtBRL(o.total_amount)}</td>
-              <td><span class="tag ${badgeClass}">${o.payment_status}</span></td>
+              <td>${statusHtml}</td>
             `;
             ordersTbody.appendChild(tr);
           });
@@ -1979,7 +2120,31 @@
     async function handlePayOrder(id) {
       try {
         await DataService.payOrder(id);
-        showToast(`Pedido #${id} marcado como PAGO!`);
+        showToast(`Pedido #${id} quitado com sucesso!`);
+        loadDashboard();
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
+
+    async function handlePartialPayOrder(id, remainingAmount) {
+      const raw = window.prompt(
+        `Pagamento Parcial do Pedido #${id}\nSaldo pendente atual: ${fmtBRL(remainingAmount)}\n\nQual valor (R$) o cliente está pagando agora?`,
+        ''
+      );
+      if (raw === null || !raw.trim()) return;
+      const amount = Number(raw.replace(',', '.').trim());
+      if (Number.isNaN(amount) || amount <= 0 || amount > Number(remainingAmount) + 0.001) {
+        showToast(`Informe um valor válido entre R$ 0,01 e ${fmtBRL(remainingAmount)}.`);
+        return;
+      }
+      try {
+        const updated = await DataService.payOrder(id, amount);
+        if (updated.payment_status === 'pago' || updated.remaining_amount <= 0) {
+          showToast(`Pedido #${id} quitado totalmente!`);
+        } else {
+          showToast(`Abatido ${fmtBRL(amount)} no Pedido #${id}! Restam ${fmtBRL(updated.remaining_amount)}.`);
+        }
         loadDashboard();
       } catch (err) {
         showToast(err.message);
@@ -2032,16 +2197,26 @@
                 }
               ];
 
+        const statusVal = document.getElementById('order-status').value;
+        const paidNowRaw = document.getElementById('order-paid-now').value.trim();
+        const paidAmountVal = statusVal === 'parcial' ? Number(paidNowRaw.replace(',', '.')) : undefined;
+
         const payload = {
           event_id: targetEvId,
           customer_name: document.getElementById('order-customer').value.trim(),
           payment_method: document.getElementById('order-method').value,
-          payment_status: document.getElementById('order-status').value,
+          payment_status: statusVal,
+          paid_amount: paidAmountVal,
           items: itemsToSend
         };
         const created = await DataService.createOrder(payload);
         document.getElementById('order-customer').value = '';
         document.getElementById('order-qty').value = '1';
+        document.getElementById('order-paid-now').value = '';
+        if (statusVal === 'parcial') {
+          document.getElementById('order-status').value = 'pago';
+          onOrderStatusChange();
+        }
         orderCart = [];
         renderOrderCart();
         showToast(`Pedido #${created.id} registrado (${fmtBRL(created.total_amount)})!`);

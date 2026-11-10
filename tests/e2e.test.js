@@ -535,4 +535,57 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
       orders_count: targetEv.orders_count
     });
   });
+
+  test('Teste 7: Pagamento Parcial na criação do pedido e abatimentos parciais até quitar', async () => {
+    // 7.1 Criar um pedido de 2x Cachorro-Quente (R$ 24,00) com entrada parcial de R$ 10,00
+    const partialOrderRes = await apiRequest('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        customer_name: 'Rafael Souza',
+        payment_method: 'pix',
+        payment_status: 'parcial',
+        paid_amount: 10.0,
+        items: [{ product_id: prodHotDogId, quantity: 2 }]
+      })
+    });
+    assert.equal(partialOrderRes.status, 201);
+    assert.equal(partialOrderRes.body.total_amount, 24.0);
+    assert.equal(partialOrderRes.body.paid_amount, 10.0);
+    assert.equal(partialOrderRes.body.remaining_amount, 14.0);
+    assert.equal(partialOrderRes.body.is_partial, true);
+    assert.equal(partialOrderRes.body.payment_status, 'pendente');
+
+    const partialId = partialOrderRes.body.id;
+
+    // 7.2 Verificar que o fechamento de caixa contabiliza os R$ 10,00 já pagos e R$ 14,00 pendentes
+    const closingMid1 = await apiRequest('/cash-closing');
+    assert.equal(closingMid1.status, 200);
+    assert.equal(closingMid1.body.total_pending, 14.0);
+    const pendingItem1 = closingMid1.body.pending_orders.find((o) => o.id === partialId);
+    assert.ok(pendingItem1, 'Pedido parcial deve aparecer na lista de pendentes pelo saldo restante');
+    assert.equal(pendingItem1.paid_amount, 10.0);
+    assert.equal(pendingItem1.remaining_amount, 14.0);
+
+    // 7.3 Abater mais R$ 6,00 parcialmente (total pago passa a R$ 16,00, restam R$ 8,00)
+    const payPart2 = await apiRequest(`/orders/${partialId}/pay`, {
+      method: 'PATCH',
+      body: JSON.stringify({ amount: 6.0 })
+    });
+    assert.equal(payPart2.status, 200);
+    assert.equal(payPart2.body.paid_amount, 16.0);
+    assert.equal(payPart2.body.remaining_amount, 8.0);
+    assert.equal(payPart2.body.payment_status, 'pendente');
+
+    // 7.4 Quitar os R$ 8,00 restantes
+    const payRest = await apiRequest(`/orders/${partialId}/pay`, {
+      method: 'PATCH',
+      body: JSON.stringify({ amount: 8.0 })
+    });
+    assert.equal(payRest.status, 200);
+    assert.equal(payRest.body.paid_amount, 24.0);
+    assert.equal(payRest.body.remaining_amount, 0);
+    assert.equal(payRest.body.payment_status, 'pago');
+
+    console.log('✔ [Teste 7] Pagamento parcial validado com sucesso!');
+  });
 });
