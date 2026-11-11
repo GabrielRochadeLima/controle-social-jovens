@@ -181,15 +181,33 @@
 
     .grid-2 {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 1rem;
       align-items: start;
+      width: 100%;
+      min-width: 0;
     }
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 0.75rem;
       padding: 1.1rem;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .product-add-row {
+      display: grid;
+      grid-template-columns: 1fr 78px auto;
+      gap: 0.45rem;
+      align-items: end;
+      width: 100%;
+      min-width: 0;
+    }
+    .btn-add-item {
+      white-space: nowrap;
+      height: 38px;
     }
     .card h2 {
       font-size: 1rem;
@@ -477,66 +495,138 @@
     }
 
     /* Ajustes específicos para Celular (Mobile) */
+    html, body {
+      overflow-x: hidden;
+      max-width: 100vw;
+      width: 100%;
+    }
+
     @media (max-width: 768px) {
       body {
-        padding: 0.6rem;
+        padding: 0.5rem 0.55rem;
       }
       header {
         flex-direction: column;
         align-items: stretch;
-        gap: 0.6rem;
+        gap: 0.55rem;
         margin-bottom: 0.75rem;
         padding-bottom: 0.65rem;
       }
+      .brand-box {
+        gap: 0.55rem;
+      }
       .brand-logo {
-        width: 36px;
-        height: 36px;
+        width: 38px;
+        height: 38px;
       }
       header h1 {
-        font-size: 1.12rem;
+        font-size: 1.15rem;
+        line-height: 1.25;
       }
       header p {
-        font-size: 0.76rem;
+        font-size: 0.75rem;
       }
       .nav-tabs {
         width: 100%;
-        justify-content: space-between;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        justify-content: flex-start;
+        padding: 0.22rem;
+        gap: 0.25rem;
+      }
+      .nav-tabs::-webkit-scrollbar {
+        display: none;
       }
       .nav-tab {
-        flex: 1;
-        text-align: center;
-        padding: 0.45rem 0.25rem;
-        font-size: 0.76rem;
+        flex: 0 0 auto;
+        padding: 0.42rem 0.65rem;
+        font-size: 0.78rem;
+        white-space: nowrap;
       }
       .event-banner {
+        flex-direction: column;
+        align-items: stretch;
         padding: 0.65rem 0.75rem;
+        gap: 0.55rem;
+        width: 100%;
+        min-width: 0;
+      }
+      .event-banner-left {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
         gap: 0.5rem;
+        width: 100%;
+        min-width: 0;
+      }
+      #active-event-select {
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+      .event-banner-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.35rem;
+        width: 100%;
+      }
+      .metric-chip {
+        justify-content: center;
+        padding: 0.28rem 0.35rem;
+        font-size: 0.72rem;
+        text-align: center;
+        min-width: 0;
       }
       .stats-row {
         grid-template-columns: 1fr 1fr;
         gap: 0.5rem;
-        margin-bottom: 0.8rem;
+        margin-bottom: 0.75rem;
+        width: 100%;
+        min-width: 0;
       }
       .stats-row .stat-card:nth-child(3) {
         grid-column: 1 / -1;
       }
       .stat-card {
-        padding: 0.6rem 0.75rem;
+        padding: 0.55rem 0.7rem;
         border-radius: 0.55rem;
+        min-width: 0;
+        box-sizing: border-box;
       }
       .stat-card span {
-        font-size: 0.72rem;
+        font-size: 0.7rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .stat-card strong {
         font-size: 1.15rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+      }
+      .stat-card small {
+        font-size: 0.7rem;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .grid-2 {
         grid-template-columns: 1fr;
         gap: 0.75rem;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
       }
       .card {
-        padding: 0.8rem;
+        padding: 0.75rem;
         border-radius: 0.65rem;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
       }
       .card h2 {
         font-size: 0.94rem;
@@ -545,14 +635,89 @@
       }
       .event-metrics-grid {
         grid-template-columns: 1fr 1fr;
+        gap: 0.35rem;
+      }
+      .event-metric-box {
+        padding: 0.4rem 0.5rem;
+        min-width: 0;
+      }
+      .event-metric-box small {
+        font-size: 0.66rem;
+      }
+      .event-metric-box strong {
+        font-size: 0.88rem;
+      }
+      .event-item {
+        padding: 0.75rem;
+        border-radius: 0.6rem;
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+      }
+      .event-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 0.35rem;
+        margin-top: 0.4rem;
+      }
+      .event-actions button {
+        width: 100%;
+        text-align: center;
+        padding: 0.38rem 0.45rem;
+        font-size: 0.75rem;
+      }
+      .product-add-row {
+        grid-template-columns: 80px 1fr !important;
+      }
+      .product-add-row > div:first-child {
+        grid-column: 1 / -1;
+      }
+      .btn-add-item {
+        width: 100%;
       }
       input, select, button {
         padding: 0.48rem 0.62rem;
         font-size: 0.84rem;
+        max-width: 100%;
+        box-sizing: border-box;
       }
       th, td {
         padding: 0.42rem 0.28rem;
         font-size: 0.78rem;
+      }
+      table {
+        min-width: 290px;
+      }
+      .test-mode-banner {
+        padding: 0.55rem 0.75rem;
+      }
+      .test-banner-content {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        gap: 0.45rem;
+      }
+      .test-banner-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.35rem;
+        width: 100%;
+      }
+      .btn-test-action {
+        width: 100%;
+        text-align: center;
+        padding: 0.35rem 0.45rem;
+        font-size: 0.74rem;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .stats-row {
+        grid-template-columns: 1fr;
+      }
+      .event-banner-metrics {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -736,11 +901,11 @@
     <!-- Barra de Controle do Evento Ativo -->
     <div class="event-banner">
       <div class="event-banner-left">
-        <div>
+        <div style="flex: 1; min-width: 0; width: 100%;">
           <label for="active-event-select" style="margin-bottom: 0.15rem; font-size: 0.72rem;">Evento / Dia Selecionado:</label>
-          <select id="active-event-select" onchange="onChangeActiveEvent(this.value)" style="font-weight: 600; min-width: 220px;"></select>
+          <select id="active-event-select" onchange="onChangeActiveEvent(this.value)" style="font-weight: 600; width: 100%;"></select>
         </div>
-        <span id="active-event-badge" class="tag tag-aberto">-</span>
+        <span id="active-event-badge" class="tag tag-aberto" style="flex-shrink: 0;">-</span>
       </div>
       <div class="event-banner-metrics" id="active-event-metrics">
         <span class="metric-chip">👥 Presentes: <strong id="banner-attendance">0</strong> <button type="button" class="btn-edit" onclick="promptUpdateAttendance()" style="margin-left:0.25rem;">Editar</button></span>
@@ -804,7 +969,7 @@
             <label for="order-paid-now" style="color: #93c5fd;">Valor Pago Agora / Entrada (R$)</label>
             <input type="number" id="order-paid-now" step="0.50" min="0.01" placeholder="Ex: 10.00 (o restante ficará pendente)" style="width: 100%;" />
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 78px auto; gap: 0.45rem; align-items: end;">
+          <div class="product-add-row">
             <div>
               <label for="order-product">Adicionar Produto</label>
               <select id="order-product" style="width: 100%;"></select>
@@ -813,7 +978,7 @@
               <label for="order-qty">Qtd</label>
               <input type="number" id="order-qty" value="1" min="1" style="width: 100%;" />
             </div>
-            <button type="button" class="btn-secondary" onclick="addItemToOrderCart()" style="white-space: nowrap; height: 37px;">
+            <button type="button" class="btn-secondary btn-add-item" onclick="addItemToOrderCart()">
               + Incluir
             </button>
           </div>
