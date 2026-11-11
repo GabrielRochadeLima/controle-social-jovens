@@ -29,6 +29,7 @@ router.get('/', async (req, res) => {
     const products = (data || []).map((p) => ({
       ...p,
       price: Number(p.price),
+      cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
       stock_quantity: p.stock_quantity === null || p.stock_quantity === undefined ? null : Number(p.stock_quantity),
       has_stock_control: p.stock_quantity !== null && p.stock_quantity !== undefined,
       category_name: p.categories ? p.categories.name : null
@@ -59,7 +60,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { name, category_id, price, stock_quantity } = req.body || {};
+    const { name, category_id, price, cost_price, stock_quantity } = req.body || {};
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'O nome do produto é obrigatório.' });
@@ -72,6 +73,14 @@ router.post('/', async (req, res) => {
     const numericPrice = Number(price);
     if (price === undefined || price === null || price === '' || Number.isNaN(numericPrice) || numericPrice < 0) {
       return res.status(400).json({ error: 'O preço (price) deve ser um número maior ou igual a zero.' });
+    }
+
+    let numericCost = 0;
+    if (cost_price !== undefined && cost_price !== null && cost_price !== '') {
+      numericCost = Number(cost_price);
+      if (Number.isNaN(numericCost) || numericCost < 0) {
+        return res.status(400).json({ error: 'O preço de custo (cost_price) deve ser um número maior ou igual a zero.' });
+      }
     }
 
     let parsedStock = null;
@@ -91,6 +100,7 @@ router.post('/', async (req, res) => {
           name: name.trim(),
           category_id: Number(category_id),
           price: Number(numericPrice.toFixed(2)),
+          cost_price: Number(numericCost.toFixed(2)),
           stock_quantity: parsedStock
         }
       ])
@@ -104,6 +114,7 @@ router.post('/', async (req, res) => {
     return res.status(201).json({
       ...data,
       price: Number(data.price),
+      cost_price: Number(data.cost_price || 0),
       stock_quantity: data.stock_quantity === null || data.stock_quantity === undefined ? null : Number(data.stock_quantity),
       has_stock_control: data.stock_quantity !== null && data.stock_quantity !== undefined,
       category_name: data.categories ? data.categories.name : null
@@ -115,7 +126,7 @@ router.post('/', async (req, res) => {
 
 /**
  * PUT /products/:id e PATCH /products/:id
- * Atualiza um produto cadastrado (nome, categoria, preço e controle de estoque).
+ * Atualiza um produto cadastrado (nome, categoria, preço, custo e controle de estoque).
  */
 async function updateProductHandler(req, res) {
   try {
@@ -124,7 +135,7 @@ async function updateProductHandler(req, res) {
       return res.status(400).json({ error: 'ID do produto inválido.' });
     }
 
-    const { name, category_id, price, stock_quantity } = req.body || {};
+    const { name, category_id, price, cost_price, stock_quantity } = req.body || {};
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'O nome do produto é obrigatório.' });
@@ -137,6 +148,14 @@ async function updateProductHandler(req, res) {
     const numericPrice = Number(price);
     if (price === undefined || price === null || price === '' || Number.isNaN(numericPrice) || numericPrice < 0) {
       return res.status(400).json({ error: 'O preço (price) deve ser um número maior ou igual a zero.' });
+    }
+
+    let numericCost = 0;
+    if (cost_price !== undefined && cost_price !== null && cost_price !== '') {
+      numericCost = Number(cost_price);
+      if (Number.isNaN(numericCost) || numericCost < 0) {
+        return res.status(400).json({ error: 'O preço de custo (cost_price) deve ser um número maior ou igual a zero.' });
+      }
     }
 
     let parsedStock = null;
@@ -155,6 +174,7 @@ async function updateProductHandler(req, res) {
         name: name.trim(),
         category_id: Number(category_id),
         price: Number(numericPrice.toFixed(2)),
+        cost_price: Number(numericCost.toFixed(2)),
         stock_quantity: parsedStock
       })
       .eq('id', productId)
@@ -169,6 +189,7 @@ async function updateProductHandler(req, res) {
     return res.status(200).json({
       ...data,
       price: Number(data.price),
+      cost_price: Number(data.cost_price || 0),
       stock_quantity: data.stock_quantity === null || data.stock_quantity === undefined ? null : Number(data.stock_quantity),
       has_stock_control: data.stock_quantity !== null && data.stock_quantity !== undefined,
       category_name: data.categories ? data.categories.name : null

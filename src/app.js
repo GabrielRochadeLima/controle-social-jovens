@@ -8,6 +8,7 @@ const productsRoutes = require('./routes/productsRoutes');
 const eventsRoutes = require('./routes/eventsRoutes');
 const ordersRoutes = require('./routes/ordersRoutes');
 const cashClosingRoutes = require('./routes/cashClosingRoutes');
+const expensesRoutes = require('./routes/expensesRoutes');
 
 const app = express();
 const rootDir = path.join(__dirname, '..');
@@ -59,5 +60,6 @@ app.use('/products', productsRoutes);
 app.use('/events', eventsRoutes);
 app.use('/orders', ordersRoutes);
 app.use('/cash-closing', cashClosingRoutes);
+app.use('/expenses', expensesRoutes);
 
 module.exports = app;

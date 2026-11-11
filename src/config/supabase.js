@@ -22,10 +22,10 @@ const initialSeed = () => ({
     { id: 3, name: 'Doces', created_at: new Date().toISOString() }
   ],
   products: [
-    { id: 1, name: 'Cachorro-Quente Completo', category_id: 1, price: 12.00, stock_quantity: null, created_at: new Date().toISOString() },
-    { id: 2, name: 'Pastel de Carne', category_id: 1, price: 10.00, stock_quantity: null, created_at: new Date().toISOString() },
-    { id: 3, name: 'Refrigerante Lata 350ml', category_id: 2, price: 6.00, stock_quantity: 48, created_at: new Date().toISOString() },
-    { id: 4, name: 'Brigadeiro Gourmet', category_id: 3, price: 4.50, stock_quantity: 30, created_at: new Date().toISOString() }
+    { id: 1, name: 'Cachorro-Quente Completo', category_id: 1, price: 12.00, cost_price: 5.50, stock_quantity: null, created_at: new Date().toISOString() },
+    { id: 2, name: 'Pastel de Carne', category_id: 1, price: 10.00, cost_price: 4.00, stock_quantity: null, created_at: new Date().toISOString() },
+    { id: 3, name: 'Refrigerante Lata 350ml', category_id: 2, price: 6.00, cost_price: 3.20, stock_quantity: 48, created_at: new Date().toISOString() },
+    { id: 4, name: 'Brigadeiro Gourmet', category_id: 3, price: 4.50, cost_price: 1.80, stock_quantity: 30, created_at: new Date().toISOString() }
   ],
   events: [
     {
@@ -38,7 +38,8 @@ const initialSeed = () => ({
     }
   ],
   orders: [],
-  order_items: []
+  order_items: [],
+  event_expenses: []
 });
 
 let mockStore = initialSeed();
@@ -47,22 +48,24 @@ let counters = {
   products: 5,
   events: 2,
   orders: 1,
-  order_items: 1
+  order_items: 1,
+  event_expenses: 1
 };
 
 function resetMockDb(withSeed = false) {
   if (withSeed) {
     mockStore = initialSeed();
-    counters = { categories: 4, products: 5, events: 2, orders: 1, order_items: 1 };
+    counters = { categories: 4, products: 5, events: 2, orders: 1, order_items: 1, event_expenses: 1 };
   } else {
     mockStore = {
       categories: [],
       products: [],
       events: [],
       orders: [],
-      order_items: []
+      order_items: [],
+      event_expenses: []
     };
-    counters = { categories: 1, products: 1, events: 1, orders: 1, order_items: 1 };
+    counters = { categories: 1, products: 1, events: 1, orders: 1, order_items: 1, event_expenses: 1 };
   }
 }
 

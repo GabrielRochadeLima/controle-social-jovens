@@ -588,4 +588,79 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
 
     console.log('✔ [Teste 7] Pagamento parcial validado com sucesso!');
   });
+
+  test('Teste 8: Gestão de Preço de Custo (cost_price) e Despesas Extras do Evento (/expenses)', async () => {
+    // 8.1 Cadastrar produto com cost_price
+    const prodRes = await apiRequest('/products', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'Pastel de Queijo Teste',
+        category_id: catLanchesId || 1,
+        price: 8.0,
+        cost_price: 3.5,
+        stock_quantity: 15
+      })
+    });
+    assert.equal(prodRes.status, 201);
+    assert.equal(prodRes.body.cost_price, 3.5);
+    const costProdId = prodRes.body.id;
+
+    // 8.2 Atualizar o produto com novo cost_price via PUT
+    const prodUpdate = await apiRequest(`/products/${costProdId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: 'Pastel de Queijo Especial',
+        category_id: catLanchesId || 1,
+        price: 9.0,
+        cost_price: 4.0,
+        stock_quantity: 15
+      })
+    });
+    assert.equal(prodUpdate.status, 200);
+    assert.equal(prodUpdate.body.cost_price, 4.0);
+
+    // 8.3 Criar despesas extras para um evento
+    const exp1 = await apiRequest('/expenses', {
+      method: 'POST',
+      body: JSON.stringify({
+        event_id: 1,
+        description: 'Gelo e Copos Descartáveis',
+        amount: 25.5
+      })
+    });
+    assert.equal(exp1.status, 201);
+    assert.equal(exp1.body.amount, 25.5);
+    assert.equal(exp1.body.description, 'Gelo e Copos Descartáveis');
+    const exp1Id = exp1.body.id;
+
+    const exp2 = await apiRequest('/expenses', {
+      method: 'POST',
+      body: JSON.stringify({
+        event_id: 1,
+        description: 'Guardanapos e Sacolas',
+        amount: 14.5
+      })
+    });
+    assert.equal(exp2.status, 201);
+
+    // 8.4 Listar despesas do evento 1
+    const listExp = await apiRequest('/expenses?event_id=1');
+    assert.equal(listExp.status, 200);
+    assert.ok(Array.isArray(listExp.body));
+    const totalExp = listExp.body.reduce((acc, cur) => acc + Number(cur.amount), 0);
+    assert.equal(totalExp, 40.0, '25.5 + 14.5 = 40.0 de despesas extras');
+
+    // 8.5 Excluir uma despesa
+    const delRes = await apiRequest(`/expenses/${exp1Id}`, {
+      method: 'DELETE'
+    });
+    assert.equal(delRes.status, 200);
+
+    const listAfterDel = await apiRequest('/expenses?event_id=1');
+    assert.equal(listAfterDel.status, 200);
+    assert.equal(listAfterDel.body.length, 1);
+    assert.equal(listAfterDel.body[0].id, exp2.body.id);
+
+    console.log('✔ [Teste 8] Custo unitário de produtos e despesas extras validados com sucesso!');
+  });
 });

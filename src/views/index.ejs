@@ -279,6 +279,15 @@
       font-size: 0.76rem;
       cursor: pointer;
     }
+    button.btn-danger {
+      background: rgba(239, 68, 68, 0.16);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+      font-weight: 600;
+      padding: 0.26rem 0.55rem;
+      font-size: 0.76rem;
+      cursor: pointer;
+    }
     .table-wrap {
       width: 100%;
       overflow-x: auto;
@@ -811,6 +820,9 @@
       <button type="button" class="nav-tab" id="tab-products" onclick="switchScreen('products')">
         📦 Produtos
       </button>
+      <button type="button" class="nav-tab" id="tab-costs" onclick="switchScreen('costs')">
+        💰 Custos & Lucro
+      </button>
       <button type="button" class="nav-tab" id="btn-env-toggle" onclick="toggleAppEnvironment()" style="color: #fbbf24; font-weight: 600;">
         🧪 Modo Teste
       </button>
@@ -1056,14 +1068,18 @@
               <label for="prod-name">Nome do Produto</label>
               <input type="text" id="prod-name" placeholder="Ex: Refrigerante Lata 350ml" required style="width: 100%;" />
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem;">
               <div>
                 <label for="prod-category">Categoria</label>
                 <select id="prod-category" style="width: 100%;"></select>
               </div>
               <div>
-                <label for="prod-price">Preço Unitário (R$)</label>
+                <label for="prod-price">Preço Venda (R$)</label>
                 <input type="number" id="prod-price" step="0.50" min="0" placeholder="Ex: 6.00" required style="width: 100%;" />
+              </div>
+              <div>
+                <label for="prod-cost">Preço Custo (R$)</label>
+                <input type="number" id="prod-cost" step="0.50" min="0" placeholder="Ex: 3.00" style="width: 100%;" />
               </div>
             </div>
             <div>
@@ -1098,7 +1114,8 @@
               <tr>
                 <th>Produto</th>
                 <th>Categoria</th>
-                <th>Preço</th>
+                <th>Custo</th>
+                <th>Venda</th>
                 <th>Estoque</th>
                 <th>Ação</th>
               </tr>
@@ -1110,7 +1127,114 @@
     </div>
   </section>
 
-  <div id="toast"></div>
+  <!-- ====================================================================== -->
+  <!-- TELA 3: CUSTOS & LUCRO DO EVENTO (CMV, DESPESAS EXTRAS E MARGENS)      -->
+  <!-- ====================================================================== -->
+  <section id="screen-costs" class="screen">
+    <div class="card" style="margin-bottom: 0.85rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h2 style="margin: 0; padding: 0; border: none; font-size: 1.05rem;">💰 Rentabilidade & Custos do Social</h2>
+          <small style="color: var(--muted);">Calcule o Custo das Mercadorias Vendidas (CMV), despesas extras e o lucro real do evento.</small>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <label for="costs-event-filter" style="margin: 0; font-weight: 600; white-space: nowrap; font-size: 0.84rem;">Evento:</label>
+          <select id="costs-event-filter" onchange="onCostsEventChange(this.value)" style="min-width: 200px; max-width: 100%;"></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Indicadores Financeiros do Evento -->
+    <div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+      <div class="stat-card">
+        <span>Vendas Totais</span>
+        <strong id="cost-stat-sales" class="text-primary">R$ 0,00</strong>
+        <small id="cost-stat-sales-desc">0 itens vendidos</small>
+      </div>
+      <div class="stat-card">
+        <span>Custo dos Produtos (CMV)</span>
+        <strong id="cost-stat-cmv" style="color: #f87171;">R$ 0,00</strong>
+        <small>Qtd vendida × Custo unit.</small>
+      </div>
+      <div class="stat-card">
+        <span>Despesas Extras</span>
+        <strong id="cost-stat-expenses" style="color: #fbbf24;">R$ 0,00</strong>
+        <small id="cost-stat-expenses-count">0 despesa(s)</small>
+      </div>
+      <div class="stat-card">
+        <span>Custo Total do Evento</span>
+        <strong id="cost-stat-total-cost" style="color: #f43f5e;">R$ 0,00</strong>
+        <small>CMV + Despesas Extras</small>
+      </div>
+      <div class="stat-card">
+        <span>Lucro Projetado (Geral)</span>
+        <strong id="cost-stat-projected-profit" class="text-success">R$ 0,00</strong>
+        <small id="cost-stat-margin">Margem: 0%</small>
+      </div>
+      <div class="stat-card">
+        <span>Lucro Real em Caixa</span>
+        <strong id="cost-stat-cash-profit" style="color: #38bdf8;">R$ 0,00</strong>
+        <small id="cost-stat-pending-desc">R$ 0,00 a receber</small>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Tabela Detalhada por Item Vendido -->
+      <div class="card">
+        <h2>📦 Produtos Vendidos no Evento</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th style="text-align: center;">Qtd</th>
+                <th style="text-align: right;">Custo Unit.</th>
+                <th style="text-align: right;">Custo Total</th>
+                <th style="text-align: right;">Total Vendas</th>
+                <th style="text-align: right;">Lucro Bruto</th>
+              </tr>
+            </thead>
+            <tbody id="costs-products-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1.5rem;">Nenhum item vendido neste evento ainda.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Gerenciamento de Despesas Extras do Evento -->
+      <div class="card">
+        <h2>🧾 Despesas Extras deste Evento</h2>
+        <form id="expense-form" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem;" onsubmit="handleCreateExpense(event)">
+          <div style="flex: 2; min-width: 140px;">
+            <label for="expense-desc">Descrição da Despesa</label>
+            <input type="text" id="expense-desc" placeholder="Ex: Gelo, Copos, Carvão..." required style="width: 100%;" />
+          </div>
+          <div style="flex: 1; min-width: 100px;">
+            <label for="expense-amount">Valor (R$)</label>
+            <input type="number" id="expense-amount" step="0.50" min="0.01" placeholder="Ex: 25.00" required style="width: 100%;" />
+          </div>
+          <div style="align-self: flex-end;">
+            <button type="submit" class="btn-primary" style="white-space: nowrap;">+ Adicionar</button>
+          </div>
+        </form>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Descrição</th>
+                <th style="text-align: right;">Valor</th>
+                <th style="text-align: center; width: 60px;">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="expenses-tbody">
+              <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:1rem;">Nenhuma despesa extra registrada.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <script>
     const SCHEMA_NAME = '<%= schema %>';
@@ -1260,10 +1384,15 @@
     document.getElementById('ev-date').value = new Date().toISOString().slice(0, 10);
 
     function switchScreen(screenName) {
-      ['events', 'orders', 'products'].forEach((s) => {
-        document.getElementById(`screen-${s}`).classList.toggle('active', s === screenName);
-        document.getElementById(`tab-${s}`).classList.toggle('active', s === screenName);
+      ['events', 'orders', 'products', 'costs'].forEach((s) => {
+        const screenEl = document.getElementById(`screen-${s}`);
+        const tabEl = document.getElementById(`tab-${s}`);
+        if (screenEl) screenEl.classList.toggle('active', s === screenName);
+        if (tabEl) tabEl.classList.toggle('active', s === screenName);
       });
+      if (screenName === 'costs') {
+        renderCostsScreen();
+      }
     }
 
     function showToast(msg) {
@@ -1282,16 +1411,17 @@
           { id: 3, name: 'Doces' }
         ],
         products: [
-          { id: 1, name: 'Cachorro-Quente Completo', category_id: 1, price: 12.00, stock_quantity: null },
-          { id: 2, name: 'Pastel de Carne', category_id: 1, price: 10.00, stock_quantity: null },
-          { id: 3, name: 'Refrigerante Lata 350ml', category_id: 2, price: 6.00, stock_quantity: 48 },
-          { id: 4, name: 'Brigadeiro Gourmet', category_id: 3, price: 4.50, stock_quantity: 30 }
+          { id: 1, name: 'Cachorro-Quente Completo', category_id: 1, price: 12.00, cost_price: 5.50, stock_quantity: null },
+          { id: 2, name: 'Pastel de Carne', category_id: 1, price: 10.00, cost_price: 4.00, stock_quantity: null },
+          { id: 3, name: 'Refrigerante Lata 350ml', category_id: 2, price: 6.00, cost_price: 3.20, stock_quantity: 48 },
+          { id: 4, name: 'Brigadeiro Gourmet', category_id: 3, price: 4.50, cost_price: 1.80, stock_quantity: 30 }
         ],
         events: [
           { id: 1, name: 'Social de Jovens', event_date: today, status: 'aberto', attendance_count: 35 }
         ],
         orders: [],
-        order_items: []
+        order_items: [],
+        event_expenses: []
       };
     }
 
@@ -1322,13 +1452,14 @@
       boxEl.style.display = statusEl.value === 'parcial' ? 'block' : 'none';
     }
 
-    // Bridge local para Eventos e Pagamentos Parciais caso a coluna paid_amount ainda não tenha sido criada no Supabase SQL Editor
+    // Bridge local para Eventos, Pagamentos Parciais e Despesas caso tabelas/colunas ainda não tenham sido criadas no Supabase SQL Editor
     function loadEventsBridge() {
       try {
         const raw = localStorage.getItem(EVENTS_BRIDGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (!parsed.paidAmountsMap) parsed.paidAmountsMap = {};
+          if (!parsed.expenses) parsed.expenses = [];
           return parsed;
         }
       } catch (_) {}
@@ -1337,7 +1468,8 @@
           { id: 1, name: 'Social de Jovens', event_date: new Date().toISOString().slice(0, 10), status: 'aberto', attendance_count: 30 }
         ],
         orderEventMap: {},
-        paidAmountsMap: {}
+        paidAmountsMap: {},
+        expenses: []
       };
       localStorage.setItem(EVENTS_BRIDGE_KEY, JSON.stringify(initial));
       return initial;
@@ -1427,7 +1559,8 @@
           { id: 1, name: 'Social de Teste', event_date: today, status: 'aberto', attendance_count: 25 }
         ],
         orders: [],
-        order_items: []
+        order_items: [],
+        event_expenses: []
       };
       saveTestDb(testDb);
       return testDb;
@@ -1757,7 +1890,12 @@
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
           return (testDb.products || []).map((p) => {
             const cat = (testDb.categories || []).find((c) => Number(c.id) === Number(p.category_id));
-            return { ...p, price: Number(p.price), category_name: cat ? cat.name : '-' };
+            return {
+              ...p,
+              price: Number(p.price),
+              cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
+              category_name: cat ? cat.name : '-'
+            };
           });
         }
         const mode = await detectBackend();
@@ -1771,17 +1909,27 @@
           return (data || []).map((p) => ({
             ...p,
             price: Number(p.price),
+            cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
             category_name: p.categories ? p.categories.name : '-'
           }));
         }
         const db = loadLocalDb();
         return db.products.map((p) => {
           const cat = db.categories.find((c) => Number(c.id) === Number(p.category_id));
-          return { ...p, category_name: cat ? cat.name : '-' };
+          return {
+            ...p,
+            price: Number(p.price),
+            cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
+            category_name: cat ? cat.name : '-'
+          };
         });
       },
 
-      async createProduct({ name, category_id, price, stock_quantity }) {
+      async createProduct({ name, category_id, price, cost_price, stock_quantity }) {
+        const numPrice = Number(price);
+        const numCost = cost_price !== undefined && cost_price !== null && cost_price !== '' ? Number(cost_price) : 0;
+        const parsedStock = stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity);
+
         if (isTestEnv()) {
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
           const nextId = (testDb.products || []).reduce((m, p) => Math.max(m, p.id), 0) + 1;
@@ -1789,8 +1937,9 @@
             id: nextId,
             name,
             category_id: Number(category_id),
-            price: Number(price),
-            stock_quantity: stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity)
+            price: numPrice,
+            cost_price: numCost,
+            stock_quantity: parsedStock
           };
           testDb.products.push(newProd);
           saveTestDb(testDb);
@@ -1801,20 +1950,29 @@
           const r = await fetch('/products', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, category_id, price, stock_quantity })
+            body: JSON.stringify({ name, category_id, price: numPrice, cost_price: numCost, stock_quantity: parsedStock })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao cadastrar produto');
           return data;
         }
         if (mode === 'supabase') {
-          const { data, error } = await sbClient
-            .from('products')
-            .insert([{ name, category_id: Number(category_id), price: Number(price), stock_quantity }])
-            .select()
-            .single();
+          const payload = {
+            name,
+            category_id: Number(category_id),
+            price: numPrice,
+            cost_price: numCost,
+            stock_quantity: parsedStock
+          };
+          let { data, error } = await sbClient.from('products').insert([payload]).select().single();
+          if (error && String(error.message || '').includes('cost_price')) {
+            delete payload.cost_price;
+            const retry = await sbClient.from('products').insert([payload]).select().single();
+            data = retry.data;
+            error = retry.error;
+          }
           if (error) throw new Error(error.message);
-          return data;
+          return { ...data, cost_price: Number(data.cost_price || numCost) };
         }
         const db = loadLocalDb();
         const nextId = db.products.reduce((m, p) => Math.max(m, p.id), 0) + 1;
@@ -1822,23 +1980,29 @@
           id: nextId,
           name,
           category_id: Number(category_id),
-          price: Number(price),
-          stock_quantity: stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity)
+          price: numPrice,
+          cost_price: numCost,
+          stock_quantity: parsedStock
         };
         db.products.push(newProd);
         saveLocalDb(db);
         return newProd;
       },
 
-      async updateProduct(id, { name, category_id, price, stock_quantity }) {
+      async updateProduct(id, { name, category_id, price, cost_price, stock_quantity }) {
+        const numPrice = Number(price);
+        const numCost = cost_price !== undefined && cost_price !== null && cost_price !== '' ? Number(cost_price) : 0;
+        const parsedStock = stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity);
+
         if (isTestEnv()) {
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
           const prod = (testDb.products || []).find((p) => Number(p.id) === Number(id));
           if (!prod) throw new Error('Produto de teste não encontrado');
           prod.name = name;
           prod.category_id = Number(category_id);
-          prod.price = Number(price);
-          prod.stock_quantity = stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity);
+          prod.price = numPrice;
+          prod.cost_price = numCost;
+          prod.stock_quantity = parsedStock;
           saveTestDb(testDb);
           return prod;
         }
@@ -1847,34 +2011,48 @@
           const r = await fetch(`/products/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, category_id, price, stock_quantity })
+            body: JSON.stringify({ name, category_id, price: numPrice, cost_price: numCost, stock_quantity: parsedStock })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao atualizar produto');
           return data;
         }
         if (mode === 'supabase') {
-          const { data, error } = await sbClient
+          const payload = {
+            name,
+            category_id: Number(category_id),
+            price: numPrice,
+            cost_price: numCost,
+            stock_quantity: parsedStock
+          };
+          let { data, error } = await sbClient
             .from('products')
-            .update({
-              name,
-              category_id: Number(category_id),
-              price: Number(price),
-              stock_quantity: stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity)
-            })
+            .update(payload)
             .eq('id', Number(id))
             .select()
             .single();
+          if (error && String(error.message || '').includes('cost_price')) {
+            delete payload.cost_price;
+            const retry = await sbClient
+              .from('products')
+              .update(payload)
+              .eq('id', Number(id))
+              .select()
+              .single();
+            data = retry.data;
+            error = retry.error;
+          }
           if (error) throw new Error(error.message);
-          return data;
+          return { ...data, cost_price: Number(data.cost_price || numCost) };
         }
         const db = loadLocalDb();
         const prod = db.products.find((p) => Number(p.id) === Number(id));
         if (!prod) throw new Error('Produto não encontrado');
         prod.name = name;
         prod.category_id = Number(category_id);
-        prod.price = Number(price);
-        prod.stock_quantity = stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity);
+        prod.price = numPrice;
+        prod.cost_price = numCost;
+        prod.stock_quantity = parsedStock;
         saveLocalDb(db);
         return prod;
       },
@@ -2212,6 +2390,126 @@
         ord.payment_status = newPaid >= fin.total_amount ? 'pago' : 'pendente';
         saveLocalDb(db);
         return enrichOrderFinancials(ord);
+      },
+
+      async getExpenses(eventId = null) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const list = testDb.event_expenses || [];
+          return list
+            .filter((e) => !eventId || eventId === 'all' || Number(e.event_id) === Number(eventId))
+            .map((e) => ({ ...e, amount: Number(e.amount) }))
+            .sort((a, b) => b.id - a.id);
+        }
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const query = eventId && eventId !== 'all' ? `?event_id=${eventId}` : '';
+          const r = await fetch(`/expenses${query}`);
+          if (r.ok) return r.json();
+        }
+        if (mode === 'supabase') {
+          try {
+            let q = sbClient.from('event_expenses').select('*').order('id', { ascending: false });
+            if (eventId && eventId !== 'all') q = q.eq('event_id', Number(eventId));
+            const { data, error } = await q;
+            if (!error && data) return data.map((e) => ({ ...e, amount: Number(e.amount) }));
+          } catch (_) {}
+          const bridge = loadEventsBridge();
+          const list = bridge.expenses || [];
+          return list
+            .filter((e) => !eventId || eventId === 'all' || Number(e.event_id) === Number(eventId))
+            .map((e) => ({ ...e, amount: Number(e.amount) }))
+            .sort((a, b) => b.id - a.id);
+        }
+        const db = loadLocalDb();
+        const list = db.event_expenses || [];
+        return list
+          .filter((e) => !eventId || eventId === 'all' || Number(e.event_id) === Number(eventId))
+          .map((e) => ({ ...e, amount: Number(e.amount) }))
+          .sort((a, b) => b.id - a.id);
+      },
+
+      async createExpense({ event_id, description, amount }) {
+        const numAmount = Number(Number(amount).toFixed(2));
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          if (!testDb.event_expenses) testDb.event_expenses = [];
+          const nextId = testDb.event_expenses.reduce((m, e) => Math.max(m, e.id), 0) + 1;
+          const exp = { id: nextId, event_id: Number(event_id), description: description.trim(), amount: numAmount, created_at: new Date().toISOString() };
+          testDb.event_expenses.push(exp);
+          saveTestDb(testDb);
+          return exp;
+        }
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch('/expenses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ event_id: Number(event_id), description: description.trim(), amount: numAmount })
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao cadastrar despesa');
+          return data;
+        }
+        if (mode === 'supabase') {
+          try {
+            const { data, error } = await sbClient
+              .from('event_expenses')
+              .insert([{ event_id: Number(event_id), description: description.trim(), amount: numAmount }])
+              .select()
+              .single();
+            if (!error && data) return { ...data, amount: Number(data.amount) };
+          } catch (_) {}
+          const bridge = loadEventsBridge();
+          if (!bridge.expenses) bridge.expenses = [];
+          const nextId = bridge.expenses.reduce((m, e) => Math.max(m, e.id), 0) + 1;
+          const exp = { id: nextId, event_id: Number(event_id), description: description.trim(), amount: numAmount, created_at: new Date().toISOString() };
+          bridge.expenses.push(exp);
+          saveEventsBridge(bridge);
+          return exp;
+        }
+        const db = loadLocalDb();
+        if (!db.event_expenses) db.event_expenses = [];
+        const nextId = db.event_expenses.reduce((m, e) => Math.max(m, e.id), 0) + 1;
+        const exp = { id: nextId, event_id: Number(event_id), description: description.trim(), amount: numAmount, created_at: new Date().toISOString() };
+        db.event_expenses.push(exp);
+        saveLocalDb(db);
+        return exp;
+      },
+
+      async deleteExpense(id) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          if (testDb.event_expenses) {
+            testDb.event_expenses = testDb.event_expenses.filter((e) => Number(e.id) !== Number(id));
+            saveTestDb(testDb);
+          }
+          return { id };
+        }
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch(`/expenses/${id}`, { method: 'DELETE' });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao excluir despesa');
+          return data;
+        }
+        if (mode === 'supabase') {
+          try {
+            await sbClient.from('event_expenses').delete().eq('id', Number(id));
+          } catch (_) {}
+          const bridge = loadEventsBridge();
+          if (bridge.expenses) {
+            bridge.expenses = bridge.expenses.filter((e) => Number(e.id) !== Number(id));
+            saveEventsBridge(bridge);
+          }
+          return { id };
+        }
+        const db = loadLocalDb();
+        if (db.event_expenses) {
+          db.event_expenses = db.event_expenses.filter((e) => Number(e.id) !== Number(id));
+          saveLocalDb(db);
+        }
+        return { id };
       }
     };
 
@@ -2223,6 +2521,8 @@
       document.getElementById('prod-name').value = prod.name;
       document.getElementById('prod-category').value = prod.category_id;
       document.getElementById('prod-price').value = prod.price;
+      document.getElementById('prod-cost').value =
+        prod.cost_price === null || prod.cost_price === undefined ? '' : prod.cost_price;
       document.getElementById('prod-stock').value =
         prod.stock_quantity === null || prod.stock_quantity === undefined ? '' : prod.stock_quantity;
 
@@ -2236,6 +2536,7 @@
       document.getElementById('prod-edit-id').value = '';
       document.getElementById('prod-name').value = '';
       document.getElementById('prod-price').value = '';
+      document.getElementById('prod-cost').value = '';
       document.getElementById('prod-stock').value = '';
       document.getElementById('product-form-title').textContent = 'Cadastrar Novo Produto';
       document.getElementById('prod-submit-btn').textContent = 'Salvar Produto';
@@ -2565,7 +2866,8 @@
           tr.innerHTML = `
             <td><strong>${p.name}</strong></td>
             <td>${p.category_name || '-'}</td>
-            <td>${fmtBRL(p.price)}</td>
+            <td style="color:#f87171;">${fmtBRL(p.cost_price || 0)}</td>
+            <td style="color:var(--primary);font-weight:600;">${fmtBRL(p.price)}</td>
             <td>${stockLabel}</td>
             <td><button type="button" class="btn-edit" onclick="startEditProduct(${p.id})">Editar</button></td>
           `;
@@ -2641,10 +2943,216 @@
             ordersTbody.appendChild(tr);
           });
         }
-        // Atualizar prévia do carrinho
+        // Atualizar prévia do carrinho e tela de custos
         renderOrderCart();
+        renderCostsScreen();
       } catch (err) {
         showToast(err.message || 'Erro ao carregar dados');
+      }
+    }
+
+    let costsEventId = null;
+
+    function onCostsEventChange(val) {
+      costsEventId = String(val);
+      renderCostsScreen();
+    }
+
+    async function renderCostsScreen() {
+      const costsFilterEl = document.getElementById('costs-event-filter');
+      if (!costsFilterEl) return;
+
+      // Se nenhum evento selecionado na tela de custos, sincroniza com o selectedEventId ou o primeiro evento
+      if (!costsEventId || (costsEventId !== 'all' && !cachedEvents.some((e) => String(e.id) === String(costsEventId)))) {
+        costsEventId = selectedEventId || (cachedEvents[0] ? String(cachedEvents[0].id) : 'all');
+      }
+
+      // Preenche o seletor da tela de custos
+      costsFilterEl.innerHTML = '';
+      cachedEvents.forEach((ev) => {
+        const opt = document.createElement('option');
+        opt.value = String(ev.id);
+        const st = ev.status === 'aberto' ? '🟢' : ev.status === 'agendado' ? '🟡' : '⚪';
+        opt.textContent = `${st} ${ev.name} (${fmtDateBR(ev.event_date)})`;
+        costsFilterEl.appendChild(opt);
+      });
+      const allOpt = document.createElement('option');
+      allOpt.value = 'all';
+      allOpt.textContent = '📊 Todos os Eventos (Geral)';
+      costsFilterEl.appendChild(allOpt);
+      costsFilterEl.value = String(costsEventId);
+
+      try {
+        const allOrders = await DataService.getOrders();
+        const expenses = await DataService.getExpenses(costsEventId);
+
+        const targetOrders = costsEventId === 'all'
+          ? allOrders
+          : allOrders.filter((o) => String(o.event_id || 1) === String(costsEventId));
+
+        // Agrupamento por produto vendido no evento
+        const productStats = {};
+
+        let totalUnitsSold = 0;
+        let totalSales = 0;
+        let totalCmv = 0;
+
+        targetOrders.forEach((o) => {
+          (o.order_items || []).forEach((item) => {
+            const pId = Number(item.product_id);
+            const qty = Number(item.quantity || 0);
+            const unitPrice = Number(item.unit_price || 0);
+            const itemSales = Number((qty * unitPrice).toFixed(2));
+
+            const matchedProduct = cachedProducts.find((p) => Number(p.id) === pId);
+            const costPrice = matchedProduct && matchedProduct.cost_price !== undefined && matchedProduct.cost_price !== null
+              ? Number(matchedProduct.cost_price)
+              : 0;
+            const itemCost = Number((qty * costPrice).toFixed(2));
+
+            if (!productStats[pId]) {
+              productStats[pId] = {
+                name: (matchedProduct && matchedProduct.name) || (item.products && item.products.name) || `Produto #${pId}`,
+                quantity: 0,
+                cost_price: costPrice,
+                total_cost: 0,
+                total_sales: 0
+              };
+            }
+
+            productStats[pId].quantity += qty;
+            productStats[pId].total_cost += itemCost;
+            productStats[pId].total_sales += itemSales;
+
+            totalUnitsSold += qty;
+            totalSales += itemSales;
+            totalCmv += itemCost;
+          });
+        });
+
+        // Despesas extras
+        const totalExpenses = (expenses || []).reduce((acc, cur) => acc + Number(cur.amount || 0), 0);
+        const totalCost = Number((totalCmv + totalExpenses).toFixed(2));
+
+        // Lucro Projetado (Bruto Total de Vendas - Custo Total)
+        const projectedProfit = Number((totalSales - totalCost).toFixed(2));
+        const profitMargin = totalSales > 0 ? Number(((projectedProfit / totalSales) * 100).toFixed(1)) : 0;
+
+        // Lucro Real em Caixa (Total efetivamente pago - Custo Total)
+        let totalPaidInOrders = 0;
+        let totalPendingInOrders = 0;
+        targetOrders.forEach((o) => {
+          const fin = enrichOrderFinancials(o);
+          totalPaidInOrders += fin.paid_amount;
+          totalPendingInOrders += fin.remaining_amount;
+        });
+        const cashProfit = Number((totalPaidInOrders - totalCost).toFixed(2));
+
+        // Atualizar Cards de Estatísticas
+        document.getElementById('cost-stat-sales').textContent = fmtBRL(totalSales);
+        document.getElementById('cost-stat-sales-desc').textContent = `${totalUnitsSold} un. vendida(s) em ${targetOrders.length} pedido(s)`;
+
+        document.getElementById('cost-stat-cmv').textContent = fmtBRL(totalCmv);
+        document.getElementById('cost-stat-expenses').textContent = fmtBRL(totalExpenses);
+        document.getElementById('cost-stat-expenses-count').textContent = `${(expenses || []).length} despesa(s) extra(s)`;
+
+        document.getElementById('cost-stat-total-cost').textContent = fmtBRL(totalCost);
+
+        const projProfitEl = document.getElementById('cost-stat-projected-profit');
+        projProfitEl.textContent = fmtBRL(projectedProfit);
+        projProfitEl.className = projectedProfit >= 0 ? 'text-success' : 'text-danger';
+        document.getElementById('cost-stat-margin').textContent = `Margem de Lucro: ${profitMargin}%`;
+
+        const cashProfitEl = document.getElementById('cost-stat-cash-profit');
+        cashProfitEl.textContent = fmtBRL(cashProfit);
+        cashProfitEl.style.color = cashProfit >= 0 ? '#38bdf8' : '#f87171';
+        document.getElementById('cost-stat-pending-desc').textContent = `${fmtBRL(totalPendingInOrders)} pendente a receber`;
+
+        // Renderizar Tabela de Detalhamento dos Produtos Vendidos
+        const prodTbody = document.getElementById('costs-products-tbody');
+        prodTbody.innerHTML = '';
+        const itemsList = Object.values(productStats).sort((a, b) => b.total_sales - a.total_sales);
+
+        if (itemsList.length === 0) {
+          prodTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1.5rem;">Nenhum item vendido neste evento ainda.</td></tr>';
+        } else {
+          itemsList.forEach((item) => {
+            const itemGrossProfit = Number((item.total_sales - item.total_cost).toFixed(2));
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><strong>${item.name}</strong></td>
+              <td style="text-align:center;">${item.quantity}</td>
+              <td style="text-align:right;">${fmtBRL(item.cost_price)}</td>
+              <td style="text-align:right;color:#f87171;">${fmtBRL(item.total_cost)}</td>
+              <td style="text-align:right;color:var(--primary);font-weight:600;">${fmtBRL(item.total_sales)}</td>
+              <td style="text-align:right;color:${itemGrossProfit >= 0 ? 'var(--success)' : '#f87171'};font-weight:700;">${fmtBRL(itemGrossProfit)}</td>
+            `;
+            prodTbody.appendChild(tr);
+          });
+        }
+
+        // Renderizar Tabela de Despesas Extras
+        const expTbody = document.getElementById('expenses-tbody');
+        expTbody.innerHTML = '';
+        if (!expenses || expenses.length === 0) {
+          expTbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:1rem;">Nenhuma despesa extra registrada.</td></tr>';
+        } else {
+          expenses.forEach((exp) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><strong>${exp.description}</strong></td>
+              <td style="text-align:right;color:#fbbf24;font-weight:600;">${fmtBRL(exp.amount)}</td>
+              <td style="text-align:center;">
+                <button type="button" class="btn-danger" onclick="handleDeleteExpense(${exp.id})" title="Excluir despesa">✕</button>
+              </td>
+            `;
+            expTbody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        showToast(`Erro ao carregar custos: ${err.message}`);
+      }
+    }
+
+    async function handleCreateExpense(e) {
+      e.preventDefault();
+      const descInput = document.getElementById('expense-desc');
+      const amountInput = document.getElementById('expense-amount');
+      const desc = descInput.value.trim();
+      const amount = Number(amountInput.value);
+
+      if (!desc || Number.isNaN(amount) || amount <= 0) {
+        showToast('Informe uma descrição e um valor válido para a despesa.');
+        return;
+      }
+
+      const targetEvId = (!costsEventId || costsEventId === 'all')
+        ? (selectedEventId !== 'all' ? selectedEventId : (cachedEvents[0] ? cachedEvents[0].id : 1))
+        : costsEventId;
+
+      try {
+        await DataService.createExpense({
+          event_id: Number(targetEvId),
+          description: desc,
+          amount
+        });
+        descInput.value = '';
+        amountInput.value = '';
+        showToast('Despesa adicionada com sucesso!');
+        await renderCostsScreen();
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
+
+    async function handleDeleteExpense(id) {
+      if (!window.confirm('Deseja realmente remover esta despesa do evento?')) return;
+      try {
+        await DataService.deleteExpense(id);
+        showToast('Despesa excluída!');
+        await renderCostsScreen();
+      } catch (err) {
+        showToast(err.message);
       }
     }
 
@@ -2762,10 +3270,12 @@
       try {
         const editId = document.getElementById('prod-edit-id').value;
         const stockRaw = document.getElementById('prod-stock').value.trim();
+        const costRaw = document.getElementById('prod-cost').value.trim();
         const payload = {
           name: document.getElementById('prod-name').value.trim(),
           category_id: Number(document.getElementById('prod-category').value),
           price: Number(document.getElementById('prod-price').value),
+          cost_price: costRaw === '' ? 0 : Number(costRaw),
           stock_quantity: stockRaw === '' ? null : Number(stockRaw)
         };
 
@@ -2777,6 +3287,7 @@
           const created = await DataService.createProduct(payload);
           document.getElementById('prod-name').value = '';
           document.getElementById('prod-price').value = '';
+          document.getElementById('prod-cost').value = '';
           document.getElementById('prod-stock').value = '';
           showToast(`Produto "${created.name}" cadastrado com sucesso!`);
         }
