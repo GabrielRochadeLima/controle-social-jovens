@@ -1333,6 +1333,9 @@
     </div>
   </div>
 
+  <!-- Notificação Toast Flutuante -->
+  <div id="toast"></div>
+
   <script>
     const SCHEMA_NAME = 'controle-social-jovens';
     const STORAGE_KEY = 'csj_db_v1';
@@ -1519,10 +1522,18 @@
     }
 
     function showToast(msg) {
-      const el = document.getElementById('toast');
+      let el = document.getElementById('toast');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'toast';
+        document.body.appendChild(el);
+      }
       el.textContent = msg;
       el.style.display = 'block';
-      setTimeout(() => { el.style.display = 'none'; }, 3200);
+      if (window._toastTimeout) clearTimeout(window._toastTimeout);
+      window._toastTimeout = setTimeout(() => {
+        el.style.display = 'none';
+      }, 3200);
     }
 
     function getDefaultSeed() {
@@ -1672,7 +1683,23 @@
     function loadTestDb() {
       try {
         const raw = localStorage.getItem(TEST_STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
+        if (raw) {
+          const db = JSON.parse(raw);
+          if (!db.app_users || !db.app_users.length) {
+            db.app_users = [
+              { id: 1, name: 'Gabriel', pin: '1234', role: 'admin', active: true },
+              { id: 2, name: 'Caixa 1', pin: '1111', role: 'seller', active: true }
+            ];
+          }
+          if (!db.event_expenses) db.event_expenses = [];
+          if (!db.orders) db.orders = [];
+          if (!db.order_items) db.order_items = [];
+          if (!db.events || !db.events.length) {
+            const today = new Date().toISOString().slice(0, 10);
+            db.events = [{ id: 1, name: 'Social de Teste', event_date: today, status: 'aberto', attendance_count: 25 }];
+          }
+          return db;
+        }
       } catch (_) {}
       return null;
     }
@@ -1757,8 +1784,8 @@
       await loadDashboard();
     }
 
-    function toggleAppEnvironment() {
-      setAppEnvironment(currentEnv === 'test' ? 'production' : 'test');
+    async function toggleAppEnvironment() {
+      await setAppEnvironment(currentEnv === 'test' ? 'production' : 'test');
     }
 
     async function resetTestDatabase() {
