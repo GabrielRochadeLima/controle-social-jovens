@@ -1345,7 +1345,10 @@
     let currentUser = null;
     try {
       const rawUser = localStorage.getItem(USER_SESSION_KEY);
-      if (rawUser) currentUser = JSON.parse(rawUser);
+      if (rawUser) {
+        const parsed = JSON.parse(rawUser);
+        currentUser = (parsed && parsed.user) ? parsed.user : parsed;
+      }
     } catch (_) {}
 
     const DEFAULT_SUPABASE_URL = 'https://irlxktcyucvckejrxunk.supabase.co';
@@ -1488,6 +1491,9 @@
     document.getElementById('ev-date').value = new Date().toISOString().slice(0, 10);
 
     function switchScreen(screenName) {
+      if (currentUser && currentUser.user) {
+        currentUser = currentUser.user;
+      }
       const role = currentUser ? currentUser.role : 'seller';
       if (role === 'seller' && screenName !== 'orders') {
         showToast('Acesso restrito: seu perfil de Vendedor tem acesso ao Caixa.');
@@ -2687,7 +2693,7 @@
           const user = (testDb.app_users || []).find((u) => Number(u.id) === Number(user_id));
           if (!user || user.active === false) throw new Error('Usuário não encontrado ou inativo.');
           if (String(user.pin).trim() !== String(pin).trim()) throw new Error('PIN incorreto. Tente novamente.');
-          return { success: true, user: { id: user.id, name: user.name, role: user.role } };
+          return { id: Number(user.id), name: user.name, role: user.role };
         }
         const mode = await detectBackend();
         if (mode === 'express') {
@@ -2698,7 +2704,7 @@
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro no login');
-          return data;
+          return (data && data.user) ? data.user : data;
         }
         if (mode === 'supabase') {
           try {
@@ -2710,7 +2716,7 @@
             if (!error && user) {
               if (user.active === false) throw new Error('Usuário desativado.');
               if (String(user.pin).trim() !== String(pin).trim()) throw new Error('PIN incorreto. Tente novamente.');
-              return { success: true, user: { id: user.id, name: user.name, role: user.role } };
+              return { id: Number(user.id), name: user.name, role: user.role };
             }
           } catch (err) {
             if (err.message && err.message.includes('PIN')) throw err;
@@ -2719,13 +2725,13 @@
           const user = (bridge.app_users || []).find((u) => Number(u.id) === Number(user_id));
           if (!user || user.active === false) throw new Error('Usuário não encontrado.');
           if (String(user.pin).trim() !== String(pin).trim()) throw new Error('PIN incorreto. Tente novamente.');
-          return { success: true, user: { id: user.id, name: user.name, role: user.role } };
+          return { id: Number(user.id), name: user.name, role: user.role };
         }
         const db = loadLocalDb();
         const user = (db.app_users || []).find((u) => Number(u.id) === Number(user_id));
         if (!user || user.active === false) throw new Error('Usuário não encontrado.');
         if (String(user.pin).trim() !== String(pin).trim()) throw new Error('PIN incorreto.');
-        return { success: true, user: { id: user.id, name: user.name, role: user.role } };
+        return { id: Number(user.id), name: user.name, role: user.role };
       },
 
       async createUser({ name, pin, role }) {
@@ -3669,6 +3675,9 @@
     }
 
     function applyRolePermissions() {
+      if (currentUser && currentUser.user) {
+        currentUser = currentUser.user;
+      }
       const nameEl = document.getElementById('session-user-name');
       const roleEl = document.getElementById('session-user-role');
       const badgeEl = document.getElementById('user-session-badge');
@@ -3796,7 +3805,8 @@
       }
 
       try {
-        const user = await DataService.loginUser({ user_id: userId, pin });
+        const loginRes = await DataService.loginUser({ user_id: userId, pin });
+        const user = (loginRes && loginRes.user) ? loginRes.user : loginRes;
         currentUser = user;
         localStorage.setItem(USER_SESSION_KEY, JSON.stringify(user));
         hideLoginModal();
