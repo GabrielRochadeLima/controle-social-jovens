@@ -992,9 +992,26 @@
               </select>
             </div>
           </div>
-          <div id="partial-entry-box" style="display: none; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.35); padding: 0.6rem; border-radius: 0.5rem;">
-            <label for="order-paid-now" style="color: #93c5fd;">Valor Pago Agora / Entrada (R$)</label>
-            <input type="number" id="order-paid-now" step="0.01" min="0.01" placeholder="Ex: 10.00 (o restante ficará pendente)" style="width: 100%;" />
+          <div id="partial-entry-box" style="display: none; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.35); padding: 0.75rem; border-radius: 0.5rem; margin-top: 0.4rem;">
+            <div style="font-weight: 700; color: #93c5fd; margin-bottom: 0.4rem; font-size: 0.85rem;">💵 Entrada do Pagamento Parcial:</div>
+            <div class="grid-2" style="margin-top: 0;">
+              <div>
+                <label for="order-paid-now" style="color: #93c5fd; font-size: 0.8rem;">Valor Pago Agora / Entrada (R$)</label>
+                <input type="number" id="order-paid-now" step="0.01" min="0.01" placeholder="Ex: 10.00" style="width: 100%; font-weight: 700;" oninput="updatePartialEntryPreview()" />
+              </div>
+              <div>
+                <label for="order-partial-method" style="color: #93c5fd; font-size: 0.8rem;">Forma de Pagamento da Entrada</label>
+                <select id="order-partial-method" style="width: 100%; font-weight: 600;">
+                  <option value="dinheiro">💵 Dinheiro</option>
+                  <option value="pix">📱 PIX</option>
+                  <option value="debito">💳 Cartão de Débito</option>
+                  <option value="credito">💳 Cartão de Crédito</option>
+                </select>
+              </div>
+            </div>
+            <div id="partial-entry-preview-text" style="font-size: 0.76rem; color: #cbd5e1; margin-top: 0.4rem;">
+              O restante ficará registrado na lista de fiados/pendentes.
+            </div>
           </div>
           <div class="product-add-row">
             <div>
@@ -1309,6 +1326,42 @@
   </section>
 
   <!-- ====================================================================== -->
+  <!-- MODAL DE PAGAMENTO / QUITAÇÃO / BAIXA PARCIAL                          -->
+  <!-- ====================================================================== -->
+  <div id="payment-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.94); z-index: 9999; justify-content: center; align-items: center; padding: 1rem; backdrop-filter: blur(8px);">
+    <div class="card" style="width: 100%; max-width: 420px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); border: 1px solid var(--primary); text-align: left; padding: 1.5rem;">
+      <h2 id="pay-modal-title" style="margin: 0 0 0.5rem 0; font-size: 1.25rem;">💰 Registrar Pagamento</h2>
+      <div id="pay-modal-order-info" style="background: var(--surface); padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 1rem; font-size: 0.85rem; border: 1px solid var(--border);"></div>
+
+      <form id="pay-modal-form" onsubmit="submitPaymentModal(event)" style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <input type="hidden" id="pay-modal-order-id" value="" />
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+            <label for="pay-modal-amount" style="font-weight: 600; margin: 0;">Valor a Pagar Agora (R$)</label>
+            <button type="button" class="btn-secondary" id="btn-pay-all-shortcut" onclick="fillPayModalFull()" style="font-size: 0.74rem; padding: 0.2rem 0.5rem;">Quitar Total</button>
+          </div>
+          <input type="number" id="pay-modal-amount" step="0.01" min="0.01" required style="width: 100%; font-size: 1.25rem; font-weight: 800; color: #38bdf8;" />
+        </div>
+
+        <div>
+          <label for="pay-modal-method" style="font-weight: 600;">Como o cliente está pagando?</label>
+          <select id="pay-modal-method" required style="width: 100%; font-size: 0.95rem; padding: 0.6rem; font-weight: 600;">
+            <option value="dinheiro">💵 Dinheiro</option>
+            <option value="pix">📱 PIX</option>
+            <option value="debito">💳 Cartão de Débito</option>
+            <option value="credito">💳 Cartão de Crédito</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.6rem;">
+          <button type="submit" class="btn-primary" style="flex: 1; padding: 0.75rem; font-size: 0.95rem; font-weight: 700;">Confirmar Pagamento ➔</button>
+          <button type="button" class="btn-secondary" onclick="closePaymentModal()" style="padding: 0.75rem 1rem;">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
   <!-- MODAL / OVERLAY DE LOGIN POR PIN                                       -->
   <!-- ====================================================================== -->
   <div id="login-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.94); z-index: 9999; justify-content: center; align-items: center; padding: 1rem; backdrop-filter: blur(8px);">
@@ -1380,6 +1433,7 @@
     let cachedProducts = [];
     let cachedCategories = [];
     let cachedEvents = [];
+    let cachedOrders = [];
     let orderCart = [];
     let selectedEventId = localStorage.getItem('csj_selected_event_id') || '';
 
@@ -2535,7 +2589,7 @@
         return enrichOrderFinancials(newOrder);
       },
 
-      async payOrder(orderId, amount = null) {
+      async payOrder(orderId, amount = null, paymentMethod = null) {
         if (isTestEnv()) {
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
           const ord = (testDb.orders || []).find((o) => Number(o.id) === Number(orderId));
@@ -2548,6 +2602,7 @@
           const newPaid = Number(Math.min(fin.total_amount, fin.paid_amount + addAmount).toFixed(2));
           ord.paid_amount = newPaid;
           ord.payment_status = newPaid >= fin.total_amount ? 'pago' : 'pendente';
+          if (paymentMethod) ord.payment_method = paymentMethod;
           saveTestDb(testDb);
           return enrichOrderFinancials(ord);
         }
@@ -2556,7 +2611,10 @@
           const r = await fetch(`/orders/${orderId}/pay`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: amount !== null ? JSON.stringify({ amount: Number(amount) }) : JSON.stringify({})
+            body: JSON.stringify({
+              amount: amount !== null ? Number(amount) : undefined,
+              payment_method: paymentMethod || undefined
+            })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao dar baixa');
@@ -2580,17 +2638,21 @@
           const newPaidAmount = Number(Math.min(fin.total_amount, fin.paid_amount + addAmount).toFixed(2));
           const newStatus = newPaidAmount >= fin.total_amount ? 'pago' : 'pendente';
 
+          const updateObj = { payment_status: newStatus, paid_amount: newPaidAmount };
+          if (paymentMethod) updateObj.payment_method = paymentMethod;
+
           let { data, error } = await sbClient
             .from('orders')
-            .update({ payment_status: newStatus, paid_amount: newPaidAmount })
+            .update(updateObj)
             .eq('id', Number(orderId))
             .select()
             .single();
 
           if (error && String(error.message || '').includes('paid_amount')) {
+            delete updateObj.paid_amount;
             const retry = await sbClient
               .from('orders')
-              .update({ payment_status: newStatus })
+              .update(updateObj)
               .eq('id', Number(orderId))
               .select()
               .single();
@@ -2599,22 +2661,26 @@
           }
           if (error) throw new Error(error.message);
 
-          if (newStatus === 'pago') {
-            delete bridge.paidAmountsMap[orderId];
-          } else {
+          if (newPaidAmount < fin.total_amount) {
             bridge.paidAmountsMap[orderId] = newPaidAmount;
+          } else {
+            delete bridge.paidAmountsMap[orderId];
           }
           saveEventsBridge(bridge);
-          return enrichOrderFinancials({ ...data, paid_amount: newPaidAmount }, bridge.paidAmountsMap);
+          return enrichOrderFinancials(data, bridge.paidAmountsMap);
         }
         const db = loadLocalDb();
-        const ord = db.orders.find((o) => Number(o.id) === Number(orderId));
+        const ord = (db.orders || []).find((o) => Number(o.id) === Number(orderId));
         if (!ord) throw new Error('Pedido não encontrado');
         const fin = enrichOrderFinancials(ord);
         const addAmount = amount !== null ? Number(Number(amount).toFixed(2)) : fin.remaining_amount;
-        const newPaid = Number(Math.min(fin.total_amount, fin.paid_amount + addAmount).toFixed(2));
-        ord.paid_amount = newPaid;
-        ord.payment_status = newPaid >= fin.total_amount ? 'pago' : 'pendente';
+        if (Number.isNaN(addAmount) || addAmount <= 0 || addAmount > fin.remaining_amount + 0.001) {
+          throw new Error(`Informe um valor válido entre R$ 0,01 e ${fmtBRL(fin.remaining_amount)}.`);
+        }
+        const newPaidAmount = Number(Math.min(fin.total_amount, fin.paid_amount + addAmount).toFixed(2));
+        ord.paid_amount = newPaidAmount;
+        ord.payment_status = newPaidAmount >= fin.total_amount ? 'pago' : 'pendente';
+        if (paymentMethod) ord.payment_method = paymentMethod;
         saveLocalDb(db);
         return enrichOrderFinancials(ord);
       },
@@ -3059,6 +3125,7 @@
         cachedCategories = categories || [];
         cachedProducts = products || [];
         cachedEvents = events || [];
+        cachedOrders = allOrders || [];
         updateEnvUi();
 
         // Garantir que haja ao menos 1 evento selecionado
@@ -3350,8 +3417,8 @@
               <td>${valHtml}</td>
               <td>
                 <div style="display:flex;gap:0.3rem;flex-wrap:wrap;">
-                  <button type="button" class="btn-warning" onclick="handlePartialPayOrder(${o.id}, ${o.remaining_amount})" style="padding:0.26rem 0.5rem;font-size:0.74rem;">Parcial</button>
-                  <button type="button" class="btn-success" onclick="handlePayOrder(${o.id})" style="padding:0.26rem 0.5rem;font-size:0.74rem;">Quitar</button>
+                  <button type="button" class="btn-warning" onclick="openPaymentModal(${o.id}, false)" style="padding:0.26rem 0.5rem;font-size:0.74rem;">Parcial</button>
+                  <button type="button" class="btn-success" onclick="openPaymentModal(${o.id}, true)" style="padding:0.26rem 0.5rem;font-size:0.74rem;">Quitar</button>
                 </div>
               </td>
             `;
@@ -3604,6 +3671,120 @@
       }
     }
 
+    
+    function updatePartialEntryPreview() {
+      const paidNowInput = document.getElementById('order-paid-now');
+      const previewText = document.getElementById('partial-entry-preview-text');
+      if (!paidNowInput || !previewText) return;
+      const amount = Number(paidNowInput.value || 0);
+
+      let totalOrderAmount = 0;
+      if (orderCart && orderCart.length > 0) {
+        totalOrderAmount = orderCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      } else {
+        const selEl = document.getElementById('order-product');
+        const qtyEl = document.getElementById('order-qty');
+        const selProd = cachedProducts.find((p) => Number(p.id) === Number(selEl && selEl.value));
+        const previewQty = Math.max(1, Number((qtyEl && qtyEl.value) || 1));
+        totalOrderAmount = selProd ? selProd.price * previewQty : 0;
+      }
+
+      if (totalOrderAmount > 0) {
+        const remaining = Math.max(0, totalOrderAmount - amount);
+        previewText.innerHTML = `Total: <strong>${fmtBRL(totalOrderAmount)}</strong> • Entrada: <strong style="color:#38bdf8;">${fmtBRL(amount)}</strong> • Saldo a Receber: <strong style="color:#fbbf24;">${fmtBRL(remaining)}</strong>`;
+      } else {
+        previewText.textContent = 'O restante ficará registrado na lista de fiados/pendentes.';
+      }
+    }
+
+    let currentPayModalOrder = null;
+
+    function openPaymentModal(orderId, isFull = false) {
+      const order = (cachedOrders || []).find((o) => Number(o.id) === Number(orderId));
+      if (!order) return;
+      currentPayModalOrder = order;
+
+      const fin = enrichOrderFinancials(order);
+      document.getElementById('pay-modal-order-id').value = order.id;
+      document.getElementById('pay-modal-title').textContent = `💰 Baixa de Pagamento - Pedido #${order.id}`;
+
+      const infoEl = document.getElementById('pay-modal-order-info');
+      infoEl.innerHTML = `
+        <div style="font-weight: 700; font-size: 1.05rem; color: var(--text);">${order.customer_name}</div>
+        <div style="display: flex; justify-content: space-between; margin-top: 0.4rem; color: var(--muted); font-size: 0.82rem;">
+          <span>Total do Pedido: <strong>${fmtBRL(fin.total_amount)}</strong></span>
+          <span>Já pago: <strong style="color: #34d399;">${fmtBRL(fin.paid_amount)}</strong></span>
+        </div>
+        <div style="margin-top: 0.5rem; padding-top: 0.4rem; border-top: 1px dashed var(--border); font-size: 0.95rem; font-weight: 700; color: #fbbf24;">
+          Saldo pendente atual: ${fmtBRL(fin.remaining_amount)}
+        </div>
+      `;
+
+      const amountInput = document.getElementById('pay-modal-amount');
+      amountInput.max = fin.remaining_amount;
+      amountInput.value = fin.remaining_amount.toFixed(2);
+
+      const methodSelect = document.getElementById('pay-modal-method');
+      if (order.payment_method && ['dinheiro', 'pix', 'debito', 'credito'].includes(order.payment_method.toLowerCase())) {
+        methodSelect.value = order.payment_method.toLowerCase();
+      }
+
+      document.getElementById('payment-modal').style.display = 'flex';
+      setTimeout(() => {
+        if (!isFull) {
+          amountInput.focus();
+          amountInput.select();
+        } else {
+          methodSelect.focus();
+        }
+      }, 150);
+    }
+
+    function fillPayModalFull() {
+      if (!currentPayModalOrder) return;
+      const fin = enrichOrderFinancials(currentPayModalOrder);
+      document.getElementById('pay-modal-amount').value = fin.remaining_amount.toFixed(2);
+    }
+
+    function closePaymentModal() {
+      document.getElementById('payment-modal').style.display = 'none';
+      currentPayModalOrder = null;
+    }
+
+    async function submitPaymentModal(e) {
+      e.preventDefault();
+      if (!currentPayModalOrder) return;
+
+      const orderId = Number(document.getElementById('pay-modal-order-id').value);
+      const amountVal = Number(document.getElementById('pay-modal-amount').value);
+      const methodVal = document.getElementById('pay-modal-method').value;
+
+      if (!orderId || Number.isNaN(amountVal) || amountVal <= 0) {
+        showToast('Informe um valor de pagamento válido maior que zero.');
+        return;
+      }
+
+      const fin = enrichOrderFinancials(currentPayModalOrder);
+      if (amountVal > fin.remaining_amount + 0.001) {
+        showToast(`O valor informado não pode ser maior que o saldo restante (${fmtBRL(fin.remaining_amount)}).`);
+        return;
+      }
+
+      try {
+        const updated = await DataService.payOrder(orderId, amountVal, methodVal);
+        closePaymentModal();
+        const methodLabel = methodVal === 'pix' ? 'PIX' : methodVal === 'dinheiro' ? 'Dinheiro' : methodVal === 'debito' ? 'Débito' : 'Crédito';
+        if (updated.payment_status === 'pago' || updated.remaining_amount <= 0) {
+          showToast(`Pedido #${orderId} quitado totalmente via ${methodLabel} (${fmtBRL(amountVal)})!`);
+        } else {
+          showToast(`Recebido ${fmtBRL(amountVal)} via ${methodLabel} no Pedido #${orderId}! Restam ${fmtBRL(updated.remaining_amount)}.`);
+        }
+        await loadDashboard();
+      } catch (err) {
+        showToast(err.message || 'Erro ao registrar pagamento');
+      }
+    }
+
     async function handlePayOrder(id) {
       try {
         await DataService.payOrder(id);
@@ -3691,7 +3872,9 @@
         const payload = {
           event_id: targetEvId,
           customer_name: document.getElementById('order-customer').value.trim(),
-          payment_method: document.getElementById('order-method').value,
+          payment_method: statusVal === 'parcial'
+            ? document.getElementById('order-partial-method').value
+            : document.getElementById('order-method').value,
           payment_status: statusVal,
           paid_amount: paidAmountVal,
           created_by_name: currentUser ? currentUser.name : 'Balcão',
