@@ -835,6 +835,9 @@
       <button type="button" class="nav-tab" id="tab-costs" onclick="switchScreen('costs')">
         💰 Custos & Lucro
       </button>
+      <button type="button" class="nav-tab" id="tab-forecast" onclick="switchScreen('forecast')" style="display: none;">
+        📋 Previsão & Compras
+      </button>
       <button type="button" class="nav-tab" id="tab-users" onclick="switchScreen('users')">
         👥 Usuários
       </button>
@@ -1116,9 +1119,22 @@
                 <input type="number" id="prod-cost" step="0.01" min="0" placeholder="Ex: 3.00" style="width: 100%;" />
               </div>
             </div>
-            <div>
-              <label for="prod-stock">Estoque <span style="font-weight:400;">(Vazio = sem controle de estoque)</span></label>
-              <input type="number" id="prod-stock" min="0" placeholder="Livre / Sem controle" style="width: 100%;" />
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+              <div>
+                <label for="prod-unit">Unidade de Medida</label>
+                <select id="prod-unit" style="width: 100%;">
+                  <option value="un">un (Unidade - ex: Lata, Salgado)</option>
+                  <option value="L">L (Litros - ex: Açaí, Suco)</option>
+                  <option value="kg">kg (Quilos - ex: Frutas, Carnes)</option>
+                  <option value="fatia">fatia (Fatias - ex: Pizza, Bolo)</option>
+                  <option value="cx">cx (Caixa)</option>
+                  <option value="pct">pct (Pacote)</option>
+                </select>
+              </div>
+              <div>
+                <label for="prod-stock">Estoque <span style="font-weight:400;">(Vazio = livre)</span></label>
+                <input type="number" id="prod-stock" min="0" placeholder="Livre / Sem controle" style="width: 100%;" />
+              </div>
             </div>
             <div style="display: flex; gap: 0.5rem;">
               <button type="submit" class="btn-primary" id="prod-submit-btn" style="flex: 1;">Salvar Produto</button>
@@ -1273,6 +1289,117 @@
   <!-- ====================================================================== -->
   <!-- TELA 4: GERENCIAMENTO DE EQUIPE & OPERADORES (EXCLUSIVO ADMIN)         -->
   <!-- ====================================================================== -->
+  
+  <!-- ====================================================================== -->
+  <!-- TELA 5: PREVISÃO DE VENDAS & COMPRAS (EXCLUSIVO ADMIN)                 -->
+  <!-- ====================================================================== -->
+  <section id="screen-forecast" class="screen">
+    <!-- Cabeçalho e Seletor de Evento -->
+    <div class="card" style="margin-bottom: 0.85rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h2 style="margin: 0; padding: 0; border: none; font-size: 1.05rem;">📋 Previsão de Vendas & Compras</h2>
+          <small style="color: var(--muted);">Planeje a quantidade de insumos a comprar (pizza, litros de açaí, kg de frutas), custos e lucro líquido previsto.</small>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <label for="forecast-event-filter" style="margin: 0; font-weight: 600; white-space: nowrap; font-size: 0.84rem;">Evento:</label>
+          <select id="forecast-event-filter" onchange="onForecastEventChange(this.value)" style="min-width: 200px; max-width: 100%;"></select>
+          <button type="button" class="btn-success" onclick="saveCurrentForecast()" title="Salvar dados de previsão deste evento">💾 Salvar Previsão</button>
+          <button type="button" class="btn-primary" onclick="copyShoppingListToClipboard()" title="Copiar lista de compras para o WhatsApp">📲 Copiar WhatsApp</button>
+          <button type="button" class="btn-secondary" onclick="window.print()" title="Imprimir lista de compras">🖨 Imprimir</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Indicadores Financeiros da Previsão -->
+    <div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 0.85rem;">
+      <div class="stat-card">
+        <span>Custo Total de Compras (Produtos)</span>
+        <strong id="forecast-stat-cost" style="color: #f87171;">R$ 0,00</strong>
+        <small id="forecast-stat-cost-desc">0 itens planejados</small>
+      </div>
+      <div class="stat-card">
+        <span>Despesas Operacionais Previstas</span>
+        <strong id="forecast-stat-expenses" style="color: #fb923c;">R$ 0,00</strong>
+        <small id="forecast-stat-expenses-desc">0 despesas extras</small>
+      </div>
+      <div class="stat-card">
+        <span>Faturamento Bruto Projetado</span>
+        <strong id="forecast-stat-sales" class="text-primary">R$ 0,00</strong>
+        <small>Receita total esperada</small>
+      </div>
+      <div class="stat-card">
+        <span>Lucro Líquido Previsto</span>
+        <strong id="forecast-stat-profit" style="color: #34d399;">R$ 0,00</strong>
+        <small id="forecast-stat-margin">Margem Líquida: 0.0%</small>
+      </div>
+    </div>
+
+    <!-- Tabela de Produtos / Simulador de Compras -->
+    <div class="card" style="margin-bottom: 0.85rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+        <h3 style="margin: 0; font-size: 0.98rem;">🛒 Produtos & Insumos para Comprar / Vender</h3>
+        <button type="button" class="btn-secondary" onclick="clearAllForecastQuantities()" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">Zerar Quantidades</button>
+      </div>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+          <thead>
+            <tr style="background: var(--surface2); text-align: left;">
+              <th style="padding: 0.6rem;">Produto</th>
+              <th style="padding: 0.6rem; width: 65px; text-align: center;">Unid.</th>
+              <th style="padding: 0.6rem; width: 95px; text-align: right;">Custo Unit.</th>
+              <th style="padding: 0.6rem; width: 95px; text-align: right;">Venda Unit.</th>
+              <th style="padding: 0.6rem; width: 140px; text-align: center;">Qtd a Comprar</th>
+              <th style="padding: 0.6rem; width: 105px; text-align: right;">Custo Total</th>
+              <th style="padding: 0.6rem; width: 105px; text-align: right;">Venda Total</th>
+              <th style="padding: 0.6rem; width: 105px; text-align: right;">Lucro Prev.</th>
+            </tr>
+          </thead>
+          <tbody id="forecast-products-tbody">
+            <!-- Renderizado via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Outras Despesas Operacionais Previstas (Copos, Guardanapos, Gelo, etc.) -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <h3 style="margin: 0; font-size: 0.98rem;">📦 Outras Despesas Operacionais Previstas</h3>
+          <small style="color: var(--muted);">Copos descartáveis, guardanapos, carvão, gelo, gás, frete ou itens de apoio.</small>
+        </div>
+      </div>
+
+      <form id="forecast-expense-form" onsubmit="addForecastExpense(event)" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem; align-items: flex-end;">
+        <div style="flex: 2; min-width: 180px;">
+          <label for="forecast-exp-desc" style="font-size: 0.78rem;">Descrição da Despesa</label>
+          <input type="text" id="forecast-exp-desc" placeholder="Ex: Copos descartáveis e guardanapos" required style="width: 100%;" />
+        </div>
+        <div style="flex: 1; min-width: 120px;">
+          <label for="forecast-exp-amt" style="font-size: 0.78rem;">Valor Estimado (R$)</label>
+          <input type="number" id="forecast-exp-amt" step="0.01" min="0.01" placeholder="Ex: 25.00" required style="width: 100%;" />
+        </div>
+        <button type="submit" class="btn-primary" style="padding: 0.55rem 1rem; font-weight: 600;">+ Adicionar</button>
+      </form>
+
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+          <thead>
+            <tr style="background: var(--surface2); text-align: left;">
+              <th style="padding: 0.5rem;">Item Operacional</th>
+              <th style="padding: 0.5rem; width: 140px; text-align: right;">Valor Previsto</th>
+              <th style="padding: 0.5rem; width: 70px; text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="forecast-expenses-tbody">
+            <!-- Renderizado via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <section id="screen-users" class="screen">
     <div class="grid-2">
       <!-- Formulário de Criação/Edição de Usuário -->
@@ -1623,12 +1750,12 @@
         showToast('Acesso restrito: seu perfil de Vendedor tem acesso ao Caixa.');
         return;
       }
-      if (role === 'manager' && (screenName === 'costs' || screenName === 'users')) {
+      if (role === 'manager' && (screenName === 'costs' || screenName === 'users' || screenName === 'forecast')) {
         showToast('Acesso restrito: somente Administradores podem acessar esta aba.');
         return;
       }
 
-      ['events', 'orders', 'products', 'costs', 'users'].forEach((s) => {
+      ['events', 'orders', 'products', 'costs', 'forecast', 'users'].forEach((s) => {
         const screenEl = document.getElementById(`screen-${s}`);
         const tabEl = document.getElementById(`tab-${s}`);
         if (screenEl) screenEl.classList.toggle('active', s === screenName);
@@ -1636,6 +1763,9 @@
       });
       if (screenName === 'costs') {
         renderCostsScreen();
+      }
+      if (screenName === 'forecast') {
+        renderForecastScreen();
       }
       if (screenName === 'users') {
         renderUsersScreen();
@@ -1666,10 +1796,11 @@
           { id: 3, name: 'Doces' }
         ],
         products: [
-          { id: 1, name: 'Cachorro-Quente Completo', category_id: 1, price: 12.00, cost_price: 5.50, stock_quantity: null },
-          { id: 2, name: 'Pastel de Carne', category_id: 1, price: 10.00, cost_price: 4.00, stock_quantity: null },
-          { id: 3, name: 'Refrigerante Lata 350ml', category_id: 2, price: 6.00, cost_price: 3.20, stock_quantity: 48 },
-          { id: 4, name: 'Brigadeiro Gourmet', category_id: 3, price: 4.50, cost_price: 1.80, stock_quantity: 30 }
+          { id: 1, name: 'Cachorro-Quente Completo', category_id: 1, price: 12.00, cost_price: 5.50, unit: 'un', stock_quantity: null },
+          { id: 2, name: 'Pizza na Forma', category_id: 1, price: 25.00, cost_price: 12.00, unit: 'un', stock_quantity: null },
+          { id: 3, name: 'Açaí Cremoso', category_id: 3, price: 18.00, cost_price: 8.50, unit: 'L', stock_quantity: null },
+          { id: 4, name: 'Refrigerante Lata 350ml', category_id: 2, price: 6.00, cost_price: 3.20, unit: 'un', stock_quantity: 48 },
+          { id: 5, name: 'Brigadeiro Gourmet', category_id: 3, price: 4.50, cost_price: 1.80, unit: 'un', stock_quantity: 30 }
         ],
         events: [
           { id: 1, name: 'Social de Jovens', event_date: today, status: 'aberto', attendance_count: 35 }
@@ -2228,10 +2359,11 @@
         });
       },
 
-      async createProduct({ name, category_id, price, cost_price, stock_quantity }) {
+      async createProduct({ name, category_id, price, cost_price, stock_quantity, unit }) {
         const numPrice = Number(price);
         const numCost = cost_price !== undefined && cost_price !== null && cost_price !== '' ? Number(cost_price) : 0;
         const parsedStock = stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity);
+        const unitVal = unit || 'un';
 
         if (isTestEnv()) {
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
@@ -2242,6 +2374,7 @@
             category_id: Number(category_id),
             price: numPrice,
             cost_price: numCost,
+            unit: unitVal,
             stock_quantity: parsedStock
           };
           testDb.products.push(newProd);
@@ -2253,7 +2386,7 @@
           const r = await fetch('/products', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, category_id, price: numPrice, cost_price: numCost, stock_quantity: parsedStock })
+            body: JSON.stringify({ name, category_id, price: numPrice, cost_price: numCost, unit: unitVal, stock_quantity: parsedStock })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao cadastrar produto');
@@ -2265,6 +2398,7 @@
             category_id: Number(category_id),
             price: numPrice,
             cost_price: numCost,
+            unit: unitVal,
             stock_quantity: parsedStock
           };
           let { data, error } = await sbClient.from('products').insert([payload]).select().single();
@@ -2292,10 +2426,11 @@
         return newProd;
       },
 
-      async updateProduct(id, { name, category_id, price, cost_price, stock_quantity }) {
+      async updateProduct(id, { name, category_id, price, cost_price, stock_quantity, unit }) {
         const numPrice = Number(price);
         const numCost = cost_price !== undefined && cost_price !== null && cost_price !== '' ? Number(cost_price) : 0;
         const parsedStock = stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity);
+        const unitVal = unit || 'un';
 
         if (isTestEnv()) {
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
@@ -2305,6 +2440,7 @@
           prod.category_id = Number(category_id);
           prod.price = numPrice;
           prod.cost_price = numCost;
+          prod.unit = unitVal;
           prod.stock_quantity = parsedStock;
           saveTestDb(testDb);
           return prod;
@@ -2314,7 +2450,7 @@
           const r = await fetch(`/products/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, category_id, price: numPrice, cost_price: numCost, stock_quantity: parsedStock })
+            body: JSON.stringify({ name, category_id, price: numPrice, cost_price: numCost, unit: unitVal, stock_quantity: parsedStock })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao atualizar produto');
@@ -2326,6 +2462,7 @@
             category_id: Number(category_id),
             price: numPrice,
             cost_price: numCost,
+            unit: unitVal,
             stock_quantity: parsedStock
           };
           let { data, error } = await sbClient
@@ -3093,6 +3230,8 @@
       document.getElementById('prod-price').value = prod.price;
       document.getElementById('prod-cost').value =
         prod.cost_price === null || prod.cost_price === undefined ? '' : prod.cost_price;
+      const unitEl = document.getElementById('prod-unit');
+      if (unitEl) unitEl.value = prod.unit || 'un';
       document.getElementById('prod-stock').value =
         prod.stock_quantity === null || prod.stock_quantity === undefined ? '' : prod.stock_quantity;
 
@@ -3108,6 +3247,8 @@
       document.getElementById('prod-price').value = '';
       document.getElementById('prod-cost').value = '';
       document.getElementById('prod-stock').value = '';
+      const unitEl = document.getElementById('prod-unit');
+      if (unitEl) unitEl.value = 'un';
       document.getElementById('product-form-title').textContent = 'Cadastrar Novo Produto';
       document.getElementById('prod-submit-btn').textContent = 'Salvar Produto';
       document.getElementById('prod-cancel-btn').style.display = 'none';
@@ -3555,7 +3696,10 @@
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td><strong>${p.name}</strong></td>
+            <td>
+              <strong>${p.name}</strong>
+              <span class="tag tag-aberto" style="font-size:0.68rem;padding:0.1rem 0.35rem;margin-left:0.25rem;">${p.unit || 'un'}</span>
+            </td>
             <td>${p.category_name || '-'}</td>
             <td style="color:#f87171;">${fmtBRL(p.cost_price || 0)}</td>
             <td style="color:var(--primary);font-weight:600;">${fmtBRL(p.price)}</td>
@@ -3652,6 +3796,383 @@
     function onCostsEventChange(val) {
       costsEventId = String(val);
       renderCostsScreen();
+    }
+
+    // ========================================================================
+    // TELA DE PREVISÃO DE VENDAS & COMPRAS (SIMULADOR DE RENTABILIDADE)
+    // ========================================================================
+    let forecastEventId = null;
+    let forecastQuantities = {};
+    let forecastExpensesList = [];
+
+    function onForecastEventChange(val) {
+      forecastEventId = String(val);
+      loadForecastDataForCurrentSelection();
+      renderForecastScreen();
+    }
+
+    function loadForecastDataForCurrentSelection() {
+      forecastQuantities = {};
+      forecastExpensesList = [];
+
+      if (!forecastEventId || forecastEventId === 'free') {
+        try {
+          const raw = localStorage.getItem('csj_free_forecast');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            forecastQuantities = parsed.items || {};
+            forecastExpensesList = parsed.expenses || [];
+          }
+        } catch (_) {}
+        return;
+      }
+
+      // Procura evento no cachedEvents
+      const ev = (cachedEvents || []).find((e) => String(e.id) === String(forecastEventId));
+      if (ev && ev.forecast_data) {
+        forecastQuantities = ev.forecast_data.items || {};
+        forecastExpensesList = ev.forecast_data.expenses || [];
+      } else {
+        // Fallback para localStorage
+        try {
+          const raw = localStorage.getItem('csj_forecast_event_' + forecastEventId);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            forecastQuantities = parsed.items || {};
+            forecastExpensesList = parsed.expenses || [];
+          }
+        } catch (_) {}
+      }
+    }
+
+    function renderForecastScreen() {
+      // 1. Preencher Seletor de Eventos
+      const select = document.getElementById('forecast-event-filter');
+      if (select) {
+        select.innerHTML = '';
+        const freeOpt = document.createElement('option');
+        freeOpt.value = 'free';
+        freeOpt.textContent = '🎯 Simulação Livre / Rascunho Geral';
+        select.appendChild(freeOpt);
+
+        (cachedEvents || []).forEach((ev) => {
+          const opt = document.createElement('option');
+          opt.value = String(ev.id);
+          const st = ev.status === 'aberto' ? '🟢' : ev.status === 'agendado' ? '🟡' : '⚪';
+          opt.textContent = `${st} ${ev.name} (${fmtDateBR(ev.event_date)})`;
+          select.appendChild(opt);
+        });
+
+        if (!forecastEventId) {
+          forecastEventId = selectedEventId && selectedEventId !== 'all'
+            ? String(selectedEventId)
+            : (cachedEvents[0] ? String(cachedEvents[0].id) : 'free');
+          loadForecastDataForCurrentSelection();
+        }
+        select.value = String(forecastEventId);
+      }
+
+      // 2. Renderizar Tabela de Produtos / Insumos
+      const prodTbody = document.getElementById('forecast-products-tbody');
+      if (prodTbody) {
+        prodTbody.innerHTML = '';
+        if (!cachedProducts || cachedProducts.length === 0) {
+          prodTbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1.5rem;">Nenhum produto cadastrado para simulação.</td></tr>';
+        } else {
+          cachedProducts.forEach((p) => {
+            const qty = Number(forecastQuantities[p.id] || 0);
+            const cost = Number(p.cost_price || 0);
+            const price = Number(p.price || 0);
+            const totalCost = qty * cost;
+            const totalSales = qty * price;
+            const totalProfit = totalSales - totalCost;
+            const unit = p.unit || 'un';
+
+            const tr = document.createElement('tr');
+            tr.id = `forecast-row-${p.id}`;
+            tr.innerHTML = `
+              <td>
+                <strong>${p.name}</strong>
+                <small style="display:block;color:var(--muted);font-size:0.75rem;">${p.category_name || 'Geral'}</small>
+              </td>
+              <td style="text-align:center;">
+                <span class="tag tag-aberto" style="font-size:0.72rem;padding:0.15rem 0.4rem;">${unit}</span>
+              </td>
+              <td style="text-align:right;color:#f87171;">${fmtBRL(cost)}</td>
+              <td style="text-align:right;color:var(--primary);font-weight:600;">${fmtBRL(price)}</td>
+              <td style="text-align:center;">
+                <div style="display:inline-flex;align-items:center;gap:0.25rem;">
+                  <button type="button" class="btn-secondary" onclick="stepForecastQty(${p.id}, -1)" style="padding:0.2rem 0.5rem;font-weight:700;font-size:0.85rem;" title="Diminuir">-</button>
+                  <input type="number" step="any" min="0" value="${qty > 0 ? qty : ''}" placeholder="0" oninput="onForecastQtyChange(${p.id}, this.value)" style="width:65px;text-align:center;font-weight:700;padding:0.35rem 0.2rem;" />
+                  <button type="button" class="btn-secondary" onclick="stepForecastQty(${p.id}, 1)" style="padding:0.2rem 0.5rem;font-weight:700;font-size:0.85rem;" title="Aumentar">+</button>
+                </div>
+              </td>
+              <td id="f-cost-${p.id}" style="text-align:right;color:#f87171;font-weight:600;">${fmtBRL(totalCost)}</td>
+              <td id="f-sales-${p.id}" style="text-align:right;color:var(--primary);font-weight:600;">${fmtBRL(totalSales)}</td>
+              <td id="f-profit-${p.id}" style="text-align:right;color:${totalProfit >= 0 ? '#34d399' : '#f87171'};font-weight:700;">${fmtBRL(totalProfit)}</td>
+            `;
+            prodTbody.appendChild(tr);
+          });
+        }
+      }
+
+      // 3. Renderizar Despesas Operacionais Previstas
+      renderForecastExpensesTable();
+
+      // 4. Atualizar Indicadores Globais
+      updateForecastKpis();
+    }
+
+    function renderForecastExpensesTable() {
+      const expTbody = document.getElementById('forecast-expenses-tbody');
+      if (!expTbody) return;
+      expTbody.innerHTML = '';
+
+      if (!forecastExpensesList || forecastExpensesList.length === 0) {
+        expTbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:1rem;">Nenhuma despesa operacional prevista (ex: copos, guardanapos, gelo).</td></tr>';
+        return;
+      }
+
+      forecastExpensesList.forEach((exp) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${exp.description}</strong></td>
+          <td style="text-align:right;color:#fb923c;font-weight:600;">${fmtBRL(exp.amount)}</td>
+          <td style="text-align:center;">
+            <button type="button" class="btn-delete" onclick="deleteForecastExpense(${exp.id})" style="padding:0.2rem 0.45rem;font-size:0.75rem;" title="Remover despesa">✕</button>
+          </td>
+        `;
+        expTbody.appendChild(tr);
+      });
+    }
+
+    function onForecastQtyChange(productId, val) {
+      const num = Math.max(0, parseFloat(val) || 0);
+      if (num === 0) {
+        delete forecastQuantities[productId];
+      } else {
+        forecastQuantities[productId] = num;
+      }
+      updateForecastRow(productId);
+      updateForecastKpis();
+    }
+
+    function stepForecastQty(productId, step) {
+      const current = Number(forecastQuantities[productId] || 0);
+      const next = Math.max(0, Number((current + step).toFixed(2)));
+      if (next === 0) {
+        delete forecastQuantities[productId];
+      } else {
+        forecastQuantities[productId] = next;
+      }
+      const row = document.getElementById(`forecast-row-${productId}`);
+      if (row) {
+        const inp = row.querySelector('input');
+        if (inp) inp.value = next > 0 ? next : '';
+      }
+      updateForecastRow(productId);
+      updateForecastKpis();
+    }
+
+    function updateForecastRow(productId) {
+      const p = (cachedProducts || []).find((x) => Number(x.id) === Number(productId));
+      if (!p) return;
+      const qty = Number(forecastQuantities[productId] || 0);
+      const cost = Number(p.cost_price || 0);
+      const price = Number(p.price || 0);
+      const totalCost = qty * cost;
+      const totalSales = qty * price;
+      const totalProfit = totalSales - totalCost;
+
+      const cEl = document.getElementById(`f-cost-${productId}`);
+      const sEl = document.getElementById(`f-sales-${productId}`);
+      const pEl = document.getElementById(`f-profit-${productId}`);
+
+      if (cEl) cEl.textContent = fmtBRL(totalCost);
+      if (sEl) sEl.textContent = fmtBRL(totalSales);
+      if (pEl) {
+        pEl.textContent = fmtBRL(totalProfit);
+        pEl.style.color = totalProfit >= 0 ? '#34d399' : '#f87171';
+      }
+    }
+
+    function clearAllForecastQuantities() {
+      if (!window.confirm('Deseja zerar todas as quantidades planejadas desta previsão?')) return;
+      forecastQuantities = {};
+      renderForecastScreen();
+    }
+
+    function addForecastExpense(e) {
+      e.preventDefault();
+      const descEl = document.getElementById('forecast-exp-desc');
+      const amtEl = document.getElementById('forecast-exp-amt');
+      const desc = descEl ? descEl.value.trim() : '';
+      const amt = amtEl ? Math.max(0.01, parseFloat(amtEl.value) || 0) : 0;
+
+      if (!desc || amt <= 0) return;
+
+      forecastExpensesList.push({
+        id: Date.now(),
+        description: desc,
+        amount: Number(amt.toFixed(2))
+      });
+
+      if (descEl) descEl.value = '';
+      if (amtEl) amtEl.value = '';
+
+      renderForecastExpensesTable();
+      updateForecastKpis();
+      showToast('Despesa operacional prevista adicionada!');
+    }
+
+    function deleteForecastExpense(id) {
+      forecastExpensesList = forecastExpensesList.filter((x) => x.id !== id);
+      renderForecastExpensesTable();
+      updateForecastKpis();
+    }
+
+    function updateForecastKpis() {
+      let totalCost = 0;
+      let totalSales = 0;
+      let itemsCount = 0;
+
+      (cachedProducts || []).forEach((p) => {
+        const qty = Number(forecastQuantities[p.id] || 0);
+        if (qty > 0) {
+          itemsCount += 1;
+          totalCost += qty * Number(p.cost_price || 0);
+          totalSales += qty * Number(p.price || 0);
+        }
+      });
+
+      const totalExpenses = (forecastExpensesList || []).reduce((s, x) => s + (Number(x.amount) || 0), 0);
+      const netProfit = totalSales - totalCost - totalExpenses;
+      const margin = totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(1) : '0.0';
+
+      const costEl = document.getElementById('forecast-stat-cost');
+      const costDescEl = document.getElementById('forecast-stat-cost-desc');
+      const expEl = document.getElementById('forecast-stat-expenses');
+      const expDescEl = document.getElementById('forecast-stat-expenses-desc');
+      const salesEl = document.getElementById('forecast-stat-sales');
+      const profitEl = document.getElementById('forecast-stat-profit');
+      const marginEl = document.getElementById('forecast-stat-margin');
+
+      if (costEl) costEl.textContent = fmtBRL(totalCost);
+      if (costDescEl) costDescEl.textContent = `${itemsCount} produto(s) a comprar`;
+      if (expEl) expEl.textContent = fmtBRL(totalExpenses);
+      if (expDescEl) expDescEl.textContent = `${forecastExpensesList.length} despesa(s) extra(s)`;
+      if (salesEl) salesEl.textContent = fmtBRL(totalSales);
+      if (profitEl) {
+        profitEl.textContent = fmtBRL(netProfit);
+        profitEl.style.color = netProfit >= 0 ? '#34d399' : '#f87171';
+      }
+      if (marginEl) {
+        marginEl.textContent = `Margem Líquida: ${margin}%`;
+      }
+    }
+
+    async function saveCurrentForecast() {
+      const dataToSave = {
+        items: forecastQuantities,
+        expenses: forecastExpensesList,
+        updated_at: new Date().toISOString()
+      };
+
+      try {
+        if (!forecastEventId || forecastEventId === 'free') {
+          localStorage.setItem('csj_free_forecast', JSON.stringify(dataToSave));
+          showToast('💾 Simulação livre salva com sucesso no navegador!');
+          return;
+        }
+
+        const evId = Number(forecastEventId);
+        // Atualizar no evento
+        const ev = (cachedEvents || []).find((e) => Number(e.id) === evId);
+        if (ev) ev.forecast_data = dataToSave;
+
+        localStorage.setItem('csj_forecast_event_' + forecastEventId, JSON.stringify(dataToSave));
+        await DataService.updateEvent(evId, { forecast_data: dataToSave });
+        showToast(`💾 Previsão do evento "${ev ? ev.name : ''}" salva com sucesso!`);
+      } catch (err) {
+        // Fallback local se a coluna no banco ainda não existir
+        localStorage.setItem('csj_forecast_event_' + forecastEventId, JSON.stringify(dataToSave));
+        showToast('💾 Previsão salva com sucesso localmente!');
+      }
+    }
+
+    function copyShoppingListToClipboard() {
+      const ev = (cachedEvents || []).find((e) => String(e.id) === String(forecastEventId));
+      const eventTitle = ev ? `${ev.name} (${fmtDateBR(ev.event_date)})` : 'Simulação de Compras';
+
+      let itemsLines = [];
+      let totalCost = 0;
+      let totalSales = 0;
+
+      (cachedProducts || []).forEach((p) => {
+        const qty = Number(forecastQuantities[p.id] || 0);
+        if (qty > 0) {
+          const unit = p.unit || 'un';
+          const cost = qty * Number(p.cost_price || 0);
+          totalCost += cost;
+          totalSales += qty * Number(p.price || 0);
+          itemsLines.push(`• *${qty} ${unit}* - ${p.name} (Custo est.: ${fmtBRL(cost)})`);
+        }
+      });
+
+      let expLines = [];
+      let totalExpenses = 0;
+      (forecastExpensesList || []).forEach((exp) => {
+        const amt = Number(exp.amount) || 0;
+        totalExpenses += amt;
+        expLines.push(`• ${exp.description} (${fmtBRL(amt)})`);
+      });
+
+      const totalInvestment = totalCost + totalExpenses;
+      const netProfit = totalSales - totalInvestment;
+      const margin = totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(1) : '0.0';
+
+      let msg = `🛒 *LISTA DE COMPRAS DO SOCIAL*\n📌 *${eventTitle}*\n\n`;
+
+      if (itemsLines.length > 0) {
+        msg += `📦 *PRODUTOS & INSUMOS A COMPRAR:*\n${itemsLines.join('\n')}\n\n`;
+      } else {
+        msg += `📦 *PRODUTOS & INSUMOS:* (Nenhum produto com quantidade marcada)\n\n`;
+      }
+
+      if (expLines.length > 0) {
+        msg += `📦 *DESPESAS OPERACIONAIS PREVISTAS:*\n${expLines.join('\n')}\n\n`;
+      }
+
+      msg += `💰 *RESUMO FINANCEIRO PROJETADO:*\n`;
+      msg += `• 🛒 Total de Compras + Insumos: *${fmtBRL(totalInvestment)}*\n`;
+      msg += `• 💵 Faturamento Estimado: *${fmtBRL(totalSales)}*\n`;
+      msg += `• 💎 Lucro Líquido Previsto: *${fmtBRL(netProfit)}* (${margin}%)\n`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(msg).then(() => {
+          showToast('📲 Lista de compras copiada para o WhatsApp!');
+        }).catch(() => {
+          fallbackCopyText(msg);
+        });
+      } else {
+        fallbackCopyText(msg);
+      }
+    }
+
+    function fallbackCopyText(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('📲 Lista de compras copiada para o WhatsApp!');
+      } catch (_) {
+        showToast('Não foi possível copiar automaticamente.');
+      }
+      document.body.removeChild(textarea);
     }
 
     async function renderCostsScreen() {
@@ -4084,11 +4605,13 @@
         const editId = document.getElementById('prod-edit-id').value;
         const stockRaw = document.getElementById('prod-stock').value.trim();
         const costRaw = document.getElementById('prod-cost').value.trim();
+        const unitEl = document.getElementById('prod-unit');
         const payload = {
           name: document.getElementById('prod-name').value.trim(),
           category_id: Number(document.getElementById('prod-category').value),
           price: Number(document.getElementById('prod-price').value),
           cost_price: costRaw === '' ? 0 : Number(costRaw),
+          unit: unitEl ? unitEl.value : 'un',
           stock_quantity: stockRaw === '' ? null : Number(stockRaw)
         };
 
@@ -4165,6 +4688,7 @@
       const tabOrders = document.getElementById('tab-orders');
       const tabProducts = document.getElementById('tab-products');
       const tabCosts = document.getElementById('tab-costs');
+      const tabForecast = document.getElementById('tab-forecast');
       const tabUsers = document.getElementById('tab-users');
       const btnEnvToggle = document.getElementById('btn-env-toggle');
       const cashStats = document.getElementById('orders-cash-stats');
@@ -4174,6 +4698,7 @@
         if (tabOrders) tabOrders.style.display = 'inline-flex';
         if (tabProducts) tabProducts.style.display = 'none';
         if (tabCosts) tabCosts.style.display = 'none';
+        if (tabForecast) tabForecast.style.display = 'none';
         if (tabUsers) tabUsers.style.display = 'none';
         if (btnEnvToggle) btnEnvToggle.style.display = 'none';
         if (cashStats) cashStats.style.display = 'none';
@@ -4187,12 +4712,13 @@
         if (tabOrders) tabOrders.style.display = 'inline-flex';
         if (tabProducts) tabProducts.style.display = 'inline-flex';
         if (tabCosts) tabCosts.style.display = 'none';
+        if (tabForecast) tabForecast.style.display = 'none';
         if (tabUsers) tabUsers.style.display = 'none';
         if (btnEnvToggle) btnEnvToggle.style.display = 'none';
         if (cashStats) cashStats.style.display = 'grid';
 
         const currentActiveScreen = document.querySelector('.screen.active');
-        if (currentActiveScreen && (currentActiveScreen.id === 'screen-costs' || currentActiveScreen.id === 'screen-users')) {
+        if (currentActiveScreen && (currentActiveScreen.id === 'screen-costs' || currentActiveScreen.id === 'screen-users' || currentActiveScreen.id === 'screen-forecast')) {
           switchScreen('orders');
         }
       } else {
@@ -4200,6 +4726,7 @@
         if (tabOrders) tabOrders.style.display = 'inline-flex';
         if (tabProducts) tabProducts.style.display = 'inline-flex';
         if (tabCosts) tabCosts.style.display = 'inline-flex';
+        if (tabForecast) tabForecast.style.display = 'inline-flex';
         if (tabUsers) tabUsers.style.display = 'inline-flex';
         if (btnEnvToggle) btnEnvToggle.style.display = 'inline-flex';
         if (cashStats) cashStats.style.display = 'grid';
@@ -4497,7 +5024,7 @@
     let deferredInstallPrompt = null;
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=5').then((reg) => {
+        navigator.serviceWorker.register('./sw.js?v=6').then((reg) => {
           reg.update();
         }).catch(() => {});
       });

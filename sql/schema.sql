@@ -39,9 +39,11 @@ CREATE TABLE IF NOT EXISTS "controle-social-jovens".products (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Caso a tabela products já exista sem a coluna cost_price:
+-- Caso a tabela products já exista sem a coluna cost_price ou unit:
 ALTER TABLE "controle-social-jovens".products
     ADD COLUMN IF NOT EXISTS cost_price NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (cost_price >= 0);
+ALTER TABLE "controle-social-jovens".products
+    ADD COLUMN IF NOT EXISTS unit VARCHAR(20) NOT NULL DEFAULT 'un';
 
 -- 3.2.1. Tabela de Eventos / Dias de Social (events)
 CREATE TABLE IF NOT EXISTS "controle-social-jovens".events (
@@ -50,8 +52,13 @@ CREATE TABLE IF NOT EXISTS "controle-social-jovens".events (
     event_date DATE NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'agendado' CHECK (status IN ('agendado', 'aberto', 'encerrado')),
     attendance_count INTEGER NOT NULL DEFAULT 0 CHECK (attendance_count >= 0),
+    forecast_data JSONB NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Caso a tabela events já exista sem a coluna forecast_data:
+ALTER TABLE "controle-social-jovens".events
+    ADD COLUMN IF NOT EXISTS forecast_data JSONB NULL;
 
 -- 3.3. Tabela de Pedidos (orders)
 CREATE TABLE IF NOT EXISTS "controle-social-jovens".orders (

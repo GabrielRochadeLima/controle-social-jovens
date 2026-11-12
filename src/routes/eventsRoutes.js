@@ -55,6 +55,7 @@ function enrichEventMetrics(event, eventOrders = []) {
     unique_buyers_count: uniqueBuyersCount,
     unique_buyers: buyersList.map((b) => b.name),
     buyers_summary: buyersList,
+    forecast_data: event.forecast_data || null,
     adherence_rate: adherenceRate,
     avg_ticket: avgTicket,
     orders_count: eventOrders.length,
@@ -158,7 +159,7 @@ async function updateEventHandler(req, res) {
       return res.status(400).json({ error: 'ID do evento inválido.' });
     }
 
-    const { name, event_date, status, attendance_count } = req.body || {};
+    const { name, event_date, status, attendance_count, forecast_data } = req.body || {};
     const updatePayload = {};
 
     if (name !== undefined) {
@@ -191,12 +192,28 @@ async function updateEventHandler(req, res) {
       updatePayload.attendance_count = parsedAttendance;
     }
 
-    const { data: updatedEvent, error } = await supabase
+    if (forecast_data !== undefined) {
+      updatePayload.forecast_data = forecast_data;
+    }
+
+    let { data: updatedEvent, error } = await supabase
       .from('events')
       .update(updatePayload)
       .eq('id', eventId)
       .select('*')
       .single();
+
+    if (error && (String(error.message).includes('forecast_data') || error.code === '42703')) {
+      delete updatePayload.forecast_data;
+      const retry = await supabase
+        .from('events')
+        .update(updatePayload)
+        .eq('id', eventId)
+        .select('*')
+        .single();
+      updatedEvent = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       const statusHttp = error.code === 'PGRST116' ? 404 : 400;

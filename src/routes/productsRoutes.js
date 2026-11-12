@@ -32,6 +32,7 @@ router.get('/', async (req, res) => {
       cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
       stock_quantity: p.stock_quantity === null || p.stock_quantity === undefined ? null : Number(p.stock_quantity),
       has_stock_control: p.stock_quantity !== null && p.stock_quantity !== undefined,
+      unit: p.unit || 'un',
       category_name: p.categories ? p.categories.name : null
     }));
 
@@ -60,7 +61,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { name, category_id, price, cost_price, stock_quantity } = req.body || {};
+    const { name, category_id, price, cost_price, stock_quantity, unit } = req.body || {};
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'O nome do produto é obrigatório.' });
@@ -93,19 +94,33 @@ router.post('/', async (req, res) => {
       }
     }
 
-    const { data, error } = await supabase
+    const normalizedUnit = unit ? String(unit).trim().slice(0, 20) : 'un';
+
+    let insertPayload = {
+      name: name.trim(),
+      category_id: Number(category_id),
+      price: Number(numericPrice.toFixed(2)),
+      cost_price: Number(numericCost.toFixed(2)),
+      stock_quantity: parsedStock,
+      unit: normalizedUnit
+    };
+
+    let { data, error } = await supabase
       .from('products')
-      .insert([
-        {
-          name: name.trim(),
-          category_id: Number(category_id),
-          price: Number(numericPrice.toFixed(2)),
-          cost_price: Number(numericCost.toFixed(2)),
-          stock_quantity: parsedStock
-        }
-      ])
+      .insert([insertPayload])
       .select('*, categories ( id, name )')
       .single();
+
+    if (error && (String(error.message).includes('unit') || error.code === '42703')) {
+      delete insertPayload.unit;
+      const retry = await supabase
+        .from('products')
+        .insert([insertPayload])
+        .select('*, categories ( id, name )')
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       return res.status(400).json({ error: error.message });
@@ -117,6 +132,7 @@ router.post('/', async (req, res) => {
       cost_price: Number(data.cost_price || 0),
       stock_quantity: data.stock_quantity === null || data.stock_quantity === undefined ? null : Number(data.stock_quantity),
       has_stock_control: data.stock_quantity !== null && data.stock_quantity !== undefined,
+      unit: data.unit || normalizedUnit,
       category_name: data.categories ? data.categories.name : null
     });
   } catch (err) {
@@ -135,7 +151,7 @@ async function updateProductHandler(req, res) {
       return res.status(400).json({ error: 'ID do produto inválido.' });
     }
 
-    const { name, category_id, price, cost_price, stock_quantity } = req.body || {};
+    const { name, category_id, price, cost_price, stock_quantity, unit } = req.body || {};
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'O nome do produto é obrigatório.' });
@@ -168,18 +184,35 @@ async function updateProductHandler(req, res) {
       }
     }
 
-    const { data, error } = await supabase
+    const normalizedUnit = unit ? String(unit).trim().slice(0, 20) : 'un';
+
+    let updatePayload = {
+      name: name.trim(),
+      category_id: Number(category_id),
+      price: Number(numericPrice.toFixed(2)),
+      cost_price: Number(numericCost.toFixed(2)),
+      stock_quantity: parsedStock,
+      unit: normalizedUnit
+    };
+
+    let { data, error } = await supabase
       .from('products')
-      .update({
-        name: name.trim(),
-        category_id: Number(category_id),
-        price: Number(numericPrice.toFixed(2)),
-        cost_price: Number(numericCost.toFixed(2)),
-        stock_quantity: parsedStock
-      })
+      .update(updatePayload)
       .eq('id', productId)
       .select('*, categories ( id, name )')
       .single();
+
+    if (error && (String(error.message).includes('unit') || error.code === '42703')) {
+      delete updatePayload.unit;
+      const retry = await supabase
+        .from('products')
+        .update(updatePayload)
+        .eq('id', productId)
+        .select('*, categories ( id, name )')
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       const status = error.code === 'PGRST116' ? 404 : 400;
@@ -192,6 +225,7 @@ async function updateProductHandler(req, res) {
       cost_price: Number(data.cost_price || 0),
       stock_quantity: data.stock_quantity === null || data.stock_quantity === undefined ? null : Number(data.stock_quantity),
       has_stock_control: data.stock_quantity !== null && data.stock_quantity !== undefined,
+      unit: data.unit || normalizedUnit,
       category_name: data.categories ? data.categories.name : null
     });
   } catch (err) {

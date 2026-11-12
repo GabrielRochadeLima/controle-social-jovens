@@ -564,6 +564,18 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
     assert.equal(payClosedEvOrder.status, 200);
     assert.equal(payClosedEvOrder.body.payment_status, 'pago');
 
+    // 6.7 Salvar e verificar previsão de compras do evento (forecast_data)
+    const forecastPayload = {
+      items: { [prodHotDogId]: 20, [prodRefriId]: 30 },
+      expenses: [{ id: 1, description: 'Copos e Guardanapos', amount: 25.0 }]
+    };
+    const saveForecast = await apiRequest(`/events/${evId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ forecast_data: forecastPayload })
+    });
+    assert.equal(saveForecast.status, 200);
+    assert.deepEqual(saveForecast.body.forecast_data, forecastPayload);
+
     console.log('✔ [Teste 6] Evento e métricas de adesão validados:', {
       name: targetEv.name,
       attendance_count: targetEv.attendance_count,
@@ -627,7 +639,7 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
   });
 
   test('Teste 8: Gestão de Preço de Custo (cost_price) e Despesas Extras do Evento (/expenses)', async () => {
-    // 8.1 Cadastrar produto com cost_price
+    // 8.1 Cadastrar produto com cost_price e unit
     const prodRes = await apiRequest('/products', {
       method: 'POST',
       body: JSON.stringify({
@@ -635,11 +647,13 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
         category_id: catLanchesId || 1,
         price: 8.0,
         cost_price: 3.5,
+        unit: 'un',
         stock_quantity: 15
       })
     });
     assert.equal(prodRes.status, 201);
     assert.equal(prodRes.body.cost_price, 3.5);
+    assert.equal(prodRes.body.unit, 'un');
     const costProdId = prodRes.body.id;
 
     // 8.2 Atualizar o produto com novo cost_price via PUT
