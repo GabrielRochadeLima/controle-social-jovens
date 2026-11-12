@@ -20,10 +20,19 @@ function enrichEventMetrics(event, eventOrders = []) {
 
   for (const order of eventOrders) {
     const key = normalizeCustomerKey(order.customer_name);
-    if (key && !uniqueMap.has(key)) {
-      uniqueMap.set(key, String(order.customer_name).trim());
-    }
     const amt = Number(order.total_amount) || 0;
+    if (key) {
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, {
+          name: String(order.customer_name).trim(),
+          total_spent: 0,
+          orders_count: 0
+        });
+      }
+      const buyer = uniqueMap.get(key);
+      buyer.total_spent = Number((buyer.total_spent + amt).toFixed(2));
+      buyer.orders_count += 1;
+    }
     const isPaid = String(order.payment_status).toLowerCase() === 'pago';
     const paidAmt = isPaid ? amt : Math.min(amt, Math.max(0, Number(order.paid_amount || 0)));
     const remAmt = Math.max(0, amt - paidAmt);
@@ -31,7 +40,8 @@ function enrichEventMetrics(event, eventOrders = []) {
     totalPending += remAmt;
   }
 
-  const uniqueBuyersCount = uniqueMap.size;
+  const buyersList = Array.from(uniqueMap.values()).sort((a, b) => b.total_spent - a.total_spent);
+  const uniqueBuyersCount = buyersList.length;
   const attendanceCount = Number(event.attendance_count || 0);
   const totalSales = Number((totalPaid + totalPending).toFixed(2));
   const adherenceRate =
@@ -43,7 +53,8 @@ function enrichEventMetrics(event, eventOrders = []) {
     ...event,
     attendance_count: attendanceCount,
     unique_buyers_count: uniqueBuyersCount,
-    unique_buyers: Array.from(uniqueMap.values()),
+    unique_buyers: buyersList.map((b) => b.name),
+    buyers_summary: buyersList,
     adherence_rate: adherenceRate,
     avg_ticket: avgTicket,
     orders_count: eventOrders.length,

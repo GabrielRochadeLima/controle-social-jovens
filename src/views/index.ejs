@@ -898,8 +898,8 @@
               <input type="date" id="ev-date" required style="width: 100%;" />
             </div>
             <div>
-              <label for="ev-attendance">Jovens Presentes (Público)</label>
-              <input type="number" id="ev-attendance" min="0" placeholder="Ex: 40 (pode editar depois)" style="width: 100%;" />
+              <label for="ev-attendance">Público Estimado (Opcional)</label>
+              <input type="number" id="ev-attendance" min="0" placeholder="Ex: 40 (deixe em branco se não souber)" style="width: 100%;" />
             </div>
           </div>
           <div>
@@ -935,9 +935,10 @@
         <span id="active-event-badge" class="tag tag-aberto" style="flex-shrink: 0;">-</span>
       </div>
       <div class="event-banner-metrics" id="active-event-metrics">
-        <span class="metric-chip">👥 Presentes: <strong id="banner-attendance">0</strong> <button type="button" class="btn-edit" onclick="promptUpdateAttendance()" style="margin-left:0.25rem;">Editar</button></span>
-        <span class="metric-chip">🛒 Compraram: <strong id="banner-buyers">0</strong></span>
-        <span class="metric-chip">📈 Adesão: <strong class="text-primary" id="banner-adherence">-</strong></span>
+        <span class="metric-chip" id="banner-attendance-chip">👥 Presentes: <strong id="banner-attendance">0</strong> <button type="button" class="btn-edit" onclick="promptUpdateAttendance()" style="margin-left:0.25rem;">Editar</button></span>
+        <span class="metric-chip clickable" id="banner-buyers-chip" onclick="openActiveEventBuyersModal()" title="Clique para ver a lista de compradores" style="cursor: pointer; background: var(--surface2); border: 1px solid var(--border);">🛒 Compraram: <strong id="banner-buyers" style="color: var(--primary);">0 pessoa(s)</strong> 🔍</span>
+        <span class="metric-chip" id="banner-ticket-chip">🏷️ Ticket Médio: <strong class="text-primary" id="banner-ticket">R$ 0,00</strong></span>
+        <span class="metric-chip" id="banner-adherence-chip">📈 Adesão: <strong class="text-primary" id="banner-adherence">-</strong></span>
       </div>
     </div>
 
@@ -1326,6 +1327,70 @@
   </section>
 
   <!-- ====================================================================== -->
+  
+  <!-- ====================================================================== -->
+  <!-- MODAL DE RESUMO DE COMPRADORES E ENCERRAMENTO DE EVENTO                -->
+  <!-- ====================================================================== -->
+  <div id="event-closing-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.94); z-index: 9999; justify-content: center; align-items: center; padding: 1rem; backdrop-filter: blur(8px);">
+    <div class="card" style="width: 100%; max-width: 620px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); border: 1px solid var(--primary); text-align: left; padding: 1.5rem; overflow: hidden;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+        <div>
+          <h2 id="closing-modal-title" style="margin: 0 0 0.25rem 0; font-size: 1.25rem; color: #fff;">📊 Resumo de Compradores do Evento</h2>
+          <div id="closing-modal-subtitle" style="font-size: 0.82rem; color: var(--muted);">Data • Status</div>
+        </div>
+        <button type="button" class="btn-secondary" onclick="closeEventClosingModal()" style="padding: 0.35rem 0.65rem; font-size: 0.9rem;" title="Fechar">✕</button>
+      </div>
+
+      <!-- Métricas Resumo -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem; margin-bottom: 1rem;">
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.65rem;">
+          <small style="color: var(--muted); font-size: 0.72rem; display: block;">Compraram (Únicos)</small>
+          <strong id="closing-stat-buyers" style="font-size: 1.15rem; color: #38bdf8;">0 pessoa(s)</strong>
+          <div id="closing-stat-attendance" style="font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem;">-</div>
+        </div>
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.65rem;">
+          <small style="color: var(--muted); font-size: 0.72rem; display: block;">Ticket Médio / Pessoa</small>
+          <strong id="closing-stat-ticket" style="font-size: 1.15rem; color: var(--primary);">R$ 0,00</strong>
+          <div id="closing-stat-orders" style="font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem;">0 pedidos</div>
+        </div>
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.65rem;">
+          <small style="color: var(--muted); font-size: 0.72rem; display: block;">Total Faturado</small>
+          <strong id="closing-stat-revenue" style="font-size: 1.15rem; color: var(--success);">R$ 0,00</strong>
+          <div id="closing-stat-pending" style="font-size: 0.72rem; color: var(--warning); margin-top: 0.15rem;">R$ 0,00 pendente</div>
+        </div>
+      </div>
+
+      <!-- Tabela / Ranking de Compradores -->
+      <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <h3 style="margin: 0; font-size: 0.95rem; color: var(--text);">👥 Quem Comprou no Evento:</h3>
+          <span id="closing-buyers-count-badge" class="tag tag-aberto" style="font-size: 0.75rem;">0 compradores</span>
+        </div>
+        <div style="flex: 1; overflow-y: auto; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--surface);">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+            <thead style="position: sticky; top: 0; background: var(--surface2); z-index: 1;">
+              <tr>
+                <th style="padding: 0.5rem; text-align: left; width: 35px;">#</th>
+                <th style="padding: 0.5rem; text-align: left;">Nome do Cliente</th>
+                <th style="padding: 0.5rem; text-align: center; width: 90px;">Pedidos</th>
+                <th style="padding: 0.5rem; text-align: right; width: 110px;">Total Gasto</th>
+              </tr>
+            </thead>
+            <tbody id="closing-buyers-tbody">
+              <!-- Linhas geradas via JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Ações do Modal -->
+      <div style="display: flex; gap: 0.5rem; justify-content: flex-end; align-items: center; border-top: 1px solid var(--border); padding-top: 0.85rem;">
+        <button type="button" class="btn-secondary" onclick="closeEventClosingModal()" style="padding: 0.65rem 1.1rem;">Fechar</button>
+        <button type="button" class="btn-warning" id="btn-confirm-event-close" onclick="confirmCloseEventFromModal()" style="display: none; padding: 0.65rem 1.25rem; font-weight: 700;">⏹ Confirmar Encerramento de Vendas</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DE PAGAMENTO / QUITAÇÃO / BAIXA PARCIAL                          -->
   <!-- ====================================================================== -->
   <div id="payment-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.94); z-index: 9999; justify-content: center; align-items: center; padding: 1rem; backdrop-filter: blur(8px);">
@@ -1708,12 +1773,25 @@
       let totalPending = 0;
       for (const o of evOrders) {
         const k = normalizeCustomerKey(o.customer_name);
-        if (k && !uniqueMap.has(k)) uniqueMap.set(k, String(o.customer_name).trim());
         const fin = enrichOrderFinancials(o);
+        const amt = fin.total_amount;
+        if (k) {
+          if (!uniqueMap.has(k)) {
+            uniqueMap.set(k, {
+              name: String(o.customer_name).trim(),
+              total_spent: 0,
+              orders_count: 0
+            });
+          }
+          const buyer = uniqueMap.get(k);
+          buyer.total_spent = Number((buyer.total_spent + amt).toFixed(2));
+          buyer.orders_count += 1;
+        }
         totalPaid += fin.paid_amount;
         totalPending += fin.remaining_amount;
       }
-      const uniqueBuyersCount = uniqueMap.size;
+      const buyersList = Array.from(uniqueMap.values()).sort((a, b) => b.total_spent - a.total_spent);
+      const uniqueBuyersCount = buyersList.length;
       const attendanceCount = Number(ev.attendance_count || 0);
       const totalSales = Number((totalPaid + totalPending).toFixed(2));
       const adherenceRate = attendanceCount > 0 ? Number(((uniqueBuyersCount / attendanceCount) * 100).toFixed(1)) : null;
@@ -1722,7 +1800,8 @@
         ...ev,
         attendance_count: attendanceCount,
         unique_buyers_count: uniqueBuyersCount,
-        unique_buyers: Array.from(uniqueMap.values()),
+        unique_buyers: buyersList.map((b) => b.name),
+        buyers_summary: buyersList,
         adherence_rate: adherenceRate,
         avg_ticket: avgTicket,
         orders_count: evOrders.length,
@@ -3058,6 +3137,90 @@
       loadDashboard();
     }
 
+    async 
+    let closingModalEventId = null;
+
+    function openEventClosingModal(eventId, isClosingAction = false) {
+      const ev = (cachedEvents || []).find((e) => Number(e.id) === Number(eventId));
+      if (!ev) return;
+      closingModalEventId = Number(eventId);
+
+      const titleEl = document.getElementById('closing-modal-title');
+      const subtitleEl = document.getElementById('closing-modal-subtitle');
+      const buyersEl = document.getElementById('closing-stat-buyers');
+      const attendanceEl = document.getElementById('closing-stat-attendance');
+      const ticketEl = document.getElementById('closing-stat-ticket');
+      const ordersEl = document.getElementById('closing-stat-orders');
+      const revenueEl = document.getElementById('closing-stat-revenue');
+      const pendingEl = document.getElementById('closing-stat-pending');
+      const badgeEl = document.getElementById('closing-buyers-count-badge');
+      const tbody = document.getElementById('closing-buyers-tbody');
+      const btnConfirmClose = document.getElementById('btn-confirm-event-close');
+
+      titleEl.textContent = isClosingAction ? `🏁 Encerrar Vendas: ${ev.name}` : `📊 Relatório de Compradores: ${ev.name}`;
+      subtitleEl.textContent = `Data: ${fmtDateBR(ev.event_date)} • Status: ${ev.status === 'aberto' ? 'Em Andamento' : ev.status === 'agendado' ? 'Agendado' : 'Encerrado'}`;
+
+      const buyersCount = ev.unique_buyers_count || 0;
+      buyersEl.textContent = `${buyersCount} pessoa(s)`;
+      attendanceEl.textContent = ev.attendance_count > 0 ? `de ${ev.attendance_count} presentes (${ev.adherence_rate}%)` : 'Público não especificado';
+
+      ticketEl.textContent = fmtBRL(ev.avg_ticket || 0);
+      ordersEl.textContent = `${ev.orders_count || 0} pedido(s) registrado(s)`;
+
+      revenueEl.textContent = fmtBRL(ev.total_sales || 0);
+      pendingEl.textContent = ev.total_pending > 0 ? `${fmtBRL(ev.total_pending)} pendente` : 'Tudo quitado';
+
+      badgeEl.textContent = `${buyersCount} comprador(es) único(s)`;
+
+      tbody.innerHTML = '';
+      const buyersList = ev.buyers_summary || [];
+
+      if (buyersList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem;">Nenhum comprador registrado neste evento ainda.</td></tr>';
+      } else {
+        buyersList.forEach((b, idx) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="color:var(--muted);width:35px;padding:0.5rem;">#${idx + 1}</td>
+            <td style="padding:0.5rem;"><strong>${b.name}</strong></td>
+            <td style="padding:0.5rem;text-align:center;">${b.orders_count} pedido(s)</td>
+            <td style="padding:0.5rem;text-align:right;color:var(--primary);font-weight:700;">${fmtBRL(b.total_spent)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      if (btnConfirmClose) {
+        btnConfirmClose.style.display = (isClosingAction && ev.status === 'aberto') ? 'inline-block' : 'none';
+      }
+
+      document.getElementById('event-closing-modal').style.display = 'flex';
+    }
+
+    function openActiveEventBuyersModal() {
+      if (!selectedEventId || selectedEventId === 'all') {
+        showToast('Selecione um evento específico para ver quem comprou.');
+        return;
+      }
+      openEventClosingModal(Number(selectedEventId), false);
+    }
+
+    function closeEventClosingModal() {
+      document.getElementById('event-closing-modal').style.display = 'none';
+      closingModalEventId = null;
+    }
+
+    async function confirmCloseEventFromModal() {
+      if (!closingModalEventId) return;
+      try {
+        await setEventStatus(closingModalEventId, 'encerrado', false);
+        closeEventClosingModal();
+        showToast('Evento encerrado com sucesso!');
+      } catch (err) {
+        showToast(err.message || 'Erro ao encerrar evento');
+      }
+    }
+
     async function setEventStatus(eventId, newStatus, openCashScreen = false) {
       try {
         await DataService.updateEvent(eventId, { status: newStatus });
@@ -3183,13 +3346,13 @@
             } else if (ev.status === 'aberto') {
               actionsHtml = `
                 <button type="button" class="btn-primary" onclick="selectEventAndOpenCash(${ev.id})">🛒 Abrir Caixa</button>
-                <button type="button" class="btn-secondary" onclick="promptUpdateAttendance(${ev.id})">👥 Presentes (${ev.attendance_count})</button>
-                <button type="button" class="btn-warning" onclick="setEventStatus(${ev.id}, 'encerrado', false)">⏹ Encerrar Evento</button>
+                <button type="button" class="btn-secondary" onclick="openEventClosingModal(${ev.id}, false)">👥 Ver Quem Comprou (${ev.unique_buyers_count || 0})</button>
+                <button type="button" class="btn-warning" onclick="openEventClosingModal(${ev.id}, true)">⏹ Encerrar Evento</button>
               `;
             } else {
               actionsHtml = `
                 <button type="button" class="btn-secondary" onclick="selectEventAndOpenCash(${ev.id})">👁 Ver Caixa / Pendências</button>
-                <button type="button" class="btn-secondary" onclick="promptUpdateAttendance(${ev.id})">👥 Presentes (${ev.attendance_count})</button>
+                <button type="button" class="btn-secondary" onclick="openEventClosingModal(${ev.id}, false)">👥 Ver Quem Comprou (${ev.unique_buyers_count || 0})</button>
                 <button type="button" class="btn-edit" onclick="setEventStatus(${ev.id}, 'aberto', true)">🔄 Reabrir Vendas</button>
               `;
             }
@@ -3205,24 +3368,24 @@
                 <span class="tag tag-${ev.status}">${statusLabel}</span>
               </div>
               <div class="event-metrics-grid">
-                <div class="event-metric-box">
-                  <small>Jovens Presentes</small>
-                  <strong>${ev.attendance_count || 0}</strong>
+                <div class="event-metric-box clickable" onclick="openEventClosingModal(${ev.id}, false)" style="cursor:pointer;" title="Clique para ver quem comprou">
+                  <small>🛒 Pessoas que Compraram</small>
+                  <strong style="color:var(--primary);">${ev.unique_buyers_count || 0} pessoa(s) 🔍</strong>
                 </div>
                 <div class="event-metric-box">
-                  <small>Compraram (Únicos)</small>
-                  <strong>${ev.unique_buyers_count || 0}</strong>
+                  <small>Ticket Médio / Pessoa</small>
+                  <strong>${fmtBRL(ev.avg_ticket || 0)}</strong>
+                </div>
+                <div class="event-metric-box">
+                  <small>Jovens Presentes</small>
+                  <strong>${ev.attendance_count > 0 ? ev.attendance_count : 'Não inf.'}</strong>
                 </div>
                 <div class="event-metric-box">
                   <small>% de Adesão</small>
-                  <strong class="text-primary">${adherenceText}</strong>
-                </div>
-                <div class="event-metric-box">
-                  <small>Ticket Médio</small>
-                  <strong>${fmtBRL(ev.avg_ticket)}</strong>
+                  <strong class="text-primary">${ev.adherence_rate !== null ? `${ev.adherence_rate}%` : 'Sem estimativa'}</strong>
                 </div>
               </div>
-              <div class="progress-bar" title="Taxa de Adesão: ${adherenceText}">
+              <div class="progress-bar" title="Taxa de Adesão: ${adherenceText}" style="${ev.attendance_count > 0 ? '' : 'display:none;'}">
                 <div class="progress-fill" style="width: ${pctWidth}%;"></div>
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
@@ -3263,9 +3426,22 @@
           badgeEl.className = `tag tag-${activeEv.status}`;
           badgeEl.textContent = stLabel;
           document.getElementById('banner-attendance').textContent = String(activeEv.attendance_count || 0);
-          document.getElementById('banner-buyers').textContent = String(activeEv.unique_buyers_count || 0);
-          document.getElementById('banner-adherence').textContent =
-            activeEv.adherence_rate !== null ? `${activeEv.adherence_rate}%` : 'Definir presentes';
+          document.getElementById('banner-buyers').textContent = `${activeEv.unique_buyers_count || 0} pessoa(s)`;
+          const bannerTicketEl = document.getElementById('banner-ticket');
+          if (bannerTicketEl) bannerTicketEl.textContent = fmtBRL(activeEv.avg_ticket || 0);
+
+          const attChip = document.getElementById('banner-attendance-chip');
+          const adhChip = document.getElementById('banner-adherence-chip');
+          if (activeEv.attendance_count > 0) {
+            if (attChip) attChip.style.display = 'inline-flex';
+            if (adhChip) {
+              adhChip.style.display = 'inline-flex';
+              document.getElementById('banner-adherence').textContent = `${activeEv.adherence_rate}%`;
+            }
+          } else {
+            if (attChip) attChip.style.display = 'inline-flex';
+            if (adhChip) adhChip.style.display = 'none';
+          }
 
           if (activeEv.status !== 'aberto') {
             closedNotice.style.display = 'block';
@@ -3284,8 +3460,14 @@
           badgeEl.className = 'tag tag-aberto';
           badgeEl.textContent = 'Visão Geral';
           document.getElementById('banner-attendance').textContent = '-';
-          document.getElementById('banner-buyers').textContent = String(knownNamesMap.size);
-          document.getElementById('banner-adherence').textContent = `${avgAdherence}%`;
+          document.getElementById('banner-buyers').textContent = `${knownNamesMap.size} pessoa(s)`;
+          const bannerTicketEl = document.getElementById('banner-ticket');
+          if (bannerTicketEl) bannerTicketEl.textContent = '-';
+          const adhChip = document.getElementById('banner-adherence-chip');
+          if (adhChip) {
+            adhChip.style.display = 'inline-flex';
+            document.getElementById('banner-adherence').textContent = `${avgAdherence}%`;
+          }
           closedNotice.style.display = 'none';
           submitBtn.disabled = false;
           submitBtn.style.opacity = '1';

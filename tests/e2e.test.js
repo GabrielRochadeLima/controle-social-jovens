@@ -541,6 +541,14 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
     assert.equal(targetEv.orders_count, 3);
     assert.equal(targetEv.unique_buyers_count, 2, 'Deve unificar Ana Clara como 1 única participante');
     assert.equal(targetEv.adherence_rate, 10.0, '2 compradores / 20 presentes = 10% de adesão');
+    assert.ok(Array.isArray(targetEv.buyers_summary), 'Deve conter resumo ordenado de compradores');
+    assert.equal(targetEv.buyers_summary.length, 2);
+    assert.equal(targetEv.buyers_summary[0].name, 'Ana Clara');
+    assert.equal(targetEv.buyers_summary[0].total_spent, 18);
+    assert.equal(targetEv.buyers_summary[0].orders_count, 2);
+    assert.equal(targetEv.buyers_summary[1].name, 'Pedro Henrique');
+    assert.equal(targetEv.buyers_summary[1].total_spent, 12);
+    assert.equal(targetEv.buyers_summary[1].orders_count, 1);
 
     // 6.6 Encerrar o evento e confirmar que ainda é possível dar baixa na pendência de Ana Clara
     const closeEv = await apiRequest(`/events/${evId}`, {
