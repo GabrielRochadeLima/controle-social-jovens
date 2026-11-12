@@ -818,6 +818,8 @@
         <strong id="session-user-name" style="color: var(--text);">Operador</strong>
         <span id="session-user-role" class="env-pill" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4);">Admin</span>
         <button type="button" onclick="promptSwitchUser()" title="Trocar ou sair do usuário" style="background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 0 0.2rem; font-size: 0.76rem; text-decoration: underline;">Trocar</button>
+        <span style="color: var(--border);">|</span>
+        <button type="button" onclick="forceAppUpdate()" title="Forçar atualização e limpar cache do app" style="background: transparent; border: none; color: #38bdf8; cursor: pointer; padding: 0 0.2rem; font-size: 0.85rem;" aria-label="Atualizar App">🔄</button>
       </div>
     </div>
     <nav class="nav-tabs" aria-label="Navegação Principal">
@@ -3926,6 +3928,25 @@
       localStorage.removeItem(USER_SESSION_KEY);
       applyRolePermissions();
       showLoginModal();
+    }
+
+    async function forceAppUpdate() {
+      showToast('🔄 Atualizando aplicativo e limpando cache...');
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const reg of regs) {
+            await reg.unregister();
+          }
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+      } catch (_) {}
+      setTimeout(() => {
+        window.location.reload(true);
+      }, 350);
     }
 
     async function initUserSession() {
