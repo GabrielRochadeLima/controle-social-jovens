@@ -251,6 +251,30 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
       })
     });
 
+    // 1.6 Cadastrar produto temporário e testar exclusão com sucesso (DELETE /products/:id)
+    const tempProdRes = await apiRequest('/products', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'Suco de Laranja Copo',
+        category_id: catBebidasId,
+        price: 5.0,
+        stock_quantity: 10
+      })
+    });
+    assert.equal(tempProdRes.status, 201);
+    const tempProdId = tempProdRes.body.id;
+
+    const delProdRes = await apiRequest(`/products/${tempProdId}`, {
+      method: 'DELETE'
+    });
+    assert.equal(delProdRes.status, 200);
+    assert.equal(delProdRes.body.success, true);
+
+    // Confirmar que o produto foi realmente removido
+    const verifyDelList = await apiRequest('/products');
+    assert.equal(verifyDelList.body.length, 2);
+    assert.ok(!verifyDelList.body.some((p) => p.id === tempProdId));
+
     console.log('✔ [Teste 1] Produtos cadastrados e edição validada:', listProds.body.map((p) => ({
       id: p.id,
       name: p.name,
@@ -347,6 +371,11 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
     const prodsAfterOverflow = await apiRequest('/products');
     const refriAfterOverflow = prodsAfterOverflow.body.find((p) => p.id === prodRefriId);
     assert.equal(refriAfterOverflow.stock_quantity, 15);
+
+    // 2.5 Tentar excluir produto com vendas vinculadas deve ser bloqueado com erro 400
+    const blockedDelete = await apiRequest(`/products/${prodRefriId}`, { method: 'DELETE' });
+    assert.equal(blockedDelete.status, 400);
+    assert.ok(blockedDelete.body.error.includes('histórico'));
 
     console.log('✔ [Teste 2] Estoque final após pedidos e bloqueio de excesso:', {
       refrigerante_stock: refriAfterOverflow.stock_quantity,

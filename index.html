@@ -2225,6 +2225,53 @@
         return prod;
       },
 
+      async deleteProduct(id) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const hasOrders = (testDb.order_items || []).some((i) => Number(i.product_id) === Number(id));
+          if (hasOrders) {
+            throw new Error('Não é possível excluir este produto pois ele possui vendas registradas no histórico de testes.');
+          }
+          testDb.products = (testDb.products || []).filter((p) => Number(p.id) !== Number(id));
+          saveTestDb(testDb);
+          return { id: Number(id) };
+        }
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch(`/products/${id}`, { method: 'DELETE' });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao excluir produto');
+          return data;
+        }
+        if (mode === 'supabase') {
+          const { count, error: countErr } = await sbClient
+            .from('order_items')
+            .select('id', { count: 'exact', head: true })
+            .eq('product_id', Number(id));
+
+          if (!countErr && count > 0) {
+            throw new Error(`Não é possível excluir este produto pois ele possui ${count} venda(s) registrada(s) no histórico. Você pode zerar o estoque.`);
+          }
+
+          const { error } = await sbClient.from('products').delete().eq('id', Number(id));
+          if (error) {
+            if (error.code === '23503' || String(error.message).includes('foreign key')) {
+              throw new Error('Não é possível excluir este produto pois ele possui histórico de pedidos.');
+            }
+            throw new Error(error.message);
+          }
+          return { id: Number(id) };
+        }
+        const db = loadLocalDb();
+        const hasOrders = (db.order_items || []).some((i) => Number(i.product_id) === Number(id));
+        if (hasOrders) {
+          throw new Error('Não é possível excluir este produto pois ele possui vendas registradas no histórico.');
+        }
+        db.products = (db.products || []).filter((p) => Number(p.id) !== Number(id));
+        saveLocalDb(db);
+        return { id: Number(id) };
+      },
+
       async getOrders() {
         if (isTestEnv()) {
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
@@ -2919,6 +2966,24 @@
       document.getElementById('prod-cancel-btn').style.display = 'none';
     }
 
+    async function handleDeleteProduct(id, encodedName) {
+      const name = decodeURIComponent(encodedName);
+      if (!window.confirm(`Deseja realmente excluir o produto "${name}"?\n\nNota: Só é possível excluir produtos que ainda não possuem vendas registradas no histórico.`)) {
+        return;
+      }
+      try {
+        await DataService.deleteProduct(id);
+        const editId = document.getElementById('prod-edit-id').value;
+        if (editId && Number(editId) === Number(id)) {
+          cancelEditProduct();
+        }
+        showToast(`Produto "${name}" excluído com sucesso!`);
+        await loadDashboard();
+      } catch (err) {
+        showToast(err.message || 'Erro ao excluir produto');
+      }
+    }
+
     function onChangeActiveEvent(val) {
       selectedEventId = String(val);
       localStorage.setItem('csj_selected_event_id', selectedEventId);
@@ -3245,7 +3310,10 @@
             <td style="color:#f87171;">${fmtBRL(p.cost_price || 0)}</td>
             <td style="color:var(--primary);font-weight:600;">${fmtBRL(p.price)}</td>
             <td>${stockLabel}</td>
-            <td><button type="button" class="btn-edit" onclick="startEditProduct(${p.id})">Editar</button></td>
+            <td style="text-align: center; white-space: nowrap;">
+              <button type="button" class="btn-edit" style="margin-right: 0.35rem;" onclick="startEditProduct(${p.id})">Editar</button>
+              <button type="button" class="btn-danger" style="padding: 0.35rem 0.6rem; font-size: 0.74rem;" title="Excluir produto" onclick="handleDeleteProduct(${p.id}, '${encodeURIComponent(p.name)}')">✕</button>
+            </td>
           `;
           prodTbody.appendChild(tr);
         });

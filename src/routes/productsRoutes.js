@@ -202,4 +202,53 @@ async function updateProductHandler(req, res) {
 router.put('/:id', updateProductHandler);
 router.patch('/:id', updateProductHandler);
 
+/**
+ * DELETE /products/:id
+ * Exclui um produto do catálogo caso não possua vendas registradas.
+ */
+router.delete('/:id', async (req, res) => {
+  try {
+    const productId = Number(req.params.id);
+    if (!productId || Number.isNaN(productId)) {
+      return res.status(400).json({ error: 'ID do produto inválido.' });
+    }
+
+    // Verificar se o produto possui pedidos vinculados
+    const { data: items, error: countErr } = await supabase
+      .from('order_items')
+      .select('id')
+      .eq('product_id', productId);
+
+    if (!countErr && items && items.length > 0) {
+      return res.status(400).json({
+        error: `Não é possível excluir este produto pois ele possui ${items.length} venda(s) registrada(s) no histórico. Você pode zerar o estoque para que não seja vendido.`
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      if (error.code === '23503' || String(error.message).includes('foreign key')) {
+        return res.status(400).json({
+          error: 'Não é possível excluir este produto pois ele possui histórico de pedidos.'
+        });
+      }
+      return res.status(500).json({ error: error.message });
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: 'Produto não encontrado.' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Produto excluído com sucesso.', product: data });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro interno ao excluir produto.', details: err.message });
+  }
+});
+
 module.exports = router;
