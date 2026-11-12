@@ -81,7 +81,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { customer_name, payment_method, payment_status, items, event_id, paid_amount } = req.body || {};
+    const { customer_name, payment_method, payment_status, items, event_id, paid_amount, created_by_name } = req.body || {};
 
     if (!customer_name || typeof customer_name !== 'string' || !customer_name.trim()) {
       return res.status(400).json({ error: 'O nome do cliente (customer_name) é obrigatório.' });
@@ -220,6 +220,7 @@ router.post('/', async (req, res) => {
       payment_status: dbPaymentStatus,
       total_amount: totalAmount,
       paid_amount: initialPaidAmount,
+      created_by_name: created_by_name ? String(created_by_name).trim() : null,
       paid_at: dbPaymentStatus === 'pago' ? new Date().toISOString() : null
     };
     if (parsedEventId !== null) {

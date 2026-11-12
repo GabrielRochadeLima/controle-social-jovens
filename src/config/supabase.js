@@ -39,7 +39,11 @@ const initialSeed = () => ({
   ],
   orders: [],
   order_items: [],
-  event_expenses: []
+  event_expenses: [],
+  app_users: [
+    { id: 1, name: 'Gabriel', pin: '1234', role: 'admin', active: true, created_at: new Date().toISOString() },
+    { id: 2, name: 'Caixa 1', pin: '1111', role: 'seller', active: true, created_at: new Date().toISOString() }
+  ]
 });
 
 let mockStore = initialSeed();
@@ -49,13 +53,14 @@ let counters = {
   events: 2,
   orders: 1,
   order_items: 1,
-  event_expenses: 1
+  event_expenses: 1,
+  app_users: 3
 };
 
 function resetMockDb(withSeed = false) {
   if (withSeed) {
     mockStore = initialSeed();
-    counters = { categories: 4, products: 5, events: 2, orders: 1, order_items: 1, event_expenses: 1 };
+    counters = { categories: 4, products: 5, events: 2, orders: 1, order_items: 1, event_expenses: 1, app_users: 3 };
   } else {
     mockStore = {
       categories: [],
@@ -63,9 +68,13 @@ function resetMockDb(withSeed = false) {
       events: [],
       orders: [],
       order_items: [],
-      event_expenses: []
+      event_expenses: [],
+      app_users: [
+        { id: 1, name: 'Gabriel', pin: '1234', role: 'admin', active: true, created_at: new Date().toISOString() },
+        { id: 2, name: 'Caixa 1', pin: '1111', role: 'seller', active: true, created_at: new Date().toISOString() }
+      ]
     };
-    counters = { categories: 1, products: 1, events: 1, orders: 1, order_items: 1, event_expenses: 1 };
+    counters = { categories: 1, products: 1, events: 1, orders: 1, order_items: 1, event_expenses: 1, app_users: 3 };
   }
 }
 

@@ -663,4 +663,80 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
 
     console.log('✔ [Teste 8] Custo unitário de produtos e despesas extras validados com sucesso!');
   });
+
+  test('Teste 9: Gestão de Usuários, Login por PIN e Rastreamento de Vendas (/users e created_by_name)', async () => {
+    // 9.1 Listar usuários iniciais padrão
+    const listRes = await apiRequest('/users');
+    assert.equal(listRes.status, 200);
+    assert.ok(Array.isArray(listRes.body));
+    const adminUser = listRes.body.find((u) => u.name === 'Gabriel');
+    assert.ok(adminUser, 'Usuário inicial Gabriel (admin) deve existir');
+    assert.equal(adminUser.role, 'admin');
+
+    const sellerUser = listRes.body.find((u) => u.name === 'Caixa 1');
+    assert.ok(sellerUser, 'Usuário inicial Caixa 1 (seller) deve existir');
+    assert.equal(sellerUser.role, 'seller');
+
+    // 9.2 Teste de Login: PIN incorreto
+    const badLogin = await apiRequest('/users/login', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: adminUser.id, pin: '0000' })
+    });
+    assert.equal(badLogin.status, 401);
+    assert.equal(badLogin.body.error, 'PIN incorreto. Tente novamente.');
+
+    // 9.3 Teste de Login: PIN correto para Admin
+    const goodLogin = await apiRequest('/users/login', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: adminUser.id, pin: '1234' })
+    });
+    assert.equal(goodLogin.status, 200);
+    assert.equal(goodLogin.body.success, true);
+    assert.equal(goodLogin.body.user.role, 'admin');
+
+    // 9.4 Cadastrar novo usuário (ex: Lucas Líder - role 'manager')
+    const createRes = await apiRequest('/users', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'Lucas Líder',
+        pin: '2222',
+        role: 'manager'
+      })
+    });
+    assert.equal(createRes.status, 201);
+    assert.equal(createRes.body.name, 'Lucas Líder');
+    assert.equal(createRes.body.role, 'manager');
+    const newUserId = createRes.body.id;
+
+    // 9.5 Atualizar PIN do usuário criado
+    const updateRes = await apiRequest(`/users/${newUserId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ pin: '9999' })
+    });
+    assert.equal(updateRes.status, 200);
+
+    // Testar login com o novo PIN
+    const newPinLogin = await apiRequest('/users/login', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: newUserId, pin: '9999' })
+    });
+    assert.equal(newPinLogin.status, 200);
+    assert.equal(newPinLogin.body.user.name, 'Lucas Líder');
+
+    // 9.6 Criar pedido gravando o vendedor responsável (created_by_name)
+    const orderWithSeller = await apiRequest('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        customer_name: 'Marcos Vinicius',
+        payment_method: 'pix',
+        payment_status: 'pago',
+        created_by_name: 'Caixa 1',
+        items: [{ product_id: prodRefriId || 1, quantity: 1 }]
+      })
+    });
+    assert.equal(orderWithSeller.status, 201);
+    assert.equal(orderWithSeller.body.created_by_name, 'Caixa 1');
+
+    console.log('✔ [Teste 9] Autenticação por PIN, perfis e rastreamento de vendas validados com sucesso!');
+  });
 });

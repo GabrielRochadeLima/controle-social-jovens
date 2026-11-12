@@ -800,14 +800,24 @@
 </head>
 <body>
   <header>
-    <div class="brand-box">
-      <img src="./icon-192.png?v=3" alt="Detroit Jovens" class="brand-logo" />
-      <div>
-        <h1 style="display:flex;align-items:center;flex-wrap:wrap;gap:0.35rem;">
-          Controle Social Jovens
-          <span id="brand-env-badge" class="env-pill env-pill-prod">PROD</span>
-        </h1>
-        <p>Eventos, Adesão, Pedidos e Produtos</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem; width: 100%;">
+      <div class="brand-box">
+        <img src="./icon-192.png?v=3" alt="Detroit Jovens" class="brand-logo" />
+        <div>
+          <h1 style="display:flex;align-items:center;flex-wrap:wrap;gap:0.35rem;">
+            Controle Social Jovens
+            <span id="brand-env-badge" class="env-pill env-pill-prod">PROD</span>
+          </h1>
+          <p>Eventos, Adesão, Pedidos e Produtos</p>
+        </div>
+      </div>
+
+      <!-- Sessão do Operador Conectado -->
+      <div id="user-session-badge" style="display: inline-flex; align-items: center; gap: 0.45rem; background: var(--surface); padding: 0.35rem 0.65rem; border-radius: 999px; border: 1px solid var(--border); font-size: 0.8rem;">
+        <span style="font-size: 0.95rem;">👤</span>
+        <strong id="session-user-name" style="color: var(--text);">Operador</strong>
+        <span id="session-user-role" class="env-pill" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4);">Admin</span>
+        <button type="button" onclick="promptSwitchUser()" title="Trocar ou sair do usuário" style="background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 0 0.2rem; font-size: 0.76rem; text-decoration: underline;">Trocar</button>
       </div>
     </div>
     <nav class="nav-tabs" aria-label="Navegação Principal">
@@ -822,6 +832,9 @@
       </button>
       <button type="button" class="nav-tab" id="tab-costs" onclick="switchScreen('costs')">
         💰 Custos & Lucro
+      </button>
+      <button type="button" class="nav-tab" id="tab-users" onclick="switchScreen('users')">
+        👥 Usuários
       </button>
       <button type="button" class="nav-tab" id="btn-env-toggle" onclick="toggleAppEnvironment()" style="color: #fbbf24; font-weight: 600;">
         🧪 Modo Teste
@@ -926,7 +939,7 @@
       </div>
     </div>
 
-    <section class="stats-row">
+    <section class="stats-row" id="orders-cash-stats">
       <div class="stat-card">
         <span>Total Recebido (Pagos)</span>
         <strong class="text-success" id="stat-paid">R$ 0,00</strong>
@@ -1014,6 +1027,7 @@
               <tr>
                 <th>#</th>
                 <th>Cliente</th>
+                <th>Vendedor</th>
                 <th>Itens</th>
                 <th>Total</th>
                 <th>Status</th>
@@ -1236,6 +1250,89 @@
     </div>
   </section>
 
+  <!-- ====================================================================== -->
+  <!-- TELA 4: GERENCIAMENTO DE EQUIPE & OPERADORES (EXCLUSIVO ADMIN)         -->
+  <!-- ====================================================================== -->
+  <section id="screen-users" class="screen">
+    <div class="grid-2">
+      <!-- Formulário de Criação/Edição de Usuário -->
+      <div class="card">
+        <h2 id="user-form-title">Cadastrar Novo Operador</h2>
+        <form id="user-form" onsubmit="handleSaveUser(event)">
+          <input type="hidden" id="user-edit-id" value="" />
+          <div>
+            <label for="new-user-name">Nome do Operador</label>
+            <input type="text" id="new-user-name" placeholder="Ex: Mariana Balcão, Lucas Líder..." required style="width: 100%;" />
+          </div>
+          <div>
+            <label for="new-user-role">Nível de Acesso (Cargo)</label>
+            <select id="new-user-role" required style="width: 100%;">
+              <option value="seller">🛒 Vendedor / Caixa (Apenas lançar vendas e quitar pendências)</option>
+              <option value="manager">👔 Gerente / Líder (Vendas, Produtos, Fechamento de Caixa e Eventos)</option>
+              <option value="admin">👑 Administrador (Acesso Total: Custos, Lucro, Modo Teste e Usuários)</option>
+            </select>
+          </div>
+          <div>
+            <label for="new-user-pin">PIN de Acesso (4 a 10 dígitos)</label>
+            <input type="password" id="new-user-pin" inputmode="numeric" minlength="4" maxlength="10" placeholder="Ex: 1234" required style="width: 100%; letter-spacing: 0.2em; font-weight: 700;" />
+            <small style="color: var(--muted); font-size: 0.72rem;">O operador usará este PIN rápido para entrar no sistema.</small>
+          </div>
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+            <button type="submit" class="btn-primary" id="user-submit-btn" style="flex: 1;">+ Salvar Operador</button>
+            <button type="button" class="btn-secondary" id="user-cancel-btn" onclick="cancelEditUser()" style="display: none;">Cancelar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tabela de Usuários Cadastrados -->
+      <div class="card">
+        <h2>👥 Operadores & Níveis de Acesso</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Cargo</th>
+                <th>Status</th>
+                <th style="text-align: center;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody">
+              <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem;">Carregando operadores...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================== -->
+  <!-- MODAL / OVERLAY DE LOGIN POR PIN                                       -->
+  <!-- ====================================================================== -->
+  <div id="login-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.94); z-index: 9999; justify-content: center; align-items: center; padding: 1rem; backdrop-filter: blur(8px);">
+    <div class="card" style="width: 100%; max-width: 380px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); border: 1px solid var(--primary); text-align: center; padding: 1.5rem 1.25rem;">
+      <div style="display: flex; justify-content: center; margin-bottom: 0.75rem;">
+        <img src="./icon-192.png?v=3" alt="Detroit Jovens" style="width: 58px; height: 58px; border-radius: 50%; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);" />
+      </div>
+      <h2 style="margin: 0 0 0.25rem 0; font-size: 1.25rem; border: none; padding: 0;">Entrar no Sistema</h2>
+      <p style="color: var(--muted); font-size: 0.82rem; margin-bottom: 1.2rem;">Selecione seu nome e digite seu PIN de acesso:</p>
+
+      <div id="login-error-msg" style="display: none; background: rgba(239, 68, 68, 0.18); border: 1px solid rgba(239, 68, 68, 0.5); color: #f87171; border-radius: 0.5rem; padding: 0.55rem; font-size: 0.8rem; margin-bottom: 0.85rem;"></div>
+
+      <form id="login-form" onsubmit="handleLoginSubmit(event)" style="display: flex; flex-direction: column; gap: 0.85rem; text-align: left;">
+        <div>
+          <label for="login-user-select" style="font-weight: 600;">Quem é você?</label>
+          <select id="login-user-select" required style="width: 100%; font-size: 0.95rem; font-weight: 600; padding: 0.6rem;"></select>
+        </div>
+        <div>
+          <label for="login-pin-input" style="font-weight: 600;">PIN de Acesso</label>
+          <input type="password" id="login-pin-input" inputmode="numeric" maxlength="10" placeholder="••••" required style="width: 100%; text-align: center; font-size: 1.35rem; letter-spacing: 0.3em; font-weight: 800; padding: 0.55rem;" />
+        </div>
+        <button type="submit" class="btn-primary" style="margin-top: 0.5rem; padding: 0.75rem; font-size: 0.95rem; font-weight: 700;">Acessar Balcão ➔</button>
+      </form>
+    </div>
+  </div>
+
   <script>
     const SCHEMA_NAME = 'controle-social-jovens';
     const STORAGE_KEY = 'csj_db_v1';
@@ -1243,6 +1340,13 @@
     const TEST_STORAGE_KEY = 'csj_test_sandbox_v1';
     const ENV_STORAGE_KEY = 'csj_app_env';
     let currentEnv = localStorage.getItem(ENV_STORAGE_KEY) || 'production';
+
+    const USER_SESSION_KEY = 'csj_current_user_v1';
+    let currentUser = null;
+    try {
+      const rawUser = localStorage.getItem(USER_SESSION_KEY);
+      if (rawUser) currentUser = JSON.parse(rawUser);
+    } catch (_) {}
 
     const DEFAULT_SUPABASE_URL = 'https://irlxktcyucvckejrxunk.supabase.co';
     const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlybHhrdGN5dWN2Y2tlanJ4dW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNTMzNTcsImV4cCI6MjA3MzcyOTM1N30.9JqCS8cN_Lzrc1BYGYmVIpF9JPyLNUmxD0hKoNhStVA';
@@ -1384,7 +1488,17 @@
     document.getElementById('ev-date').value = new Date().toISOString().slice(0, 10);
 
     function switchScreen(screenName) {
-      ['events', 'orders', 'products', 'costs'].forEach((s) => {
+      const role = currentUser ? currentUser.role : 'seller';
+      if (role === 'seller' && screenName !== 'orders') {
+        showToast('Acesso restrito: seu perfil de Vendedor tem acesso ao Caixa.');
+        return;
+      }
+      if (role === 'manager' && (screenName === 'costs' || screenName === 'users')) {
+        showToast('Acesso restrito: somente Administradores podem acessar esta aba.');
+        return;
+      }
+
+      ['events', 'orders', 'products', 'costs', 'users'].forEach((s) => {
         const screenEl = document.getElementById(`screen-${s}`);
         const tabEl = document.getElementById(`tab-${s}`);
         if (screenEl) screenEl.classList.toggle('active', s === screenName);
@@ -1392,6 +1506,9 @@
       });
       if (screenName === 'costs') {
         renderCostsScreen();
+      }
+      if (screenName === 'users') {
+        renderUsersScreen();
       }
     }
 
@@ -1421,7 +1538,11 @@
         ],
         orders: [],
         order_items: [],
-        event_expenses: []
+        event_expenses: [],
+        app_users: [
+          { id: 1, name: 'Gabriel', pin: '1234', role: 'admin', active: true },
+          { id: 2, name: 'Caixa 1', pin: '1111', role: 'seller', active: true }
+        ]
       };
     }
 
@@ -1460,6 +1581,12 @@
           const parsed = JSON.parse(raw);
           if (!parsed.paidAmountsMap) parsed.paidAmountsMap = {};
           if (!parsed.expenses) parsed.expenses = [];
+          if (!parsed.app_users || !parsed.app_users.length) {
+            parsed.app_users = [
+              { id: 1, name: 'Gabriel', pin: '1234', role: 'admin', active: true },
+              { id: 2, name: 'Caixa 1', pin: '1111', role: 'seller', active: true }
+            ];
+          }
           return parsed;
         }
       } catch (_) {}
@@ -1469,7 +1596,11 @@
         ],
         orderEventMap: {},
         paidAmountsMap: {},
-        expenses: []
+        expenses: [],
+        app_users: [
+          { id: 1, name: 'Gabriel', pin: '1234', role: 'admin', active: true },
+          { id: 2, name: 'Caixa 1', pin: '1111', role: 'seller', active: true }
+        ]
       };
       localStorage.setItem(EVENTS_BRIDGE_KEY, JSON.stringify(initial));
       return initial;
@@ -1560,7 +1691,11 @@
         ],
         orders: [],
         order_items: [],
-        event_expenses: []
+        event_expenses: [],
+        app_users: [
+          { id: 1, name: 'Gabriel', pin: '1234', role: 'admin', active: true },
+          { id: 2, name: 'Caixa 1', pin: '1111', role: 'seller', active: true }
+        ]
       };
       saveTestDb(testDb);
       return testDb;
@@ -2115,7 +2250,8 @@
           );
       },
 
-      async createOrder({ customer_name, payment_method, payment_status, paid_amount, items, event_id }) {
+      async createOrder({ customer_name, payment_method, payment_status, paid_amount, items, event_id, created_by_name }) {
+        const sellerName = created_by_name || (currentUser ? currentUser.name : null);
         if (isTestEnv()) {
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
           let total = 0;
@@ -2150,6 +2286,7 @@
             payment_status: dbPaymentStatus,
             total_amount: finalTotal,
             paid_amount: finalPaidAmount,
+            created_by_name: sellerName,
             created_at: new Date().toISOString()
           };
           testDb.orders.push(newOrder);
@@ -2176,7 +2313,7 @@
           const r = await fetch('/orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ customer_name, payment_method, payment_status, paid_amount, items, event_id })
+            body: JSON.stringify({ customer_name, payment_method, payment_status, paid_amount, items, event_id, created_by_name: sellerName })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao criar pedido');
@@ -2215,7 +2352,8 @@
             payment_method,
             payment_status: dbPaymentStatus,
             total_amount: finalTotal,
-            paid_amount: finalPaidAmount
+            paid_amount: finalPaidAmount,
+            created_by_name: sellerName
           };
           if (supabaseHasEventsTable && event_id) {
             insertPayload.event_id = Number(event_id);
@@ -2227,6 +2365,12 @@
             .select()
             .single();
 
+          if (oErr && String(oErr.message || '').includes('created_by_name')) {
+            delete insertPayload.created_by_name;
+            const retry = await sbClient.from('orders').insert([insertPayload]).select().single();
+            ord = retry.data;
+            oErr = retry.error;
+          }
           if (oErr && String(oErr.message || '').includes('paid_amount')) {
             delete insertPayload.paid_amount;
             const retry = await sbClient.from('orders').insert([insertPayload]).select().single();
@@ -2286,6 +2430,7 @@
           payment_status: dbPaymentStatus,
           total_amount: finalTotal,
           paid_amount: finalPaidAmount,
+          created_by_name: sellerName,
           created_at: new Date().toISOString()
         };
         db.orders.push(newOrder);
@@ -2507,6 +2652,204 @@
         const db = loadLocalDb();
         if (db.event_expenses) {
           db.event_expenses = db.event_expenses.filter((e) => Number(e.id) !== Number(id));
+          saveLocalDb(db);
+        }
+        return { id };
+      },
+
+      async getUsers(all = false) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          return (testDb.app_users || []).filter((u) => all || u.active !== false);
+        }
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch(`/users${all ? '?all=true' : ''}`);
+          if (r.ok) return r.json();
+        }
+        if (mode === 'supabase') {
+          try {
+            let q = sbClient.from('app_users').select('id, name, role, active, created_at').order('id');
+            if (!all) q = q.eq('active', true);
+            const { data, error } = await q;
+            if (!error && data) return data.map((u) => ({ ...u, active: Boolean(u.active) }));
+          } catch (_) {}
+          const bridge = loadEventsBridge();
+          return (bridge.app_users || []).filter((u) => all || u.active !== false);
+        }
+        const db = loadLocalDb();
+        return (db.app_users || []).filter((u) => all || u.active !== false);
+      },
+
+      async loginUser({ user_id, pin }) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const user = (testDb.app_users || []).find((u) => Number(u.id) === Number(user_id));
+          if (!user || user.active === false) throw new Error('Usuário não encontrado ou inativo.');
+          if (String(user.pin).trim() !== String(pin).trim()) throw new Error('PIN incorreto. Tente novamente.');
+          return { success: true, user: { id: user.id, name: user.name, role: user.role } };
+        }
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch('/users/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: Number(user_id), pin: String(pin).trim() })
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro no login');
+          return data;
+        }
+        if (mode === 'supabase') {
+          try {
+            const { data: user, error } = await sbClient
+              .from('app_users')
+              .select('*')
+              .eq('id', Number(user_id))
+              .maybeSingle();
+            if (!error && user) {
+              if (user.active === false) throw new Error('Usuário desativado.');
+              if (String(user.pin).trim() !== String(pin).trim()) throw new Error('PIN incorreto. Tente novamente.');
+              return { success: true, user: { id: user.id, name: user.name, role: user.role } };
+            }
+          } catch (err) {
+            if (err.message && err.message.includes('PIN')) throw err;
+          }
+          const bridge = loadEventsBridge();
+          const user = (bridge.app_users || []).find((u) => Number(u.id) === Number(user_id));
+          if (!user || user.active === false) throw new Error('Usuário não encontrado.');
+          if (String(user.pin).trim() !== String(pin).trim()) throw new Error('PIN incorreto. Tente novamente.');
+          return { success: true, user: { id: user.id, name: user.name, role: user.role } };
+        }
+        const db = loadLocalDb();
+        const user = (db.app_users || []).find((u) => Number(u.id) === Number(user_id));
+        if (!user || user.active === false) throw new Error('Usuário não encontrado.');
+        if (String(user.pin).trim() !== String(pin).trim()) throw new Error('PIN incorreto.');
+        return { success: true, user: { id: user.id, name: user.name, role: user.role } };
+      },
+
+      async createUser({ name, pin, role }) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          if (!testDb.app_users) testDb.app_users = [];
+          const nextId = testDb.app_users.reduce((m, u) => Math.max(m, u.id), 0) + 1;
+          const created = { id: nextId, name: name.trim(), pin: pin.trim(), role, active: true, created_at: new Date().toISOString() };
+          testDb.app_users.push(created);
+          saveTestDb(testDb);
+          return created;
+        }
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch('/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, pin, role })
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao cadastrar usuário');
+          return data;
+        }
+        if (mode === 'supabase') {
+          try {
+            const { data, error } = await sbClient
+              .from('app_users')
+              .insert([{ name: name.trim(), pin: pin.trim(), role, active: true }])
+              .select('id, name, role, active, created_at')
+              .single();
+            if (!error && data) return data;
+          } catch (_) {}
+          const bridge = loadEventsBridge();
+          if (!bridge.app_users) bridge.app_users = [];
+          const nextId = bridge.app_users.reduce((m, u) => Math.max(m, u.id), 0) + 1;
+          const created = { id: nextId, name: name.trim(), pin: pin.trim(), role, active: true, created_at: new Date().toISOString() };
+          bridge.app_users.push(created);
+          saveEventsBridge(bridge);
+          return created;
+        }
+        const db = loadLocalDb();
+        if (!db.app_users) db.app_users = [];
+        const nextId = db.app_users.reduce((m, u) => Math.max(m, u.id), 0) + 1;
+        const created = { id: nextId, name: name.trim(), pin: pin.trim(), role, active: true, created_at: new Date().toISOString() };
+        db.app_users.push(created);
+        saveLocalDb(db);
+        return created;
+      },
+
+      async updateUser(id, payload) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const user = (testDb.app_users || []).find((u) => Number(u.id) === Number(id));
+          if (!user) throw new Error('Usuário não encontrado');
+          Object.assign(user, payload);
+          saveTestDb(testDb);
+          return user;
+        }
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch(`/users/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao atualizar usuário');
+          return data;
+        }
+        if (mode === 'supabase') {
+          try {
+            const { data, error } = await sbClient
+              .from('app_users')
+              .update(payload)
+              .eq('id', Number(id))
+              .select('id, name, role, active, created_at')
+              .single();
+            if (!error && data) return data;
+          } catch (_) {}
+          const bridge = loadEventsBridge();
+          const user = (bridge.app_users || []).find((u) => Number(u.id) === Number(id));
+          if (!user) throw new Error('Usuário não encontrado');
+          Object.assign(user, payload);
+          saveEventsBridge(bridge);
+          return user;
+        }
+        const db = loadLocalDb();
+        const user = (db.app_users || []).find((u) => Number(u.id) === Number(id));
+        if (!user) throw new Error('Usuário não encontrado');
+        Object.assign(user, payload);
+        saveLocalDb(db);
+        return user;
+      },
+
+      async deleteUser(id) {
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          if (testDb.app_users) {
+            testDb.app_users = testDb.app_users.filter((u) => Number(u.id) !== Number(id));
+            saveTestDb(testDb);
+          }
+          return { id };
+        }
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch(`/users/${id}`, { method: 'DELETE' });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao excluir usuário');
+          return data;
+        }
+        if (mode === 'supabase') {
+          try {
+            await sbClient.from('app_users').delete().eq('id', Number(id));
+          } catch (_) {}
+          const bridge = loadEventsBridge();
+          if (bridge.app_users) {
+            bridge.app_users = bridge.app_users.filter((u) => Number(u.id) !== Number(id));
+            saveEventsBridge(bridge);
+          }
+          return { id };
+        }
+        const db = loadLocalDb();
+        if (db.app_users) {
+          db.app_users = db.app_users.filter((u) => Number(u.id) !== Number(id));
           saveLocalDb(db);
         }
         return { id };
@@ -2917,7 +3260,7 @@
         const ordersTbody = document.getElementById('orders-tbody');
         ordersTbody.innerHTML = '';
         if (filteredOrders.length === 0) {
-          ordersTbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido registrado neste evento ainda.</td></tr>';
+          ordersTbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido registrado neste evento ainda.</td></tr>';
         } else {
           filteredOrders.slice(0, 12).forEach((o) => {
             const fin = enrichOrderFinancials(o);
@@ -2936,6 +3279,7 @@
             tr.innerHTML = `
               <td>#${o.id}</td>
               <td>${o.customer_name}</td>
+              <td><span style="font-size:0.75rem;color:var(--muted);">${o.created_by_name || '-'}</span></td>
               <td style="font-size:0.76rem;color:var(--muted);">${itemsDesc || '-'}</td>
               <td>${fmtBRL(o.total_amount)}</td>
               <td>${statusHtml}</td>
@@ -2944,6 +3288,7 @@
           });
         }
         // Atualizar prévia do carrinho e tela de custos
+        applyRolePermissions();
         renderOrderCart();
         renderCostsScreen();
       } catch (err) {
@@ -3246,6 +3591,7 @@
           payment_method: document.getElementById('order-method').value,
           payment_status: statusVal,
           paid_amount: paidAmountVal,
+          created_by_name: currentUser ? currentUser.name : 'Balcão',
           items: itemsToSend
         };
         const created = await DataService.createOrder(payload);
@@ -3311,7 +3657,350 @@
       }
     });
 
+    
+    function formatRoleBadge(role) {
+      if (role === 'admin') {
+        return '<span class="env-pill" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4);">👑 Admin</span>';
+      }
+      if (role === 'manager') {
+        return '<span class="env-pill" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);">👔 Gerente</span>';
+      }
+      return '<span class="env-pill" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);">🛒 Vendedor</span>';
+    }
+
+    function applyRolePermissions() {
+      const nameEl = document.getElementById('session-user-name');
+      const roleEl = document.getElementById('session-user-role');
+      const badgeEl = document.getElementById('user-session-badge');
+
+      if (!currentUser) {
+        if (nameEl) nameEl.textContent = 'Não conectado';
+        if (roleEl) roleEl.textContent = '';
+        if (badgeEl) badgeEl.style.display = 'none';
+        return;
+      }
+
+      if (badgeEl) badgeEl.style.display = 'inline-flex';
+      if (nameEl) nameEl.textContent = currentUser.name || 'Operador';
+      if (roleEl) {
+        const r = currentUser.role || 'seller';
+        roleEl.textContent = r === 'admin' ? '👑 Admin' : r === 'manager' ? '👔 Gerente' : '🛒 Vendedor';
+        roleEl.style.background = r === 'admin' ? 'rgba(99, 102, 241, 0.2)' : r === 'manager' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)';
+        roleEl.style.color = r === 'admin' ? '#818cf8' : r === 'manager' ? '#34d399' : '#fbbf24';
+        roleEl.style.borderColor = r === 'admin' ? 'rgba(99, 102, 241, 0.4)' : r === 'manager' ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)';
+      }
+
+      const role = currentUser.role || 'seller';
+      const tabEvents = document.getElementById('tab-events');
+      const tabOrders = document.getElementById('tab-orders');
+      const tabProducts = document.getElementById('tab-products');
+      const tabCosts = document.getElementById('tab-costs');
+      const tabUsers = document.getElementById('tab-users');
+      const btnEnvToggle = document.getElementById('btn-env-toggle');
+      const cashStats = document.getElementById('orders-cash-stats');
+
+      if (role === 'seller') {
+        if (tabEvents) tabEvents.style.display = 'none';
+        if (tabOrders) tabOrders.style.display = 'inline-flex';
+        if (tabProducts) tabProducts.style.display = 'none';
+        if (tabCosts) tabCosts.style.display = 'none';
+        if (tabUsers) tabUsers.style.display = 'none';
+        if (btnEnvToggle) btnEnvToggle.style.display = 'none';
+        if (cashStats) cashStats.style.display = 'none';
+
+        const currentActiveScreen = document.querySelector('.screen.active');
+        if (currentActiveScreen && currentActiveScreen.id !== 'screen-orders') {
+          switchScreen('orders');
+        }
+      } else if (role === 'manager') {
+        if (tabEvents) tabEvents.style.display = 'inline-flex';
+        if (tabOrders) tabOrders.style.display = 'inline-flex';
+        if (tabProducts) tabProducts.style.display = 'inline-flex';
+        if (tabCosts) tabCosts.style.display = 'none';
+        if (tabUsers) tabUsers.style.display = 'none';
+        if (btnEnvToggle) btnEnvToggle.style.display = 'none';
+        if (cashStats) cashStats.style.display = 'grid';
+
+        const currentActiveScreen = document.querySelector('.screen.active');
+        if (currentActiveScreen && (currentActiveScreen.id === 'screen-costs' || currentActiveScreen.id === 'screen-users')) {
+          switchScreen('orders');
+        }
+      } else {
+        if (tabEvents) tabEvents.style.display = 'inline-flex';
+        if (tabOrders) tabOrders.style.display = 'inline-flex';
+        if (tabProducts) tabProducts.style.display = 'inline-flex';
+        if (tabCosts) tabCosts.style.display = 'inline-flex';
+        if (tabUsers) tabUsers.style.display = 'inline-flex';
+        if (btnEnvToggle) btnEnvToggle.style.display = 'inline-flex';
+        if (cashStats) cashStats.style.display = 'grid';
+      }
+    }
+
+    async function showLoginModal() {
+      const overlay = document.getElementById('login-overlay');
+      const select = document.getElementById('login-user-select');
+      const pinInput = document.getElementById('login-pin-input');
+      const errBox = document.getElementById('login-error-msg');
+      if (errBox) {
+        errBox.textContent = '';
+        errBox.style.display = 'none';
+      }
+      if (pinInput) pinInput.value = '';
+
+      if (select) {
+        select.innerHTML = '<option value="" disabled selected>Selecione um operador...</option>';
+        try {
+          const users = await DataService.getUsers();
+          const activeUsers = (users || []).filter((u) => u.active !== false);
+          if (activeUsers.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '1';
+            opt.textContent = 'Gabriel (👑 Admin)';
+            select.appendChild(opt);
+          } else {
+            activeUsers.forEach((u) => {
+              const opt = document.createElement('option');
+              opt.value = String(u.id);
+              const roleLabel = u.role === 'admin' ? '👑 Admin' : u.role === 'manager' ? '👔 Gerente' : '🛒 Vendedor';
+              opt.textContent = `${u.name} (${roleLabel})`;
+              select.appendChild(opt);
+            });
+          }
+        } catch (_) {}
+      }
+
+      if (overlay) overlay.style.display = 'flex';
+      if (pinInput) setTimeout(() => pinInput.focus(), 150);
+    }
+
+    function hideLoginModal() {
+      const overlay = document.getElementById('login-overlay');
+      if (overlay) overlay.style.display = 'none';
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const select = document.getElementById('login-user-select');
+      const pinInput = document.getElementById('login-pin-input');
+      const errBox = document.getElementById('login-error-msg');
+
+      const userId = Number(select.value);
+      const pin = pinInput.value.trim();
+
+      if (!userId || !pin) {
+        if (errBox) {
+          errBox.textContent = 'Selecione o operador e digite o PIN.';
+          errBox.style.display = 'block';
+        }
+        return;
+      }
+
+      try {
+        const user = await DataService.loginUser({ user_id: userId, pin });
+        currentUser = user;
+        localStorage.setItem(USER_SESSION_KEY, JSON.stringify(user));
+        hideLoginModal();
+        applyRolePermissions();
+        showToast(`Bem-vindo, ${user.name}!`);
+        await loadDashboard();
+        if (user.role === 'seller') {
+          switchScreen('orders');
+        }
+      } catch (err) {
+        if (errBox) {
+          errBox.textContent = err.message || 'PIN incorreto. Tente novamente.';
+          errBox.style.display = 'block';
+        }
+        pinInput.value = '';
+        pinInput.focus();
+      }
+    }
+
+    function promptSwitchUser() {
+      currentUser = null;
+      localStorage.removeItem(USER_SESSION_KEY);
+      applyRolePermissions();
+      showLoginModal();
+    }
+
+    async function initUserSession() {
+      if (!currentUser) {
+        await showLoginModal();
+      } else {
+        applyRolePermissions();
+      }
+    }
+
+    let userEditId = null;
+
+    async function renderUsersScreen() {
+      if (currentUser && currentUser.role !== 'admin') {
+        showToast('Apenas administradores podem gerenciar operadores.');
+        switchScreen('orders');
+        return;
+      }
+
+      const tbody = document.getElementById('users-tbody');
+      if (!tbody) return;
+
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem;">Carregando operadores...</td></tr>';
+
+      try {
+        const users = await DataService.getUsers();
+        tbody.innerHTML = '';
+        if (!users || users.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1.5rem;">Nenhum operador encontrado.</td></tr>';
+          return;
+        }
+
+        users.forEach((u) => {
+          const tr = document.createElement('tr');
+          const isMe = currentUser && Number(currentUser.id) === Number(u.id);
+          const statusBadge = u.active !== false
+            ? '<span class="tag tag-pago">Ativo</span>'
+            : '<span class="tag tag-pendente">Inativo</span>';
+
+          tr.innerHTML = `
+            <td>
+              <strong>${u.name}</strong> ${isMe ? '<small style="color:var(--primary);font-weight:700;">(Você)</small>' : ''}
+            </td>
+            <td>${formatRoleBadge(u.role)}</td>
+            <td>${statusBadge}</td>
+            <td style="text-align: center; white-space: nowrap;">
+              <button type="button" class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.74rem;" onclick="startEditUser(${u.id}, '${encodeURIComponent(u.name)}', '${u.role}')">✏️ Editar</button>
+              <button type="button" class="btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.74rem;" onclick="promptChangeUserPin(${u.id}, '${encodeURIComponent(u.name)}')">🔑 PIN</button>
+              ${!isMe ? `
+                <button type="button" class="${u.active !== false ? 'btn-danger' : 'btn-primary'}" style="padding: 0.25rem 0.5rem; font-size: 0.74rem;" onclick="toggleUserStatus(${u.id}, ${u.active !== false})">
+                  ${u.active !== false ? 'Desativar' : 'Ativar'}
+                </button>
+                <button type="button" class="btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.74rem;" onclick="handleDeleteUser(${u.id}, '${encodeURIComponent(u.name)}')">✕</button>
+              ` : ''}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#f87171;padding:1.5rem;">Erro ao carregar: ${err.message}</td></tr>`;
+      }
+    }
+
+    function startEditUser(id, encodedName, role) {
+      userEditId = id;
+      document.getElementById('user-edit-id').value = id;
+      document.getElementById('new-user-name').value = decodeURIComponent(encodedName);
+      document.getElementById('new-user-role').value = role;
+      const pinEl = document.getElementById('new-user-pin');
+      pinEl.value = '';
+      pinEl.required = false;
+      pinEl.placeholder = 'Deixe em branco para manter o atual';
+      document.getElementById('user-form-title').textContent = 'Editar Operador';
+      document.getElementById('user-submit-btn').textContent = 'Salvar Alterações';
+      document.getElementById('user-cancel-btn').style.display = 'inline-block';
+      document.getElementById('new-user-name').focus();
+    }
+
+    function cancelEditUser() {
+      userEditId = null;
+      document.getElementById('user-edit-id').value = '';
+      document.getElementById('new-user-name').value = '';
+      document.getElementById('new-user-role').value = 'seller';
+      const pinEl = document.getElementById('new-user-pin');
+      pinEl.value = '';
+      pinEl.required = true;
+      pinEl.placeholder = 'Ex: 1234';
+      document.getElementById('user-form-title').textContent = 'Cadastrar Novo Operador';
+      document.getElementById('user-submit-btn').textContent = '+ Salvar Operador';
+      document.getElementById('user-cancel-btn').style.display = 'none';
+    }
+
+    async function handleSaveUser(e) {
+      e.preventDefault();
+      const id = document.getElementById('user-edit-id').value;
+      const name = document.getElementById('new-user-name').value.trim();
+      const role = document.getElementById('new-user-role').value;
+      const pin = document.getElementById('new-user-pin').value.trim();
+
+      if (!name) {
+        showToast('Informe o nome do operador.');
+        return;
+      }
+
+      try {
+        if (id) {
+          const payload = { name, role };
+          if (pin) payload.pin = pin;
+          await DataService.updateUser(id, payload);
+          if (currentUser && Number(currentUser.id) === Number(id)) {
+            currentUser.name = name;
+            currentUser.role = role;
+            localStorage.setItem(USER_SESSION_KEY, JSON.stringify(currentUser));
+            applyRolePermissions();
+          }
+          showToast(`Operador "${name}" atualizado com sucesso!`);
+          cancelEditUser();
+        } else {
+          if (!pin || pin.length < 4) {
+            showToast('O PIN deve conter no mínimo 4 dígitos.');
+            return;
+          }
+          await DataService.createUser({ name, role, pin });
+          showToast(`Operador "${name}" cadastrado com sucesso!`);
+          cancelEditUser();
+        }
+        await renderUsersScreen();
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
+
+    async function toggleUserStatus(id, currentlyActive) {
+      if (currentUser && Number(currentUser.id) === Number(id)) {
+        showToast('Você não pode desativar seu próprio usuário logado.');
+        return;
+      }
+      try {
+        await DataService.updateUser(id, { active: !currentlyActive });
+        showToast(`Operador ${!currentlyActive ? 'ativado' : 'desativado'} com sucesso!`);
+        await renderUsersScreen();
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
+
+    async function promptChangeUserPin(id, encodedName) {
+      const name = decodeURIComponent(encodedName);
+      const newPin = window.prompt(`Novo PIN para o operador "${name}" (4 a 10 dígitos):`, '');
+      if (newPin === null) return;
+      if (!newPin.trim() || newPin.trim().length < 4) {
+        showToast('O PIN deve ter no mínimo 4 dígitos numéricos.');
+        return;
+      }
+      try {
+        await DataService.updateUser(id, { pin: newPin.trim() });
+        showToast(`PIN de "${name}" atualizado com sucesso!`);
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
+
+    async function handleDeleteUser(id, encodedName) {
+      const name = decodeURIComponent(encodedName);
+      if (currentUser && Number(currentUser.id) === Number(id)) {
+        showToast('Você não pode excluir seu próprio usuário logado.');
+        return;
+      }
+      if (!window.confirm(`Deseja realmente remover o operador "${name}"?`)) return;
+      try {
+        await DataService.deleteUser(id);
+        showToast(`Operador "${name}" excluído.`);
+        await renderUsersScreen();
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
+
     updateEnvUi();
+    initUserSession();
     loadDashboard();
 
     // Registro do Service Worker e suporte a Instalação PWA no Celular (Android / iOS)
