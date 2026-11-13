@@ -1,10 +1,10 @@
-const CACHE_NAME = 'controle-social-jovens-v6';
+const CACHE_NAME = 'controle-social-jovens-v7';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json?v=6',
-  './icon-192.png?v=6',
-  './icon-512.png?v=6'
+  './manifest.json?v=7',
+  './icon-192.png?v=7',
+  './icon-512.png?v=7'
 ];
 
 self.addEventListener('install', (event) => {

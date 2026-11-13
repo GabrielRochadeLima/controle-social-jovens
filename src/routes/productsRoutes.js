@@ -33,6 +33,9 @@ router.get('/', async (req, res) => {
       stock_quantity: p.stock_quantity === null || p.stock_quantity === undefined ? null : Number(p.stock_quantity),
       has_stock_control: p.stock_quantity !== null && p.stock_quantity !== undefined,
       unit: p.unit || 'un',
+      package_name: p.package_name || null,
+      package_cost: p.package_cost !== null && p.package_cost !== undefined ? Number(p.package_cost) : null,
+      package_yield: p.package_yield !== null && p.package_yield !== undefined ? Number(p.package_yield) : null,
       category_name: p.categories ? p.categories.name : null
     }));
 
@@ -61,7 +64,17 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { name, category_id, price, cost_price, stock_quantity, unit } = req.body || {};
+    const {
+      name,
+      category_id,
+      price,
+      cost_price,
+      stock_quantity,
+      unit,
+      package_name,
+      package_cost,
+      package_yield
+    } = req.body || {};
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'O nome do produto é obrigatório.' });
@@ -76,8 +89,16 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'O preço (price) deve ser um número maior ou igual a zero.' });
     }
 
+    const parsedPkgCost =
+      package_cost !== undefined && package_cost !== null && package_cost !== '' ? Number(package_cost) : null;
+    const parsedPkgYield =
+      package_yield !== undefined && package_yield !== null && package_yield !== '' ? Number(package_yield) : null;
+    const parsedPkgName = package_name ? String(package_name).trim().slice(0, 100) : null;
+
     let numericCost = 0;
-    if (cost_price !== undefined && cost_price !== null && cost_price !== '') {
+    if (parsedPkgCost !== null && parsedPkgYield !== null && parsedPkgYield > 0 && (cost_price === undefined || cost_price === null || cost_price === '')) {
+      numericCost = Number((parsedPkgCost / parsedPkgYield).toFixed(2));
+    } else if (cost_price !== undefined && cost_price !== null && cost_price !== '') {
       numericCost = Number(cost_price);
       if (Number.isNaN(numericCost) || numericCost < 0) {
         return res.status(400).json({ error: 'O preço de custo (cost_price) deve ser um número maior ou igual a zero.' });
@@ -102,7 +123,10 @@ router.post('/', async (req, res) => {
       price: Number(numericPrice.toFixed(2)),
       cost_price: Number(numericCost.toFixed(2)),
       stock_quantity: parsedStock,
-      unit: normalizedUnit
+      unit: normalizedUnit,
+      package_name: parsedPkgName,
+      package_cost: parsedPkgCost,
+      package_yield: parsedPkgYield
     };
 
     let { data, error } = await supabase
@@ -111,11 +135,17 @@ router.post('/', async (req, res) => {
       .select('*, categories ( id, name )')
       .single();
 
-    if (error && (String(error.message).includes('unit') || error.code === '42703')) {
-      delete insertPayload.unit;
+    if (error && (String(error.message).includes('package_') || String(error.message).includes('unit') || error.code === '42703')) {
+      const safePayload = {
+        name: insertPayload.name,
+        category_id: insertPayload.category_id,
+        price: insertPayload.price,
+        cost_price: insertPayload.cost_price,
+        stock_quantity: insertPayload.stock_quantity
+      };
       const retry = await supabase
         .from('products')
-        .insert([insertPayload])
+        .insert([safePayload])
         .select('*, categories ( id, name )')
         .single();
       data = retry.data;
@@ -133,6 +163,9 @@ router.post('/', async (req, res) => {
       stock_quantity: data.stock_quantity === null || data.stock_quantity === undefined ? null : Number(data.stock_quantity),
       has_stock_control: data.stock_quantity !== null && data.stock_quantity !== undefined,
       unit: data.unit || normalizedUnit,
+      package_name: data.package_name !== undefined ? data.package_name : parsedPkgName,
+      package_cost: data.package_cost !== undefined ? (data.package_cost !== null ? Number(data.package_cost) : null) : parsedPkgCost,
+      package_yield: data.package_yield !== undefined ? (data.package_yield !== null ? Number(data.package_yield) : null) : parsedPkgYield,
       category_name: data.categories ? data.categories.name : null
     });
   } catch (err) {
@@ -151,7 +184,17 @@ async function updateProductHandler(req, res) {
       return res.status(400).json({ error: 'ID do produto inválido.' });
     }
 
-    const { name, category_id, price, cost_price, stock_quantity, unit } = req.body || {};
+    const {
+      name,
+      category_id,
+      price,
+      cost_price,
+      stock_quantity,
+      unit,
+      package_name,
+      package_cost,
+      package_yield
+    } = req.body || {};
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'O nome do produto é obrigatório.' });
@@ -166,8 +209,16 @@ async function updateProductHandler(req, res) {
       return res.status(400).json({ error: 'O preço (price) deve ser um número maior ou igual a zero.' });
     }
 
+    const parsedPkgCost =
+      package_cost !== undefined && package_cost !== null && package_cost !== '' ? Number(package_cost) : null;
+    const parsedPkgYield =
+      package_yield !== undefined && package_yield !== null && package_yield !== '' ? Number(package_yield) : null;
+    const parsedPkgName = package_name ? String(package_name).trim().slice(0, 100) : null;
+
     let numericCost = 0;
-    if (cost_price !== undefined && cost_price !== null && cost_price !== '') {
+    if (parsedPkgCost !== null && parsedPkgYield !== null && parsedPkgYield > 0 && (cost_price === undefined || cost_price === null || cost_price === '')) {
+      numericCost = Number((parsedPkgCost / parsedPkgYield).toFixed(2));
+    } else if (cost_price !== undefined && cost_price !== null && cost_price !== '') {
       numericCost = Number(cost_price);
       if (Number.isNaN(numericCost) || numericCost < 0) {
         return res.status(400).json({ error: 'O preço de custo (cost_price) deve ser um número maior ou igual a zero.' });
@@ -192,7 +243,10 @@ async function updateProductHandler(req, res) {
       price: Number(numericPrice.toFixed(2)),
       cost_price: Number(numericCost.toFixed(2)),
       stock_quantity: parsedStock,
-      unit: normalizedUnit
+      unit: normalizedUnit,
+      package_name: parsedPkgName,
+      package_cost: parsedPkgCost,
+      package_yield: parsedPkgYield
     };
 
     let { data, error } = await supabase
@@ -202,11 +256,17 @@ async function updateProductHandler(req, res) {
       .select('*, categories ( id, name )')
       .single();
 
-    if (error && (String(error.message).includes('unit') || error.code === '42703')) {
-      delete updatePayload.unit;
+    if (error && (String(error.message).includes('package_') || String(error.message).includes('unit') || error.code === '42703')) {
+      const safePayload = {
+        name: updatePayload.name,
+        category_id: updatePayload.category_id,
+        price: updatePayload.price,
+        cost_price: updatePayload.cost_price,
+        stock_quantity: updatePayload.stock_quantity
+      };
       const retry = await supabase
         .from('products')
-        .update(updatePayload)
+        .update(safePayload)
         .eq('id', productId)
         .select('*, categories ( id, name )')
         .single();
@@ -226,6 +286,9 @@ async function updateProductHandler(req, res) {
       stock_quantity: data.stock_quantity === null || data.stock_quantity === undefined ? null : Number(data.stock_quantity),
       has_stock_control: data.stock_quantity !== null && data.stock_quantity !== undefined,
       unit: data.unit || normalizedUnit,
+      package_name: data.package_name !== undefined ? data.package_name : parsedPkgName,
+      package_cost: data.package_cost !== undefined ? (data.package_cost !== null ? Number(data.package_cost) : null) : parsedPkgCost,
+      package_yield: data.package_yield !== undefined ? (data.package_yield !== null ? Number(data.package_yield) : null) : parsedPkgYield,
       category_name: data.categories ? data.categories.name : null
     });
   } catch (err) {

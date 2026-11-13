@@ -1121,10 +1121,11 @@
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
               <div>
-                <label for="prod-unit">Unidade de Medida</label>
+                <label for="prod-unit">Unidade de Venda (no Caixa)</label>
                 <select id="prod-unit" style="width: 100%;">
                   <option value="un">un (Unidade - ex: Lata, Salgado)</option>
-                  <option value="L">L (Litros - ex: Açaí, Suco)</option>
+                  <option value="copo">copo (Copos - ex: Açaí 300ml, Suco)</option>
+                  <option value="L">L (Litros)</option>
                   <option value="kg">kg (Quilos - ex: Frutas, Carnes)</option>
                   <option value="fatia">fatia (Fatias - ex: Pizza, Bolo)</option>
                   <option value="cx">cx (Caixa)</option>
@@ -1134,6 +1135,38 @@
               <div>
                 <label for="prod-stock">Estoque <span style="font-weight:400;">(Vazio = livre)</span></label>
                 <input type="number" id="prod-stock" min="0" placeholder="Livre / Sem controle" style="width: 100%;" />
+              </div>
+            </div>
+
+            <!-- Assistente de Rendimento / Embalagem de Atacado (ex: Balde 10L) -->
+            <div style="margin-top: 0.35rem;">
+              <button type="button" class="btn-secondary" id="btn-toggle-pkg-calc" onclick="togglePackageCalculator()" style="width: 100%; font-size: 0.78rem; padding: 0.45rem 0.6rem; display: flex; align-items: center; justify-content: space-between; border: 1px dashed var(--primary); background: rgba(99, 102, 241, 0.08);">
+                <span>🧮 <strong>Calcular por Embalagem / Rendimento</strong> (ex: balde 10L, caixa)</span>
+                <span id="pkg-calc-arrow">▼</span>
+              </button>
+              <div id="package-calc-box" style="display: none; background: var(--surface2); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.75rem; margin-top: 0.45rem;">
+                <div style="font-size: 0.73rem; color: var(--muted); margin-bottom: 0.5rem;">
+                  💡 Use se você compra em fardos/baldes no atacadista. O sistema calcula o custo unitário e avisa quantos baldes comprar:
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <div>
+                    <label for="prod-pkg-name" style="font-size: 0.74rem;">Nome da Embalagem Atacado</label>
+                    <input type="text" id="prod-pkg-name" placeholder="Ex: Balde de 10L, Caixa 5kg" style="width: 100%; font-size: 0.82rem;" />
+                  </div>
+                  <div>
+                    <label for="prod-pkg-cost" style="font-size: 0.74rem;">Valor Pago na Embalagem (R$)</label>
+                    <input type="number" id="prod-pkg-cost" step="0.01" min="0" placeholder="Ex: 120.00" oninput="calculateUnitCostFromPackage()" style="width: 100%; font-size: 0.82rem;" />
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; align-items: flex-end;">
+                  <div>
+                    <label for="prod-pkg-yield" style="font-size: 0.74rem;">Quantas porções ela rende?</label>
+                    <input type="number" id="prod-pkg-yield" step="any" min="0.01" placeholder="Ex: 25 copos" oninput="calculateUnitCostFromPackage()" style="width: 100%; font-size: 0.82rem;" />
+                  </div>
+                  <div id="pkg-calc-feedback" style="background: var(--surface); border: 1px solid var(--border); border-radius: 0.35rem; padding: 0.45rem 0.5rem; font-size: 0.75rem; color: var(--primary); text-align: center; font-weight: 700;">
+                    Custo: R$ 0,00 / porção
+                  </div>
+                </div>
               </div>
             </div>
             <div style="display: flex; gap: 0.5rem;">
@@ -2359,11 +2392,14 @@
         });
       },
 
-      async createProduct({ name, category_id, price, cost_price, stock_quantity, unit }) {
+      async createProduct({ name, category_id, price, cost_price, stock_quantity, unit, package_name, package_cost, package_yield }) {
         const numPrice = Number(price);
         const numCost = cost_price !== undefined && cost_price !== null && cost_price !== '' ? Number(cost_price) : 0;
         const parsedStock = stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity);
         const unitVal = unit || 'un';
+        const pkgNameVal = package_name || null;
+        const pkgCostVal = package_cost !== undefined && package_cost !== null && package_cost !== '' ? Number(package_cost) : null;
+        const pkgYieldVal = package_yield !== undefined && package_yield !== null && package_yield !== '' ? Number(package_yield) : null;
 
         if (isTestEnv()) {
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
@@ -2375,7 +2411,10 @@
             price: numPrice,
             cost_price: numCost,
             unit: unitVal,
-            stock_quantity: parsedStock
+            stock_quantity: parsedStock,
+            package_name: pkgNameVal,
+            package_cost: pkgCostVal,
+            package_yield: pkgYieldVal
           };
           testDb.products.push(newProd);
           saveTestDb(testDb);
@@ -2386,7 +2425,7 @@
           const r = await fetch('/products', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, category_id, price: numPrice, cost_price: numCost, unit: unitVal, stock_quantity: parsedStock })
+            body: JSON.stringify({ name, category_id, price: numPrice, cost_price: numCost, unit: unitVal, stock_quantity: parsedStock, package_name: pkgNameVal, package_cost: pkgCostVal, package_yield: pkgYieldVal })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao cadastrar produto');
@@ -2399,7 +2438,10 @@
             price: numPrice,
             cost_price: numCost,
             unit: unitVal,
-            stock_quantity: parsedStock
+            stock_quantity: parsedStock,
+            package_name: pkgNameVal,
+            package_cost: pkgCostVal,
+            package_yield: pkgYieldVal
           };
           let { data, error } = await sbClient.from('products').insert([payload]).select().single();
           if (error && String(error.message || '').includes('cost_price')) {
@@ -2426,11 +2468,14 @@
         return newProd;
       },
 
-      async updateProduct(id, { name, category_id, price, cost_price, stock_quantity, unit }) {
+      async updateProduct(id, { name, category_id, price, cost_price, stock_quantity, unit, package_name, package_cost, package_yield }) {
         const numPrice = Number(price);
         const numCost = cost_price !== undefined && cost_price !== null && cost_price !== '' ? Number(cost_price) : 0;
         const parsedStock = stock_quantity === null || stock_quantity === '' ? null : Number(stock_quantity);
         const unitVal = unit || 'un';
+        const pkgNameVal = package_name || null;
+        const pkgCostVal = package_cost !== undefined && package_cost !== null && package_cost !== '' ? Number(package_cost) : null;
+        const pkgYieldVal = package_yield !== undefined && package_yield !== null && package_yield !== '' ? Number(package_yield) : null;
 
         if (isTestEnv()) {
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
@@ -2442,6 +2487,9 @@
           prod.cost_price = numCost;
           prod.unit = unitVal;
           prod.stock_quantity = parsedStock;
+          prod.package_name = pkgNameVal;
+          prod.package_cost = pkgCostVal;
+          prod.package_yield = pkgYieldVal;
           saveTestDb(testDb);
           return prod;
         }
@@ -2450,7 +2498,7 @@
           const r = await fetch(`/products/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, category_id, price: numPrice, cost_price: numCost, unit: unitVal, stock_quantity: parsedStock })
+            body: JSON.stringify({ name, category_id, price: numPrice, cost_price: numCost, unit: unitVal, stock_quantity: parsedStock, package_name: pkgNameVal, package_cost: pkgCostVal, package_yield: pkgYieldVal })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao atualizar produto');
@@ -2463,7 +2511,10 @@
             price: numPrice,
             cost_price: numCost,
             unit: unitVal,
-            stock_quantity: parsedStock
+            stock_quantity: parsedStock,
+            package_name: pkgNameVal,
+            package_cost: pkgCostVal,
+            package_yield: pkgYieldVal
           };
           let { data, error } = await sbClient
             .from('products')
@@ -3220,6 +3271,34 @@
       }
     };
 
+    
+    function togglePackageCalculator(forceOpen = null) {
+      const box = document.getElementById('package-calc-box');
+      const arrow = document.getElementById('pkg-calc-arrow');
+      if (!box) return;
+      const willOpen = forceOpen !== null ? forceOpen : box.style.display === 'none';
+      box.style.display = willOpen ? 'block' : 'none';
+      if (arrow) arrow.textContent = willOpen ? '▲' : '▼';
+    }
+
+    function calculateUnitCostFromPackage() {
+      const costEl = document.getElementById('prod-pkg-cost');
+      const yieldEl = document.getElementById('prod-pkg-yield');
+      const feedbackEl = document.getElementById('pkg-calc-feedback');
+      const prodCostEl = document.getElementById('prod-cost');
+
+      const pkgCost = costEl ? Math.max(0, parseFloat(costEl.value) || 0) : 0;
+      const pkgYield = yieldEl ? Math.max(0, parseFloat(yieldEl.value) || 0) : 0;
+
+      if (pkgCost > 0 && pkgYield > 0) {
+        const unitCost = Number((pkgCost / pkgYield).toFixed(2));
+        if (prodCostEl) prodCostEl.value = unitCost.toFixed(2);
+        if (feedbackEl) feedbackEl.innerHTML = `💡 Custo: <strong style="color:#34d399;">${fmtBRL(unitCost)}</strong> / porção`;
+      } else {
+        if (feedbackEl) feedbackEl.textContent = 'Custo: R$ 0,00 / porção';
+      }
+    }
+
     function startEditProduct(productId) {
       const prod = cachedProducts.find((p) => Number(p.id) === Number(productId));
       if (!prod) return;
@@ -3235,6 +3314,20 @@
       document.getElementById('prod-stock').value =
         prod.stock_quantity === null || prod.stock_quantity === undefined ? '' : prod.stock_quantity;
 
+      const pkgNameEl = document.getElementById('prod-pkg-name');
+      const pkgCostEl = document.getElementById('prod-pkg-cost');
+      const pkgYieldEl = document.getElementById('prod-pkg-yield');
+      if (pkgNameEl) pkgNameEl.value = prod.package_name || '';
+      if (pkgCostEl) pkgCostEl.value = (prod.package_cost !== null && prod.package_cost !== undefined) ? prod.package_cost : '';
+      if (pkgYieldEl) pkgYieldEl.value = (prod.package_yield !== null && prod.package_yield !== undefined) ? prod.package_yield : '';
+
+      if (prod.package_cost && prod.package_yield) {
+        togglePackageCalculator(true);
+        calculateUnitCostFromPackage();
+      } else {
+        togglePackageCalculator(false);
+      }
+
       document.getElementById('product-form-title').textContent = `Editar Produto #${prod.id}`;
       document.getElementById('prod-submit-btn').textContent = 'Salvar Alterações';
       document.getElementById('prod-cancel-btn').style.display = 'inline-block';
@@ -3249,6 +3342,13 @@
       document.getElementById('prod-stock').value = '';
       const unitEl = document.getElementById('prod-unit');
       if (unitEl) unitEl.value = 'un';
+      const pkgNameEl = document.getElementById('prod-pkg-name');
+      const pkgCostEl = document.getElementById('prod-pkg-cost');
+      const pkgYieldEl = document.getElementById('prod-pkg-yield');
+      if (pkgNameEl) pkgNameEl.value = '';
+      if (pkgCostEl) pkgCostEl.value = '';
+      if (pkgYieldEl) pkgYieldEl.value = '';
+      togglePackageCalculator(false);
       document.getElementById('product-form-title').textContent = 'Cadastrar Novo Produto';
       document.getElementById('prod-submit-btn').textContent = 'Salvar Produto';
       document.getElementById('prod-cancel-btn').style.display = 'none';
@@ -3699,6 +3799,7 @@
             <td>
               <strong>${p.name}</strong>
               <span class="tag tag-aberto" style="font-size:0.68rem;padding:0.1rem 0.35rem;margin-left:0.25rem;">${p.unit || 'un'}</span>
+              ${(p.package_yield && p.package_yield > 1) ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;">📦 ${p.package_name || 'Embalagem'}: Rende ${p.package_yield} ${p.unit || 'un'} (${fmtBRL(p.package_cost || 0)})</div>` : ''}
             </td>
             <td>${p.category_name || '-'}</td>
             <td style="color:#f87171;">${fmtBRL(p.cost_price || 0)}</td>
@@ -3881,12 +3982,26 @@
         } else {
           cachedProducts.forEach((p) => {
             const qty = Number(forecastQuantities[p.id] || 0);
-            const cost = Number(p.cost_price || 0);
             const price = Number(p.price || 0);
-            const totalCost = qty * cost;
+            const unit = p.unit || 'un';
+
+            // Cálculo inteligente de embalagem / rendimento
+            const hasPkg = Boolean(p.package_yield && p.package_yield > 1 && p.package_cost && p.package_cost > 0);
+            let totalCost = 0;
+            let pkgInfoHtml = '';
+
+            if (hasPkg && qty > 0) {
+              const pkgsNeeded = Math.ceil(qty / p.package_yield);
+              totalCost = pkgsNeeded * Number(p.package_cost);
+              const maxServings = pkgsNeeded * p.package_yield;
+              const surplus = maxServings - qty;
+              pkgInfoHtml = `<div style="font-size:0.71rem;color:#f87171;margin-top:0.2rem;">🛒 Comprar: <strong>${pkgsNeeded}x ${p.package_name || 'emb.'}</strong> (${fmtBRL(totalCost)})${surplus > 0 ? ` • Sobra: ${surplus} ${unit}` : ''}</div>`;
+            } else {
+              totalCost = qty * Number(p.cost_price || 0);
+            }
+
             const totalSales = qty * price;
             const totalProfit = totalSales - totalCost;
-            const unit = p.unit || 'un';
 
             const tr = document.createElement('tr');
             tr.id = `forecast-row-${p.id}`;
@@ -3894,11 +4009,15 @@
               <td>
                 <strong>${p.name}</strong>
                 <small style="display:block;color:var(--muted);font-size:0.75rem;">${p.category_name || 'Geral'}</small>
+                ${hasPkg ? `<small style="display:block;color:var(--primary);font-size:0.71rem;">📦 ${p.package_name || 'Emb.'}: ${fmtBRL(p.package_cost)} (rende ${p.package_yield} ${unit})</small>` : ''}
               </td>
               <td style="text-align:center;">
                 <span class="tag tag-aberto" style="font-size:0.72rem;padding:0.15rem 0.4rem;">${unit}</span>
               </td>
-              <td style="text-align:right;color:#f87171;">${fmtBRL(cost)}</td>
+              <td style="text-align:right;color:#f87171;">
+                ${fmtBRL(p.cost_price || 0)}
+                <small style="display:block;font-size:0.68rem;color:var(--muted);">/${unit}</small>
+              </td>
               <td style="text-align:right;color:var(--primary);font-weight:600;">${fmtBRL(price)}</td>
               <td style="text-align:center;">
                 <div style="display:inline-flex;align-items:center;gap:0.25rem;">
@@ -3906,6 +4025,7 @@
                   <input type="number" step="any" min="0" value="${qty > 0 ? qty : ''}" placeholder="0" oninput="onForecastQtyChange(${p.id}, this.value)" style="width:65px;text-align:center;font-weight:700;padding:0.35rem 0.2rem;" />
                   <button type="button" class="btn-secondary" onclick="stepForecastQty(${p.id}, 1)" style="padding:0.2rem 0.5rem;font-weight:700;font-size:0.85rem;" title="Aumentar">+</button>
                 </div>
+                <div id="f-pkg-info-${p.id}">${pkgInfoHtml}</div>
               </td>
               <td id="f-cost-${p.id}" style="text-align:right;color:#f87171;font-weight:600;">${fmtBRL(totalCost)}</td>
               <td id="f-sales-${p.id}" style="text-align:right;color:var(--primary);font-weight:600;">${fmtBRL(totalSales)}</td>
@@ -3978,15 +4098,30 @@
       const p = (cachedProducts || []).find((x) => Number(x.id) === Number(productId));
       if (!p) return;
       const qty = Number(forecastQuantities[productId] || 0);
-      const cost = Number(p.cost_price || 0);
       const price = Number(p.price || 0);
-      const totalCost = qty * cost;
+      const unit = p.unit || 'un';
+
+      const hasPkg = Boolean(p.package_yield && p.package_yield > 1 && p.package_cost && p.package_cost > 0);
+      let totalCost = 0;
+      let pkgInfoHtml = '';
+
+      if (hasPkg && qty > 0) {
+        const pkgsNeeded = Math.ceil(qty / p.package_yield);
+        totalCost = pkgsNeeded * Number(p.package_cost);
+        const maxServings = pkgsNeeded * p.package_yield;
+        const surplus = maxServings - qty;
+        pkgInfoHtml = `<div style="font-size:0.71rem;color:#f87171;margin-top:0.2rem;">🛒 Comprar: <strong>${pkgsNeeded}x ${p.package_name || 'emb.'}</strong> (${fmtBRL(totalCost)})${surplus > 0 ? ` • Sobra: ${surplus} ${unit}` : ''}</div>`;
+      } else {
+        totalCost = qty * Number(p.cost_price || 0);
+      }
+
       const totalSales = qty * price;
       const totalProfit = totalSales - totalCost;
 
       const cEl = document.getElementById(`f-cost-${productId}`);
       const sEl = document.getElementById(`f-sales-${productId}`);
       const pEl = document.getElementById(`f-profit-${productId}`);
+      const pkgInfoEl = document.getElementById(`f-pkg-info-${productId}`);
 
       if (cEl) cEl.textContent = fmtBRL(totalCost);
       if (sEl) sEl.textContent = fmtBRL(totalSales);
@@ -3994,6 +4129,7 @@
         pEl.textContent = fmtBRL(totalProfit);
         pEl.style.color = totalProfit >= 0 ? '#34d399' : '#f87171';
       }
+      if (pkgInfoEl) pkgInfoEl.innerHTML = pkgInfoHtml;
     }
 
     function clearAllForecastQuantities() {
@@ -4040,7 +4176,13 @@
         const qty = Number(forecastQuantities[p.id] || 0);
         if (qty > 0) {
           itemsCount += 1;
-          totalCost += qty * Number(p.cost_price || 0);
+          const hasPkg = Boolean(p.package_yield && p.package_yield > 1 && p.package_cost && p.package_cost > 0);
+          if (hasPkg) {
+            const pkgsNeeded = Math.ceil(qty / p.package_yield);
+            totalCost += pkgsNeeded * Number(p.package_cost);
+          } else {
+            totalCost += qty * Number(p.cost_price || 0);
+          }
           totalSales += qty * Number(p.price || 0);
         }
       });
@@ -4112,10 +4254,20 @@
         const qty = Number(forecastQuantities[p.id] || 0);
         if (qty > 0) {
           const unit = p.unit || 'un';
-          const cost = qty * Number(p.cost_price || 0);
+          const hasPkg = Boolean(p.package_yield && p.package_yield > 1 && p.package_cost && p.package_cost > 0);
+          let cost = 0;
+          if (hasPkg) {
+            const pkgsNeeded = Math.ceil(qty / p.package_yield);
+            cost = pkgsNeeded * Number(p.package_cost);
+            const maxServings = pkgsNeeded * p.package_yield;
+            const surplus = maxServings - qty;
+            itemsLines.push(`• *${pkgsNeeded}x ${p.package_name || 'embalagem'}* - ${p.name} (Custo total: ${fmtBRL(cost)}) — Rende até ${maxServings} ${unit}${surplus > 0 ? ` (planejado: ${qty}, sobra: ${surplus})` : ''}`);
+          } else {
+            cost = qty * Number(p.cost_price || 0);
+            itemsLines.push(`• *${qty} ${unit}* - ${p.name} (Custo est.: ${fmtBRL(cost)})`);
+          }
           totalCost += cost;
           totalSales += qty * Number(p.price || 0);
-          itemsLines.push(`• *${qty} ${unit}* - ${p.name} (Custo est.: ${fmtBRL(cost)})`);
         }
       });
 
@@ -4606,13 +4758,19 @@
         const stockRaw = document.getElementById('prod-stock').value.trim();
         const costRaw = document.getElementById('prod-cost').value.trim();
         const unitEl = document.getElementById('prod-unit');
+        const pkgNameVal = (document.getElementById('prod-pkg-name') ? document.getElementById('prod-pkg-name').value.trim() : '') || null;
+        const pkgCostRaw = (document.getElementById('prod-pkg-cost') ? document.getElementById('prod-pkg-cost').value.trim() : '');
+        const pkgYieldRaw = (document.getElementById('prod-pkg-yield') ? document.getElementById('prod-pkg-yield').value.trim() : '');
         const payload = {
           name: document.getElementById('prod-name').value.trim(),
           category_id: Number(document.getElementById('prod-category').value),
           price: Number(document.getElementById('prod-price').value),
           cost_price: costRaw === '' ? 0 : Number(costRaw),
           unit: unitEl ? unitEl.value : 'un',
-          stock_quantity: stockRaw === '' ? null : Number(stockRaw)
+          stock_quantity: stockRaw === '' ? null : Number(stockRaw),
+          package_name: pkgNameVal,
+          package_cost: pkgCostRaw === '' ? null : Number(pkgCostRaw),
+          package_yield: pkgYieldRaw === '' ? null : Number(pkgYieldRaw)
         };
 
         if (editId) {
@@ -5024,7 +5182,7 @@
     let deferredInstallPrompt = null;
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=6').then((reg) => {
+        navigator.serviceWorker.register('./sw.js?v=7').then((reg) => {
           reg.update();
         }).catch(() => {});
       });

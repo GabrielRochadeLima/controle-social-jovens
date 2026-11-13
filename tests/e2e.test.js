@@ -656,6 +656,25 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
     assert.equal(prodRes.body.unit, 'un');
     const costProdId = prodRes.body.id;
 
+    // 8.1.1 Cadastrar produto com embalagem e rendimento (ex: Balde 10L por R$ 120 que rende 25 copos = R$ 4,80 cada)
+    const acaiRes = await apiRequest('/products', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'Açaí Cremoso 300ml',
+        category_id: catLanchesId || 1,
+        price: 12.0,
+        unit: 'copo',
+        package_name: 'Balde de 10L',
+        package_cost: 120.0,
+        package_yield: 25
+      })
+    });
+    assert.equal(acaiRes.status, 201);
+    assert.equal(acaiRes.body.cost_price, 4.8);
+    assert.equal(acaiRes.body.package_name, 'Balde de 10L');
+    assert.equal(acaiRes.body.package_cost, 120.0);
+    assert.equal(acaiRes.body.package_yield, 25);
+
     // 8.2 Atualizar o produto com novo cost_price via PUT
     const prodUpdate = await apiRequest(`/products/${costProdId}`, {
       method: 'PUT',
