@@ -3766,7 +3766,6 @@
           }
           if (oErr) throw new Error(oErr.message);
 
-          const bridge = loadEventsBridge();
           if (!supabaseHasEventsTable && event_id) {
             bridge.orderEventMap[ord.id] = Number(event_id);
           }
@@ -6901,7 +6900,7 @@
     let deferredInstallPrompt = null;
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=9').then((reg) => {
+        navigator.serviceWorker.register('./sw.js?v=10').then((reg) => {
           reg.update();
         }).catch(() => {});
       });
