@@ -2690,6 +2690,7 @@
           if (!parsed.paidAmountsMap) parsed.paidAmountsMap = {};
           if (!parsed.expenses) parsed.expenses = [];
           if (!parsed.productPromosMap) parsed.productPromosMap = {};
+          if (!parsed.productPackagesMap) parsed.productPackagesMap = {};
           if (!parsed.app_users || !parsed.app_users.length) {
             parsed.app_users = [
               { id: 1, name: 'Gabriel', pin: '1234', role: 'admin', active: true },
@@ -2707,6 +2708,7 @@
         paidAmountsMap: {},
         expenses: [],
         productPromosMap: {},
+        productPackagesMap: {},
         app_users: [
           { id: 1, name: 'Gabriel', pin: '1234', role: 'admin', active: true },
           { id: 2, name: 'Caixa 1', pin: '1111', role: 'seller', active: true }
@@ -3188,8 +3190,10 @@
           if (error) throw new Error(error.message);
           const bridge = loadEventsBridge();
           const promosMap = bridge.productPromosMap || {};
+          const packagesMap = bridge.productPackagesMap || {};
           return (data || []).map((p) => {
             const promoOverride = promosMap[p.id];
+            const pkgOverride = packagesMap[p.id] || {};
             const isPromo = promoOverride !== undefined ? Boolean(promoOverride.is_promo_active) : Boolean(p.is_promo_active);
             const promoPrice = promoOverride && promoOverride.promo_price !== undefined
               ? (promoOverride.promo_price !== null ? Number(promoOverride.promo_price) : null)
@@ -3197,11 +3201,15 @@
             const effectivePrice = isPromo && promoPrice > 0 ? promoPrice : Number(p.price);
             return {
               ...p,
+              unit: p.unit || pkgOverride.unit || 'un',
+              package_name: p.package_name !== undefined && p.package_name !== null ? p.package_name : (pkgOverride.package_name || null),
+              package_cost: p.package_cost !== undefined && p.package_cost !== null ? Number(p.package_cost) : (pkgOverride.package_cost !== undefined ? pkgOverride.package_cost : null),
+              package_yield: p.package_yield !== undefined && p.package_yield !== null ? Number(p.package_yield) : (pkgOverride.package_yield !== undefined ? pkgOverride.package_yield : null),
               price: Number(p.price),
               promo_price: promoPrice,
               is_promo_active: isPromo,
               effective_price: effectivePrice,
-              cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
+              cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : (pkgOverride.cost_price !== undefined ? Number(pkgOverride.cost_price) : 0),
               category_name: p.categories ? p.categories.name : '-'
             };
           });
@@ -3274,15 +3282,39 @@
             package_cost: pkgCostVal,
             package_yield: pkgYieldVal
           };
-          let { data, error } = await sbClient.from('products').insert([payload]).select().single();
-          if (error && String(error.message || '').includes('cost_price')) {
-            delete payload.cost_price;
-            const retry = await sbClient.from('products').insert([payload]).select().single();
-            data = retry.data;
-            error = retry.error;
+          let result = await sbClient.from('products').insert([payload]).select().single();
+          const optionalCols = ['package_cost', 'package_yield', 'package_name', 'unit', 'cost_price', 'stock_quantity'];
+          while (result.error && optionalCols.some((col) => String(result.error.message || '').includes(col))) {
+            const missingCol = optionalCols.find((col) => String(result.error.message || '').includes(col));
+            if (missingCol && missingCol in payload) {
+              delete payload[missingCol];
+              result = await sbClient.from('products').insert([payload]).select().single();
+            } else {
+              break;
+            }
           }
-          if (error) throw new Error(error.message);
-          return { ...data, cost_price: Number(data.cost_price || numCost) };
+          if (result.error) throw new Error(result.error.message);
+          const data = result.data;
+          try {
+            const bridge = loadEventsBridge();
+            if (!bridge.productPackagesMap) bridge.productPackagesMap = {};
+            bridge.productPackagesMap[data.id] = {
+              unit: unitVal,
+              package_name: pkgNameVal,
+              package_cost: pkgCostVal,
+              package_yield: pkgYieldVal,
+              cost_price: numCost
+            };
+            saveEventsBridge(bridge);
+          } catch (_) {}
+          return {
+            ...data,
+            unit: unitVal,
+            package_name: pkgNameVal,
+            package_cost: pkgCostVal,
+            package_yield: pkgYieldVal,
+            cost_price: Number(data && data.cost_price !== undefined && data.cost_price !== null ? data.cost_price : numCost)
+          };
         }
         const db = loadLocalDb();
         const nextId = db.products.reduce((m, p) => Math.max(m, p.id), 0) + 1;
@@ -3347,25 +3379,49 @@
             package_cost: pkgCostVal,
             package_yield: pkgYieldVal
           };
-          let { data, error } = await sbClient
+          let result = await sbClient
             .from('products')
             .update(payload)
             .eq('id', Number(id))
             .select()
             .single();
-          if (error && String(error.message || '').includes('cost_price')) {
-            delete payload.cost_price;
-            const retry = await sbClient
-              .from('products')
-              .update(payload)
-              .eq('id', Number(id))
-              .select()
-              .single();
-            data = retry.data;
-            error = retry.error;
+          const optionalCols = ['package_cost', 'package_yield', 'package_name', 'unit', 'cost_price', 'stock_quantity'];
+          while (result.error && optionalCols.some((col) => String(result.error.message || '').includes(col))) {
+            const missingCol = optionalCols.find((col) => String(result.error.message || '').includes(col));
+            if (missingCol && missingCol in payload) {
+              delete payload[missingCol];
+              result = await sbClient
+                .from('products')
+                .update(payload)
+                .eq('id', Number(id))
+                .select()
+                .single();
+            } else {
+              break;
+            }
           }
-          if (error) throw new Error(error.message);
-          return { ...data, cost_price: Number(data.cost_price || numCost) };
+          if (result.error) throw new Error(result.error.message);
+          const data = result.data;
+          try {
+            const bridge = loadEventsBridge();
+            if (!bridge.productPackagesMap) bridge.productPackagesMap = {};
+            bridge.productPackagesMap[Number(id)] = {
+              unit: unitVal,
+              package_name: pkgNameVal,
+              package_cost: pkgCostVal,
+              package_yield: pkgYieldVal,
+              cost_price: numCost
+            };
+            saveEventsBridge(bridge);
+          } catch (_) {}
+          return {
+            ...data,
+            unit: unitVal,
+            package_name: pkgNameVal,
+            package_cost: pkgCostVal,
+            package_yield: pkgYieldVal,
+            cost_price: Number(data && data.cost_price !== undefined && data.cost_price !== null ? data.cost_price : numCost)
+          };
         }
         const db = loadLocalDb();
         const prod = db.products.find((p) => Number(p.id) === Number(id));
@@ -6951,7 +7007,7 @@
     let deferredInstallPrompt = null;
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=11').then((reg) => {
+        navigator.serviceWorker.register('./sw.js?v=12').then((reg) => {
           reg.update();
         }).catch(() => {});
       });
