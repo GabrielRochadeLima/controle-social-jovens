@@ -1189,7 +1189,7 @@
               <label style="margin-bottom: 0.2rem; font-size: 0.8rem;">Status do Pagamento:</label>
               <div class="pos-pill-group" id="pos-status-pills">
                 <button type="button" class="pos-pill active" data-status="pago" onclick="selectOrderStatus('pago')">✅ Pago na hora</button>
-                <button type="button" class="pos-pill" data-status="pendente" onclick="selectOrderStatus('pendente')">⏳ Fiado / Pendente</button>
+                <button type="button" class="pos-pill" data-status="pendente" onclick="selectOrderStatus('pendente')">⏳ Pendente (Pagar depois)</button>
                 <button type="button" class="pos-pill" data-status="parcial" onclick="selectOrderStatus('parcial')">💰 Parcial (Entrada)</button>
               </div>
               <select id="order-status" onchange="onOrderStatusChange()" style="display: none;">
@@ -1218,7 +1218,7 @@
               </div>
             </div>
             <div id="partial-entry-preview-text" style="font-size: 0.76rem; color: #cbd5e1; margin-top: 0.4rem;">
-              O restante ficará registrado na lista de fiados/pendentes.
+              O restante ficará registrado na lista de pendentes.
             </div>
           </div>
 
@@ -5325,7 +5325,7 @@
         const remaining = Math.max(0, totalOrderAmount - amount);
         previewText.innerHTML = `Total: <strong>${fmtBRL(totalOrderAmount)}</strong> • Entrada: <strong style="color:#38bdf8;">${fmtBRL(amount)}</strong> • Saldo a Receber: <strong style="color:#fbbf24;">${fmtBRL(remaining)}</strong>`;
       } else {
-        previewText.textContent = 'O restante ficará registrado na lista de fiados/pendentes.';
+        previewText.textContent = 'O restante ficará registrado na lista de pendentes.';
       }
     }
 
