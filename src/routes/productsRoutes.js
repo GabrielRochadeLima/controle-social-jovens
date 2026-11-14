@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { supabase } = require('../config/supabase');
+const { getPromoForProduct, setPromoForProduct } = require('../services/promoStore');
 
 /**
  * GET /products
@@ -27,17 +28,13 @@ router.get('/', async (req, res) => {
     }
 
     const products = (data || []).map((p) => {
-      const isPromoActive = Boolean(p.is_promo_active);
-      const promoPrice = p.promo_price !== null && p.promo_price !== undefined ? Number(p.promo_price) : null;
-      const effectivePrice = (isPromoActive && promoPrice !== null && promoPrice > 0)
-        ? Number(promoPrice.toFixed(2))
-        : Number(Number(p.price).toFixed(2));
+      const promo = getPromoForProduct(p);
       return {
         ...p,
         price: Number(p.price),
-        promo_price: promoPrice,
-        is_promo_active: isPromoActive,
-        effective_price: effectivePrice,
+        promo_price: promo.promo_price,
+        is_promo_active: promo.is_promo_active,
+        effective_price: promo.effective_price,
         cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
         stock_quantity: p.stock_quantity === null || p.stock_quantity === undefined ? null : Number(p.stock_quantity),
         has_stock_control: p.stock_quantity !== null && p.stock_quantity !== undefined,
@@ -349,12 +346,32 @@ router.patch('/:id/promo', async (req, res) => {
       updatePayload.promo_price = promo_price !== null && promo_price !== '' ? Number(Number(promo_price).toFixed(2)) : null;
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('products')
       .update(updatePayload)
       .eq('id', productId)
       .select('*, categories ( id, name )')
       .single();
+
+    if (error && (String(error.message).includes('is_promo_active') || String(error.message).includes('promo_price') || error.code === 'PGRST204')) {
+      setPromoForProduct(productId, updatePayload.is_promo_active, updatePayload.promo_price);
+      const { data: prodData } = await supabase
+        .from('products')
+        .select('*, categories ( id, name )')
+        .eq('id', productId)
+        .single();
+
+      if (prodData) {
+        data = {
+          ...prodData,
+          is_promo_active: Boolean(updatePayload.is_promo_active),
+          promo_price: updatePayload.promo_price !== undefined ? updatePayload.promo_price : null
+        };
+        error = null;
+      }
+    } else if (!error) {
+      setPromoForProduct(productId, updatePayload.is_promo_active, updatePayload.promo_price);
+    }
 
     if (error) {
       return res.status(400).json({ error: error.message });

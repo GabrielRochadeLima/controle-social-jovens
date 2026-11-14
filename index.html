@@ -2638,6 +2638,7 @@
           const parsed = JSON.parse(raw);
           if (!parsed.paidAmountsMap) parsed.paidAmountsMap = {};
           if (!parsed.expenses) parsed.expenses = [];
+          if (!parsed.productPromosMap) parsed.productPromosMap = {};
           if (!parsed.app_users || !parsed.app_users.length) {
             parsed.app_users = [
               { id: 1, name: 'Gabriel', pin: '1234', role: 'admin', active: true },
@@ -2654,6 +2655,7 @@
         orderEventMap: {},
         paidAmountsMap: {},
         expenses: [],
+        productPromosMap: {},
         app_users: [
           { id: 1, name: 'Gabriel', pin: '1234', role: 'admin', active: true },
           { id: 2, name: 'Caixa 1', pin: '1111', role: 'seller', active: true }
@@ -3133,12 +3135,25 @@
         if (mode === 'supabase') {
           const { data, error } = await sbClient.from('products').select('*, categories(id, name)').order('id');
           if (error) throw new Error(error.message);
-          return (data || []).map((p) => ({
-            ...p,
-            price: Number(p.price),
-            cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
-            category_name: p.categories ? p.categories.name : '-'
-          }));
+          const bridge = loadEventsBridge();
+          const promosMap = bridge.productPromosMap || {};
+          return (data || []).map((p) => {
+            const promoOverride = promosMap[p.id];
+            const isPromo = promoOverride !== undefined ? Boolean(promoOverride.is_promo_active) : Boolean(p.is_promo_active);
+            const promoPrice = promoOverride && promoOverride.promo_price !== undefined
+              ? (promoOverride.promo_price !== null ? Number(promoOverride.promo_price) : null)
+              : (p.promo_price !== null && p.promo_price !== undefined ? Number(p.promo_price) : null);
+            const effectivePrice = isPromo && promoPrice > 0 ? promoPrice : Number(p.price);
+            return {
+              ...p,
+              price: Number(p.price),
+              promo_price: promoPrice,
+              is_promo_active: isPromo,
+              effective_price: effectivePrice,
+              cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
+              category_name: p.categories ? p.categories.name : '-'
+            };
+          });
         }
         const db = loadLocalDb();
         return db.products.map((p) => {
@@ -3365,6 +3380,20 @@
         const isActive = Boolean(is_promo_active);
         const parsedPrice = promo_price !== null && promo_price !== undefined && promo_price !== '' ? Number(promo_price) : null;
 
+        const bridge = loadEventsBridge();
+        if (!bridge.productPromosMap) bridge.productPromosMap = {};
+        bridge.productPromosMap[pId] = { is_promo_active: isActive, promo_price: parsedPrice };
+        saveEventsBridge(bridge);
+
+        if (syncBroadcastChannel) {
+          try {
+            syncBroadcastChannel.postMessage({
+              type: 'promo_updated',
+              payload: { id: pId, is_promo_active: isActive, promo_price: parsedPrice }
+            });
+          } catch (_) {}
+        }
+
         if (isTestEnv()) {
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
           const prod = (testDb.products || []).find((p) => Number(p.id) === pId);
@@ -3388,17 +3417,22 @@
         }
 
         if (mode === 'supabase') {
-          const { data, error } = await sbClient
-            .from('products')
-            .update({ is_promo_active: isActive, promo_price: parsedPrice })
-            .eq('id', pId)
-            .select()
-            .single();
-          if (error) {
-            console.warn('Fallback de atualização de promoção no Supabase:', error.message);
+          try {
+            const { data, error } = await sbClient
+              .from('products')
+              .update({ is_promo_active: isActive, promo_price: parsedPrice })
+              .eq('id', pId)
+              .select()
+              .single();
+            if (error) {
+              console.warn('Fallback de atualização de promoção no Supabase:', error.message);
+              return { id: pId, is_promo_active: isActive, promo_price: parsedPrice };
+            }
+            return data;
+          } catch (err) {
+            console.warn('Fallback de atualização de promoção no Supabase:', err.message);
             return { id: pId, is_promo_active: isActive, promo_price: parsedPrice };
           }
-          return data;
         }
 
         const db = loadLocalDb();
@@ -3668,6 +3702,9 @@
           const { data: prods, error: pErr } = await sbClient.from('products').select('*').in('id', ids);
           if (pErr) throw new Error(pErr.message);
 
+          const bridge = loadEventsBridge();
+          const promosMap = bridge.productPromosMap || {};
+
           let total = 0;
           for (const item of items) {
             const prod = (prods || []).find((p) => Number(p.id) === Number(item.product_id));
@@ -3675,7 +3712,13 @@
             if (prod.stock_quantity !== null && prod.stock_quantity < item.quantity) {
               throw new Error(`Estoque insuficiente para "${prod.name}" (Disponível: ${prod.stock_quantity})`);
             }
-            total += Number(prod.price) * Number(item.quantity);
+            const promoOverride = promosMap[prod.id];
+            const isPromo = promoOverride !== undefined ? Boolean(promoOverride.is_promo_active) : Boolean(prod.is_promo_active);
+            const promoPrice = promoOverride && promoOverride.promo_price !== undefined
+              ? (promoOverride.promo_price !== null ? Number(promoOverride.promo_price) : null)
+              : (prod.promo_price !== null && prod.promo_price !== undefined ? Number(prod.promo_price) : null);
+            const unitPrice = isPromo && promoPrice > 0 ? promoPrice : Number(prod.price);
+            total += unitPrice * Number(item.quantity);
           }
 
           const finalTotal = Number(total.toFixed(2));
@@ -3734,8 +3777,14 @@
 
           for (const item of items) {
             const prod = prods.find((p) => Number(p.id) === Number(item.product_id));
+            const promoOverride = promosMap[prod.id];
+            const isPromo = promoOverride !== undefined ? Boolean(promoOverride.is_promo_active) : Boolean(prod.is_promo_active);
+            const promoPrice = promoOverride && promoOverride.promo_price !== undefined
+              ? (promoOverride.promo_price !== null ? Number(promoOverride.promo_price) : null)
+              : (prod.promo_price !== null && prod.promo_price !== undefined ? Number(prod.promo_price) : null);
+            const unitPrice = isPromo && promoPrice > 0 ? promoPrice : Number(prod.price);
             await sbClient.from('order_items').insert([
-              { order_id: ord.id, product_id: prod.id, quantity: item.quantity, unit_price: prod.price }
+              { order_id: ord.id, product_id: prod.id, quantity: item.quantity, unit_price: unitPrice }
             ]);
             if (prod.stock_quantity !== null) {
               await sbClient
@@ -3755,7 +3804,9 @@
           if (prod.stock_quantity !== null && prod.stock_quantity < item.quantity) {
             throw new Error(`Estoque insuficiente para "${prod.name}". Disponível: ${prod.stock_quantity}`);
           }
-          total += Number(prod.price) * Number(item.quantity);
+          const isPromo = Boolean(prod.is_promo_active && prod.promo_price > 0);
+          const effectivePrice = isPromo ? Number(prod.promo_price) : Number(prod.price);
+          total += effectivePrice * Number(item.quantity);
         }
 
         const finalTotal = Number(total.toFixed(2));
@@ -4896,6 +4947,21 @@
               if (msg.originClientId === getClientId()) return;
               if (msg.type === 'order_event' && msg.payload) {
                 RealtimeManager.handleIncomingEvent(msg.payload, 'broadcast');
+              } else if (msg.type === 'promo_updated' && msg.payload) {
+                const { id, is_promo_active, promo_price } = msg.payload;
+                const cached = cachedProducts.find((p) => Number(p.id) === Number(id));
+                if (cached) {
+                  cached.is_promo_active = is_promo_active;
+                  cached.promo_price = promo_price;
+                  cached.effective_price = is_promo_active && promo_price > 0 ? promo_price : Number(cached.price);
+                }
+                const bridge = loadEventsBridge();
+                if (!bridge.productPromosMap) bridge.productPromosMap = {};
+                bridge.productPromosMap[id] = { is_promo_active, promo_price };
+                saveEventsBridge(bridge);
+                if (typeof renderPosCatalog === 'function') renderPosCatalog();
+                if (typeof renderOrderCart === 'function') renderOrderCart();
+                if (typeof renderProductsScreen === 'function') renderProductsScreen();
               }
             };
           }
@@ -5207,6 +5273,28 @@
         window.addEventListener('focus', () => {
           this.pollForChanges();
         });
+    // Sincronizar alterações de bridge e promoções entre abas locais
+    window.addEventListener('storage', (e) => {
+      if (e.key === EVENTS_BRIDGE_KEY) {
+        try {
+          const updatedBridge = JSON.parse(e.newValue);
+          if (updatedBridge && updatedBridge.productPromosMap) {
+            Object.entries(updatedBridge.productPromosMap).forEach(([pid, promo]) => {
+              const p = cachedProducts.find((x) => Number(x.id) === Number(pid));
+              if (p) {
+                p.is_promo_active = promo.is_promo_active;
+                p.promo_price = promo.promo_price;
+                p.effective_price = promo.is_promo_active && promo.promo_price > 0 ? promo.promo_price : Number(p.price);
+              }
+            });
+            if (typeof renderPosCatalog === 'function') renderPosCatalog();
+            if (typeof renderOrderCart === 'function') renderOrderCart();
+            if (typeof renderProductsScreen === 'function') renderProductsScreen();
+          }
+        } catch (_) {}
+      }
+    });
+
       },
 
       updateStatusPill(state) {
@@ -6370,6 +6458,12 @@
         const pkgNameVal = (document.getElementById('prod-pkg-name') ? document.getElementById('prod-pkg-name').value.trim() : '') || null;
         const pkgCostRaw = (document.getElementById('prod-pkg-cost') ? document.getElementById('prod-pkg-cost').value.trim() : '');
         const pkgYieldRaw = (document.getElementById('prod-pkg-yield') ? document.getElementById('prod-pkg-yield').value.trim() : '');
+        const promoActiveEl = document.getElementById('prod-promo-active');
+        const promoPriceEl = document.getElementById('prod-promo-price');
+        const isPromoVal = promoActiveEl ? Boolean(promoActiveEl.checked) : false;
+        const promoPriceRaw = promoPriceEl ? promoPriceEl.value.trim() : '';
+        const promoPriceVal = promoPriceRaw !== '' ? Number(promoPriceRaw.replace(',', '.')) : null;
+
         const payload = {
           name: document.getElementById('prod-name').value.trim(),
           category_id: Number(document.getElementById('prod-category').value),
@@ -6379,19 +6473,27 @@
           stock_quantity: stockRaw === '' ? null : Number(stockRaw),
           package_name: pkgNameVal,
           package_cost: pkgCostRaw === '' ? null : Number(pkgCostRaw),
-          package_yield: pkgYieldRaw === '' ? null : Number(pkgYieldRaw)
+          package_yield: pkgYieldRaw === '' ? null : Number(pkgYieldRaw),
+          is_promo_active: isPromoVal,
+          promo_price: promoPriceVal
         };
 
         if (editId) {
           const updated = await DataService.updateProduct(editId, payload);
+          await DataService.updateProductPromo(editId, { is_promo_active: isPromoVal, promo_price: promoPriceVal });
           showToast(`Produto "${updated.name}" atualizado com sucesso!`);
           cancelEditProduct();
         } else {
           const created = await DataService.createProduct(payload);
+          if (created && created.id) {
+            await DataService.updateProductPromo(created.id, { is_promo_active: isPromoVal, promo_price: promoPriceVal });
+          }
           document.getElementById('prod-name').value = '';
           document.getElementById('prod-price').value = '';
           document.getElementById('prod-cost').value = '';
           document.getElementById('prod-stock').value = '';
+          if (promoActiveEl) promoActiveEl.checked = false;
+          if (promoPriceEl) promoPriceEl.value = '';
           showToast(`Produto "${created.name}" cadastrado com sucesso!`);
         }
         loadDashboard();

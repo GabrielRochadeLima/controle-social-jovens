@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { supabase } = require('../config/supabase');
 const sseBroadcaster = require('../services/sseBroadcaster');
+const { getPromoForProduct } = require('../services/promoStore');
 
 const VALID_STATUSES = ['pago', 'pendente', 'parcial'];
 
@@ -219,7 +220,8 @@ router.post('/', async (req, res) => {
         });
       }
 
-      const unitPrice = Number(product.price);
+      const promo = getPromoForProduct(product);
+      const unitPrice = promo.effective_price;
       totalAmount += unitPrice * totalQty;
 
       orderItemsPayload.push({
@@ -574,9 +576,8 @@ router.put('/:id', async (req, res) => {
       const insertItemsList = [];
       for (const [pid, qty] of newItemsMap.entries()) {
         const prod = prodMap.get(pid);
-        const unitPrice = (prod.is_promo_active && prod.promo_price > 0)
-          ? Number(Number(prod.promo_price).toFixed(2))
-          : Number(Number(prod.price).toFixed(2));
+        const promo = getPromoForProduct(prod);
+        const unitPrice = promo.effective_price;
         calcTotal += qty * unitPrice;
         insertItemsList.push({
           order_id: orderId,
