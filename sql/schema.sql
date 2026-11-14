@@ -322,3 +322,13 @@ INSERT INTO "controle-social-jovens".products (name, category_id, price, stock_q
 SELECT 'Brigadeiro Gourmet', c.id, 4.50, 30
 FROM "controle-social-jovens".categories c WHERE c.name = 'Doces'
 AND NOT EXISTS (SELECT 1 FROM "controle-social-jovens".products p WHERE p.name = 'Brigadeiro Gourmet');
+
+-- 3.5. Habilitar replicação em tempo real no Supabase para o schema controle-social-jovens
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE "controle-social-jovens".orders;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;

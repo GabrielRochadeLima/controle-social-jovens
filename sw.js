@@ -1,10 +1,10 @@
-const CACHE_NAME = 'controle-social-jovens-v8';
+const CACHE_NAME = 'controle-social-jovens-v9';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json?v=8',
-  './icon-192.png?v=8',
-  './icon-512.png?v=8'
+  './manifest.json?v=9',
+  './icon-192.png?v=9',
+  './icon-512.png?v=9'
 ];
 
 self.addEventListener('install', (event) => {
@@ -25,6 +25,23 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // Network-first para navegação e arquivos HTML: garante que atualizações cheguem imediatamente
+  if (event.request.mode === 'navigate' || event.request.url.includes('index.html') || event.request.url.endsWith('/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
   );

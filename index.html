@@ -987,6 +987,7 @@
           <h1 style="display:flex;align-items:center;flex-wrap:wrap;gap:0.35rem;">
             Controle Social Jovens
             <span id="brand-env-badge" class="env-pill env-pill-prod">PROD</span>
+            <span id="realtime-status-pill" class="env-pill" style="background:rgba(16,185,129,0.18);color:#34d399;border:1px solid rgba(16,185,129,0.45);cursor:pointer;" onclick="if(window.RealtimeManager){RealtimeManager.scheduleUiRefresh();showToast('Sincronização forçada!');}" title="Atualização contínua em tempo real ativa">🟢 Tempo Real</span>
           </h1>
           <p>Eventos, Adesão, Pedidos e Produtos</p>
         </div>
@@ -4919,8 +4920,14 @@
 
     async function reconcileOrdersAndMetrics(eventPayload = null) {
       try {
-        const allOrders = await DataService.getOrders();
+        const [allOrders, prods] = await Promise.all([
+          DataService.getOrders(),
+          DataService.getProducts().catch(() => null)
+        ]);
         cachedOrders = allOrders || [];
+        if (prods && Array.isArray(prods)) {
+          cachedProducts = prods;
+        }
         const events = await DataService.getEvents(cachedOrders);
         cachedEvents = events || [];
 
@@ -5138,6 +5145,18 @@
           openEventClosingModal(closingModalEventId, isClosingAction);
         }
 
+        // 9. Atualizar catálogo do Touch PDV (Frente de Caixa do Vendedor) e tela de produtos
+        if (typeof renderPosCatalog === 'function') {
+          try {
+            renderPosCatalog();
+          } catch (_) {}
+        }
+        if (typeof renderProductsScreen === 'function') {
+          try {
+            renderProductsScreen();
+          } catch (_) {}
+        }
+
       } catch (err) {
         console.warn('[Realtime] Erro ao sincronizar UI:', err);
       }
@@ -5149,44 +5168,68 @@
       status: 'idle',
       reconnectAttempts: 0,
       reconnectTimer: null,
-      pollingTimer: null,
+      heartbeatTimer: null,
       refreshDebounceTimer: null,
       lastKnownOrderHash: null,
       baseReconnectDelay: 1000,
       maxReconnectDelay: 30000,
-      visiblePollingInterval: 5000,
-      hiddenPollingInterval: 15000,
+      pollingIntervalVisible: 2000,
+      pollingIntervalHidden: 4000,
 
       async init() {
         initBroadcastSync();
         this.setupLifecycleListeners();
+        this.startHeartbeatSync();
         await this.connect();
       },
 
       setupLifecycleListeners() {
         window.addEventListener('online', () => {
           this.reconnectAttempts = 0;
-          this.scheduleUiRefresh();
+          this.updateStatusPill('connected');
+          this.pollForChanges();
           this.connect();
         });
 
         window.addEventListener('offline', () => {
           this.disconnectStreamOnly();
           this.status = 'disconnected';
+          this.updateStatusPill('offline');
         });
 
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') {
-            this.scheduleUiRefresh();
-            if (this.status === 'polling_fallback' || !this.isStreamActive()) {
-              this.startPolling(true);
-            }
-          } else {
-            if (this.pollingTimer) {
-              this.startPolling(false);
-            }
+            this.pollForChanges();
           }
+          this.startHeartbeatSync();
         });
+
+        window.addEventListener('focus', () => {
+          this.pollForChanges();
+        });
+      },
+
+      updateStatusPill(state) {
+        const pill = document.getElementById('realtime-status-pill');
+        if (!pill) return;
+        if (state === 'connected') {
+          pill.textContent = '🟢 Tempo Real';
+          pill.style.background = 'rgba(16,185,129,0.18)';
+          pill.style.color = '#34d399';
+          pill.style.borderColor = 'rgba(16,185,129,0.45)';
+          pill.title = 'Sincronização em tempo real ativa (clique para sincronizar agora)';
+        } else if (state === 'offline') {
+          pill.textContent = '🔴 Offline';
+          pill.style.background = 'rgba(239,68,68,0.18)';
+          pill.style.color = '#f87171';
+          pill.style.borderColor = 'rgba(239,68,68,0.45)';
+          pill.title = 'Sem conexão';
+        } else if (state === 'syncing') {
+          pill.textContent = '🟡 Sincronizando...';
+          pill.style.background = 'rgba(245,158,11,0.18)';
+          pill.style.color = '#fbbf24';
+          pill.style.borderColor = 'rgba(245,158,11,0.45)';
+        }
       },
 
       isStreamActive() {
@@ -5205,16 +5248,11 @@
           this.connectExpressSse();
         } else if (mode === 'supabase') {
           this.connectSupabaseRealtime();
-        } else {
-          this.startPolling();
         }
       },
 
       connectExpressSse() {
-        if (typeof EventSource === 'undefined') {
-          this.startPolling();
-          return;
-        }
+        if (typeof EventSource === 'undefined') return;
 
         this.disconnectStreamOnly();
 
@@ -5228,7 +5266,7 @@
           this.eventSource.onopen = () => {
             this.status = 'connected';
             this.reconnectAttempts = 0;
-            this.stopPolling();
+            this.updateStatusPill('connected');
           };
 
           this.eventSource.onmessage = (event) => {
@@ -5252,7 +5290,7 @@
       handleStreamDisconnect() {
         this.disconnectStreamOnly();
         this.status = 'reconnecting';
-        this.startPolling();
+        this.updateStatusPill('syncing');
 
         this.reconnectAttempts++;
         const delay = Math.min(
@@ -5284,10 +5322,7 @@
 
       connectSupabaseRealtime() {
         if (!sbClient) initSupabaseClient();
-        if (!sbClient || typeof sbClient.channel !== 'function') {
-          this.startPolling();
-          return;
-        }
+        if (!sbClient || typeof sbClient.channel !== 'function') return;
 
         this.disconnectStreamOnly();
         this.status = 'connecting';
@@ -5302,16 +5337,16 @@
               if (status === 'SUBSCRIBED') {
                 this.status = 'connected';
                 this.reconnectAttempts = 0;
-                this.stopPolling();
+                this.updateStatusPill('connected');
               } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
                 this.status = 'reconnecting';
-                this.startPolling();
+                this.updateStatusPill('syncing');
               }
             });
 
           this.supabaseSubscription = channel;
         } catch (err) {
-          this.startPolling();
+          console.warn('[Realtime] Supabase subscription falhou:', err);
         }
       },
 
@@ -5346,46 +5381,67 @@
         }, 'supabase');
       },
 
-      startPolling(immediate = false) {
-        this.stopPolling();
-        this.status = this.isStreamActive() ? 'connected' : 'polling_fallback';
-
-        const getInterval = () => (document.hidden ? this.hiddenPollingInterval : this.visiblePollingInterval);
-
-        const pollTick = async () => {
-          try {
-            await this.pollForChanges();
-          } catch (_) {}
-          this.pollingTimer = setTimeout(pollTick, getInterval());
-        };
-
-        if (immediate) {
-          pollTick();
-        } else {
-          this.pollingTimer = setTimeout(pollTick, getInterval());
+      startHeartbeatSync() {
+        if (this.heartbeatTimer) {
+          clearInterval(this.heartbeatTimer);
+          this.heartbeatTimer = null;
         }
+
+        const interval = document.hidden ? this.pollingIntervalHidden : this.pollingIntervalVisible;
+        this.heartbeatTimer = setInterval(() => {
+          if (navigator.onLine === false) return;
+          this.pollForChanges();
+        }, interval);
       },
 
       stopPolling() {
-        if (this.pollingTimer) {
-          clearTimeout(this.pollingTimer);
-          this.pollingTimer = null;
-        }
+        // Mantemos heartbeat contínuo ativo como rede de segurança ininterrupta
+      },
+
+      getOrderFingerprint(orders) {
+        if (!orders || !Array.isArray(orders)) return '';
+        return orders
+          .map((o) => `${o.id}:${o.payment_status}:${o.paid_amount || 0}:${o.total_amount || 0}:${o.updated_at || o.created_at || ''}`)
+          .join('|');
       },
 
       async pollForChanges() {
-        const orders = await DataService.getOrders();
-        if (!orders || !Array.isArray(orders)) return;
+        try {
+          const orders = await DataService.getOrders();
+          if (!orders || !Array.isArray(orders)) return;
 
-        const hash = orders.map((o) => `${o.id}:${o.payment_status}:${o.paid_amount}:${o.total_amount}`).join('|');
-        if (this.lastKnownOrderHash === null) {
-          this.lastKnownOrderHash = hash;
-          return;
-        }
+          const currentHash = this.getOrderFingerprint(orders);
+          if (this.lastKnownOrderHash === null) {
+            this.lastKnownOrderHash = currentHash;
+            this.updateStatusPill('connected');
+            return;
+          }
 
-        if (hash !== this.lastKnownOrderHash) {
-          this.lastKnownOrderHash = hash;
-          this.scheduleUiRefresh();
+          if (currentHash !== this.lastKnownOrderHash) {
+            const oldOrders = cachedOrders || [];
+            this.lastKnownOrderHash = currentHash;
+
+            if (orders.length > oldOrders.length) {
+              const newest = orders[0];
+              const myClientId = getClientId();
+              if (newest && newest.client_id !== myClientId) {
+                showToast(`🔔 Novo pedido #${newest.id} (${newest.customer_name || 'Balcão'}) recebido!`, 'order_created');
+              }
+            } else if (orders.length === oldOrders.length) {
+              const newlyPaid = orders.find((ord) => {
+                const prev = oldOrders.find((o) => Number(o.id) === Number(ord.id));
+                return prev && prev.payment_status !== 'pago' && ord.payment_status === 'pago';
+              });
+              if (newlyPaid) {
+                showToast(`✅ Pedido #${newlyPaid.id} (${newlyPaid.customer_name}) foi quitado!`, 'order_paid');
+              }
+            }
+
+            await reconcileOrdersAndMetrics();
+            this.updateStatusPill('connected');
+          }
+        } catch (err) {
+          console.warn('[Realtime] Erro no polling de sincronização:', err);
         }
       },
 
@@ -5419,7 +5475,10 @@
         this.refreshDebounceTimer = setTimeout(async () => {
           this.refreshDebounceTimer = null;
           await reconcileOrdersAndMetrics(payload);
-        }, 120);
+          if (Array.isArray(cachedOrders)) {
+            this.lastKnownOrderHash = this.getOrderFingerprint(cachedOrders);
+          }
+        }, 100);
       },
 
       reconcileOrdersAndMetrics(payload = null) {
@@ -6740,7 +6799,7 @@
     let deferredInstallPrompt = null;
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=8').then((reg) => {
+        navigator.serviceWorker.register('./sw.js?v=9').then((reg) => {
           reg.update();
         }).catch(() => {});
       });
