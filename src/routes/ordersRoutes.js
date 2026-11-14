@@ -1,8 +1,36 @@
 const express = require('express');
 const router = express.Router();
 const { supabase } = require('../config/supabase');
+const sseBroadcaster = require('../services/sseBroadcaster');
 
 const VALID_STATUSES = ['pago', 'pendente', 'parcial'];
+
+function extractClientId(req) {
+  if (!req) return null;
+  const clean = (val) => (typeof val === 'string' ? val.replace(/[\r\n]/g, '').trim() : '');
+  const headers = req.headers || {};
+  const headerClientId = clean(headers['x-client-id'] || headers['x-session-id']);
+  if (headerClientId) {
+    return headerClientId;
+  }
+  for (const [key, value] of Object.entries(headers)) {
+    const lower = key.toLowerCase();
+    if (lower === 'x-client-id' || lower === 'x-session-id') {
+      const cleaned = clean(value);
+      if (cleaned) return cleaned;
+    }
+  }
+  const bodyClientId = clean(req.body && req.body.client_id);
+  if (bodyClientId) {
+    return bodyClientId;
+  }
+  const queryClientId = clean(req.query && req.query.client_id);
+  if (queryClientId) {
+    return queryClientId;
+  }
+  return null;
+}
+
 
 function computeOrderFinancials(order) {
   const total = Number(order.total_amount) || 0;
@@ -71,6 +99,19 @@ router.get('/', async (req, res) => {
     return res.status(500).json({ error: 'Erro interno ao listar pedidos.', details: err.message });
   }
 });
+
+/**
+ * GET /orders/realtime/stream
+ * Endpoint Server-Sent Events (SSE) para sincronização em tempo real de pedidos.
+ * Alias: GET /orders/stream
+ */
+const handleSseStream = (req, res) => {
+  const clientId = extractClientId(req) || 'anonymous';
+  sseBroadcaster.addClient(req, res, clientId);
+};
+
+router.get('/realtime/stream', handleSseStream);
+router.get('/stream', handleSseStream);
 
 /**
  * POST /orders
@@ -265,7 +306,7 @@ router.post('/', async (req, res) => {
     }
 
     const fin = computeOrderFinancials({ ...createdOrder, paid_amount: initialPaidAmount });
-    return res.status(201).json({
+    const orderWithItems = {
       ...createdOrder,
       ...fin,
       order_items: (insertedItems || []).map((item) => ({
@@ -274,7 +315,21 @@ router.post('/', async (req, res) => {
         unit_price: Number(item.unit_price),
         subtotal: Number((Number(item.quantity) * Number(item.unit_price)).toFixed(2))
       }))
-    });
+    };
+
+    const clientId = extractClientId(req);
+    try {
+      sseBroadcaster.broadcast({
+        type: 'order_created',
+        order: orderWithItems,
+        client_id: clientId,
+        timestamp: Date.now()
+      });
+    } catch (broadcastErr) {
+      console.error('[Realtime] Erro ao transmitir order_created:', broadcastErr.message);
+    }
+
+    return res.status(201).json(orderWithItems);
   } catch (err) {
     return res.status(500).json({ error: 'Erro interno ao registrar pedido.', details: err.message });
   }
@@ -358,6 +413,29 @@ router.patch('/:id/pay', async (req, res) => {
     }
 
     const updatedFin = computeOrderFinancials(updatedOrder);
+    const finalOrder = {
+      ...updatedOrder,
+      ...updatedFin,
+      order_items: (updatedOrder.order_items || []).map((item) => ({
+        ...item,
+        quantity: Number(item.quantity),
+        unit_price: Number(item.unit_price),
+        subtotal: Number((Number(item.quantity) * Number(item.unit_price)).toFixed(2))
+      }))
+    };
+
+    const clientId = extractClientId(req);
+    try {
+      sseBroadcaster.broadcast({
+        type: 'order_paid',
+        order: finalOrder,
+        client_id: clientId,
+        timestamp: Date.now()
+      });
+    } catch (broadcastErr) {
+      console.error('[Realtime] Erro ao transmitir order_paid:', broadcastErr.message);
+    }
+
     return res.status(200).json({
       ...updatedOrder,
       ...updatedFin
@@ -453,6 +531,13 @@ router.put('/:id', async (req, res) => {
         prodMap.set(Number(p.id), p);
       }
 
+      // Validar que todos os novos produtos requisitados existem no banco antes de qualquer alteração
+      for (const pid of productIds) {
+        if (!prodMap.has(pid)) {
+          return res.status(404).json({ error: `Produto com ID ${pid} não encontrado.` });
+        }
+      }
+
       // 3. Checar estoque para cada produto modificado
       for (const pid of allProductIds) {
         const prod = prodMap.get(pid);
@@ -544,6 +629,29 @@ router.put('/:id', async (req, res) => {
     if (ordUpdateErr) return res.status(400).json({ error: ordUpdateErr.message });
 
     const fin = computeOrderFinancials(updatedOrder);
+    const finalOrder = {
+      ...updatedOrder,
+      ...fin,
+      order_items: (updatedOrder.order_items || []).map((item) => ({
+        ...item,
+        quantity: Number(item.quantity),
+        unit_price: Number(item.unit_price),
+        subtotal: Number((Number(item.quantity) * Number(item.unit_price)).toFixed(2))
+      }))
+    };
+
+    const clientId = extractClientId(req);
+    try {
+      sseBroadcaster.broadcast({
+        type: 'order_updated',
+        order: finalOrder,
+        client_id: clientId,
+        timestamp: Date.now()
+      });
+    } catch (broadcastErr) {
+      console.error('[Realtime] Erro ao transmitir order_updated:', broadcastErr.message);
+    }
+
     return res.status(200).json({
       ...updatedOrder,
       ...fin
@@ -590,10 +698,34 @@ router.delete('/:id', async (req, res) => {
     await supabase.from('order_items').delete().eq('order_id', orderId);
     await supabase.from('orders').delete().eq('id', orderId);
 
+    const clientId = extractClientId(req);
+    try {
+      sseBroadcaster.broadcast({
+        type: 'order_deleted',
+        order_id: orderId,
+        event_id: existingOrder.event_id || null,
+        order: {
+          id: orderId,
+          event_id: existingOrder.event_id || null,
+          customer_name: existingOrder.customer_name || null,
+          total_amount: Number(existingOrder.total_amount || 0),
+          restored_items: (existingOrder.order_items || []).map((item) => ({
+            product_id: Number(item.product_id),
+            quantity: Number(item.quantity)
+          }))
+        },
+        client_id: clientId,
+        timestamp: Date.now()
+      });
+    } catch (broadcastErr) {
+      console.error('[Realtime] Erro ao transmitir order_deleted:', broadcastErr.message);
+    }
+
     return res.status(200).json({ success: true, message: `Pedido #${orderId} cancelado com sucesso.` });
   } catch (err) {
     return res.status(500).json({ error: 'Erro interno ao cancelar pedido.', details: err.message });
   }
 });
 
+router.sseBroadcaster = sseBroadcaster;
 module.exports = router;

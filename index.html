@@ -487,20 +487,24 @@
 
     #toast {
       position: fixed;
-      bottom: 1rem;
+      bottom: 1.25rem;
       right: 1rem;
       left: 1rem;
-      max-width: 420px;
+      max-width: 440px;
       margin: 0 auto;
       background: #1e293b;
       border: 1px solid var(--primary);
       padding: 0.75rem 1rem;
       border-radius: 0.55rem;
       display: none;
-      z-index: 100;
+      z-index: 10000;
       box-shadow: 0 10px 25px rgba(0,0,0,0.5);
       text-align: center;
       font-size: 0.86rem;
+      cursor: pointer;
+      word-break: break-word;
+      user-select: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
     }
 
     /* Ajustes específicos para Celular (Mobile) */
@@ -1930,6 +1934,29 @@
     const DEFAULT_SUPABASE_URL = 'https://irlxktcyucvckejrxunk.supabase.co';
     const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlybHhrdGN5dWN2Y2tlanJ4dW5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNTMzNTcsImV4cCI6MjA3MzcyOTM1N30.9JqCS8cN_Lzrc1BYGYmVIpF9JPyLNUmxD0hKoNhStVA';
 
+    const CLIENT_ID_STORAGE_KEY = 'csj_client_id';
+
+    function getClientId() {
+      try {
+        let cid = sessionStorage.getItem(CLIENT_ID_STORAGE_KEY);
+        if (!cid) {
+          if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            cid = 'c_' + window.crypto.randomUUID();
+          } else {
+            cid = 'c_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+          }
+          sessionStorage.setItem(CLIENT_ID_STORAGE_KEY, cid);
+        }
+        return cid;
+      } catch (_) {
+        if (!window._csjFallbackClientId) {
+          window._csjFallbackClientId = 'c_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+        }
+        return window._csjFallbackClientId;
+      }
+    }
+    const currentClientId = getClientId();
+
     const fmtBRL = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
     function fmtDateBR(isoDate) {
@@ -2399,19 +2426,152 @@
       }
     }
 
-    function showToast(msg) {
+    let toastQueue = [];
+    let isToastActive = false;
+    let toastTimeoutId = null;
+    let toastShownTimestamp = 0;
+    const recentRealtimeEvents = new Map();
+
+    function showToast(msg, type = 'info') {
+      if (!msg) return;
+
+      const item = { msg, type, time: Date.now() };
+
+      if (isToastActive) {
+        if (toastQueue.length > 0 && toastQueue[toastQueue.length - 1].msg === msg) {
+          return;
+        }
+        if (toastQueue.length >= 4) {
+          toastQueue.shift();
+        }
+        toastQueue.push(item);
+        return;
+      }
+
+      renderToast(item);
+    }
+
+    function renderToast(item) {
       let el = document.getElementById('toast');
       if (!el) {
         el = document.createElement('div');
         el.id = 'toast';
         document.body.appendChild(el);
       }
-      el.textContent = msg;
+
+      isToastActive = true;
+      toastShownTimestamp = Date.now();
+      el.textContent = item.msg;
       el.style.display = 'block';
-      if (window._toastTimeout) clearTimeout(window._toastTimeout);
-      window._toastTimeout = setTimeout(() => {
+
+      if (item.type === 'order_created' || item.type === 'success') {
+        el.style.borderColor = '#10b981';
+        el.style.boxShadow = '0 10px 25px rgba(16, 185, 129, 0.35)';
+      } else if (item.type === 'order_paid') {
+        el.style.borderColor = '#34d399';
+        el.style.boxShadow = '0 10px 25px rgba(52, 211, 153, 0.35)';
+      } else if (item.type === 'order_deleted' || item.type === 'danger') {
+        el.style.borderColor = '#ef4444';
+        el.style.boxShadow = '0 10px 25px rgba(239, 68, 68, 0.35)';
+      } else if (item.type === 'order_updated' || item.type === 'update') {
+        el.style.borderColor = '#38bdf8';
+        el.style.boxShadow = '0 10px 25px rgba(56, 189, 248, 0.35)';
+      } else {
+        el.style.borderColor = 'var(--primary)';
+        el.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.5)';
+      }
+
+      el.onclick = () => {
+        dismissToast();
+      };
+
+      const duration = toastQueue.length > 0 ? 2000 : 3200;
+
+      if (toastTimeoutId) clearTimeout(toastTimeoutId);
+      window._toastTimeout = toastTimeoutId = setTimeout(() => {
+        dismissToast();
+      }, duration);
+    }
+
+    function dismissToast() {
+      const el = document.getElementById('toast');
+      if (toastTimeoutId) {
+        clearTimeout(toastTimeoutId);
+        toastTimeoutId = null;
+        window._toastTimeout = null;
+      }
+      if (el) {
         el.style.display = 'none';
-      }, 3200);
+      }
+      isToastActive = false;
+
+      if (toastQueue.length > 0) {
+        const nextItem = toastQueue.shift();
+        setTimeout(() => {
+          renderToast(nextItem);
+        }, 100);
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && isToastActive) {
+        if (Date.now() - toastShownTimestamp > 3500) {
+          dismissToast();
+        }
+      }
+    });
+
+    function isDuplicateRealtimeEvent(eventOrId) {
+      if (!eventOrId) return false;
+      let key;
+      if (typeof eventOrId === 'string' || typeof eventOrId === 'number') {
+        key = String(eventOrId);
+      } else {
+        const event = eventOrId;
+        const order = event.order || {};
+        const orderId = event.order_id || order.id || '';
+        if (!orderId && !event.type) return false;
+        const ts = event.timestamp ? Math.floor(event.timestamp / 2000) : Math.floor(Date.now() / 2000);
+        key = `${event.type || 'evt'}_${orderId}_${ts}`;
+      }
+      const now = Date.now();
+      for (const [k, time] of recentRealtimeEvents.entries()) {
+        if (now - time > 10000) recentRealtimeEvents.delete(k);
+      }
+      if (recentRealtimeEvents.has(key)) return true;
+      recentRealtimeEvents.set(key, now);
+      return false;
+    }
+
+    function formatRealtimeToastMessage(event) {
+      if (!event || !event.type) return null;
+      const order = event.order || {};
+      const orderId = event.order_id || order.id || '?';
+      const rawCustomer = order.customer_name ? String(order.customer_name).trim() : '';
+      const isAnonymous = !rawCustomer || /^an[oô]nimo$/i.test(rawCustomer) || /^balc[aã]o$/i.test(rawCustomer);
+      const clientTag = isAnonymous ? '' : ` (${rawCustomer})`;
+
+      switch (event.type) {
+        case 'order_created': {
+          const totalStr = fmtBRL(order.total_amount || 0);
+          return `🔔 Novo pedido #${orderId}${clientTag} registrado: ${totalStr}`;
+        }
+        case 'order_paid': {
+          const isSettled = (order.payment_status === 'pago') || (Number(order.remaining_amount || 0) <= 0);
+          const statusText = isSettled
+            ? 'quitado'
+            : `baixa de ${fmtBRL(order.paid_amount || 0)}`;
+          return `💰 Pedido #${orderId}${clientTag} atualizado: ${statusText}`;
+        }
+        case 'order_updated': {
+          return `✏️ Pedido #${orderId}${clientTag} modificado`;
+        }
+        case 'order_deleted': {
+          return `🗑️ Pedido #${orderId}${clientTag} cancelado`;
+        }
+        default:
+          return null;
+      }
     }
 
     function getDefaultSeed() {
@@ -3331,10 +3491,21 @@
 
         const mode = await detectBackend();
         if (mode === 'express') {
+          const clientId = getClientId();
           const r = await fetch(`/orders/${oId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ customer_name, payment_method, payment_status, paid_amount, items })
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Client-Id': clientId
+            },
+            body: JSON.stringify({
+              customer_name,
+              payment_method,
+              payment_status,
+              paid_amount,
+              items,
+              client_id: clientId
+            })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao alterar pedido');
@@ -3469,10 +3640,23 @@
         }
         const mode = await detectBackend();
         if (mode === 'express') {
+          const clientId = getClientId();
           const r = await fetch('/orders', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ customer_name, payment_method, payment_status, paid_amount, items, event_id, created_by_name: sellerName })
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Client-Id': clientId
+            },
+            body: JSON.stringify({
+              customer_name,
+              payment_method,
+              payment_status,
+              paid_amount,
+              items,
+              event_id,
+              created_by_name: sellerName,
+              client_id: clientId
+            })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao criar pedido');
@@ -3631,12 +3815,17 @@
         }
         const mode = await detectBackend();
         if (mode === 'express') {
+          const clientId = getClientId();
           const r = await fetch(`/orders/${orderId}/pay`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Client-Id': clientId
+            },
             body: JSON.stringify({
               amount: amount !== null ? Number(amount) : undefined,
-              payment_method: paymentMethod || undefined
+              payment_method: paymentMethod || undefined,
+              client_id: clientId
             })
           });
           const data = await r.json();
@@ -3706,6 +3895,25 @@
         if (paymentMethod) ord.payment_method = paymentMethod;
         saveLocalDb(db);
         return enrichOrderFinancials(ord);
+      },
+
+      async deleteOrder(orderId) {
+        const oId = Number(orderId);
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const clientId = getClientId();
+          const r = await fetch(`/orders/${oId}?client_id=${encodeURIComponent(clientId)}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Client-Id': clientId
+            }
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao cancelar pedido');
+          return data;
+        }
+        return { id: oId };
       },
 
       async getExpenses(eventId = null) {
@@ -4669,6 +4877,561 @@
         showToast(err.message || 'Erro ao carregar dados');
       }
     }
+
+    // ========================================================================
+    // REALTIME MANAGER & MULTI-TIER SYNCHRONIZATION (Milestone 2)
+    // ========================================================================
+    const SYNC_CHANNEL_NAME = 'csj_orders_sync';
+    let syncBroadcastChannel = null;
+
+    function initBroadcastSync() {
+      if (typeof window.BroadcastChannel !== 'undefined') {
+        try {
+          if (!syncBroadcastChannel) {
+            syncBroadcastChannel = new BroadcastChannel(SYNC_CHANNEL_NAME);
+            syncBroadcastChannel.onmessage = (event) => {
+              if (!event || !event.data) return;
+              const msg = event.data;
+              if (msg.originClientId === getClientId()) return;
+              if (msg.type === 'order_event' && msg.payload) {
+                RealtimeManager.handleIncomingEvent(msg.payload, 'broadcast');
+              }
+            };
+          }
+        } catch (err) {
+          console.warn('[RealtimeSync] BroadcastChannel não disponível:', err);
+        }
+      }
+    }
+
+    function broadcastLocalOrderEvent(payload) {
+      if (syncBroadcastChannel) {
+        try {
+          syncBroadcastChannel.postMessage({
+            type: 'order_event',
+            originClientId: getClientId(),
+            payload: payload,
+            timestamp: Date.now()
+          });
+        } catch (_) {}
+      }
+    }
+
+    async function reconcileOrdersAndMetrics(eventPayload = null) {
+      try {
+        const allOrders = await DataService.getOrders();
+        cachedOrders = allOrders || [];
+        const events = await DataService.getEvents(cachedOrders);
+        cachedEvents = events || [];
+
+        const filteredOrders = selectedEventId === 'all'
+          ? cachedOrders
+          : cachedOrders.filter((o) => String(o.event_id || 1) === String(selectedEventId));
+
+        let totalPaid = 0;
+        let totalPending = 0;
+        let paidCount = 0;
+        let pendingCount = 0;
+        const byMethod = {};
+        const pendingOrders = [];
+
+        filteredOrders.forEach((o) => {
+          const fin = enrichOrderFinancials(o);
+          if (fin.paid_amount > 0) {
+            totalPaid += fin.paid_amount;
+            const m = (o.payment_method || 'outros').toLowerCase();
+            byMethod[m] = Number(((byMethod[m] || 0) + fin.paid_amount).toFixed(2));
+          }
+          if (o.payment_status === 'pago' || fin.remaining_amount <= 0) {
+            paidCount++;
+          } else {
+            totalPending += fin.remaining_amount;
+            pendingCount++;
+            pendingOrders.push(fin);
+          }
+        });
+
+        // 1. Resumo do Caixa (#orders-cash-stats)
+        const statPaidEl = document.getElementById('stat-paid');
+        const statPaidCountEl = document.getElementById('stat-paid-count');
+        const statPendingEl = document.getElementById('stat-pending');
+        const statPendingCountEl = document.getElementById('stat-pending-count');
+        const statMethodsEl = document.getElementById('stat-methods');
+
+        if (statPaidEl) statPaidEl.textContent = fmtBRL(totalPaid);
+        if (statPaidCountEl) statPaidCountEl.textContent = `${paidCount} pedido(s) quitado(s)`;
+        if (statPendingEl) statPendingEl.textContent = fmtBRL(totalPending);
+        if (statPendingCountEl) statPendingCountEl.textContent = `${pendingCount} pedido(s) em aberto`;
+        if (statMethodsEl) {
+          const methodsEntries = Object.entries(byMethod);
+          statMethodsEl.innerHTML = methodsEntries.length
+            ? methodsEntries.map(([m, val]) => `<strong>${m.toUpperCase()}:</strong> ${fmtBRL(val)}`).join(' &nbsp;|&nbsp; ')
+            : 'Nenhum pagamento confirmado neste filtro';
+        }
+
+        // 2. Tabela de Pedidos Pendentes (#pending-tbody)
+        const pendingTbody = document.getElementById('pending-tbody');
+        if (pendingTbody) {
+          pendingTbody.innerHTML = '';
+          if (pendingOrders.length === 0) {
+            pendingTbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido pendente!</td></tr>';
+          } else {
+            pendingOrders.forEach((o) => {
+              const tr = document.createElement('tr');
+              const valHtml = o.is_partial
+                ? `<div class="text-warning"><strong>Falta: ${fmtBRL(o.remaining_amount)}</strong></div>
+                   <div style="font-size:0.7rem;color:var(--muted);">Total ${fmtBRL(o.total_amount)} • Pago ${fmtBRL(o.paid_amount)}</div>`
+                : `<div class="text-warning"><strong>${fmtBRL(o.remaining_amount)}</strong></div>`;
+              tr.innerHTML = `
+                <td>#${o.id}</td>
+                <td><strong>${o.customer_name}</strong></td>
+                <td>${(o.payment_method || '').toUpperCase()}</td>
+                <td>${valHtml}</td>
+                <td>
+                  <div style="display:flex;gap:0.3rem;flex-wrap:wrap;">
+                    <button type="button" class="btn-warning" onclick="openPaymentModal(${o.id}, false)" style="padding:0.26rem 0.5rem;font-size:0.74rem;">Parcial</button>
+                    <button type="button" class="btn-success" onclick="openPaymentModal(${o.id}, true)" style="padding:0.26rem 0.5rem;font-size:0.74rem;">Quitar</button>
+                  </div>
+                </td>
+              `;
+              pendingTbody.appendChild(tr);
+            });
+          }
+        }
+
+        // 3. Tabela de Pedidos Registrados (#orders-tbody)
+        const ordersTbody = document.getElementById('orders-tbody');
+        if (ordersTbody) {
+          ordersTbody.innerHTML = '';
+          if (filteredOrders.length === 0) {
+            ordersTbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido registrado neste evento ainda.</td></tr>';
+          } else {
+            filteredOrders.slice(0, 12).forEach((o) => {
+              const fin = enrichOrderFinancials(o);
+              const itemsDesc = (o.order_items || [])
+                .map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`)
+                .join(', ');
+              let statusHtml = '';
+              if (o.payment_status === 'pago' || fin.remaining_amount <= 0) {
+                statusHtml = '<span class="tag tag-pago">pago</span>';
+              } else if (fin.is_partial) {
+                statusHtml = `<span class="tag tag-parcial">parcial (faltam ${fmtBRL(fin.remaining_amount)})</span>`;
+              } else {
+                statusHtml = '<span class="tag tag-pendente">pendente</span>';
+              }
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>#${o.id}</td>
+                <td>${o.customer_name}</td>
+                <td><span style="font-size:0.75rem;color:var(--muted);">${o.created_by_name || '-'}</span></td>
+                <td style="font-size:0.76rem;color:var(--muted);">${itemsDesc || '-'}</td>
+                <td>${fmtBRL(o.total_amount)}</td>
+                <td>${statusHtml}</td>
+                <td style="text-align: center; white-space: nowrap;">
+                  <button type="button" class="btn-edit" onclick="editOrder(${o.id})" style="padding: 0.22rem 0.5rem; font-size: 0.74rem;">✏️ Editar</button>
+                </td>
+              `;
+              ordersTbody.appendChild(tr);
+            });
+          }
+        }
+
+        // 4. Alerta de Pedidos de Outros Eventos
+        const otherPending = selectedEventId === 'all'
+          ? []
+          : cachedOrders.filter((o) => o.payment_status === 'pendente' && String(o.event_id || 1) !== String(selectedEventId));
+        const otherAlertEl = document.getElementById('other-pending-alert');
+        if (otherAlertEl) {
+          if (otherPending.length > 0) {
+            const otherSum = otherPending.reduce((s, o) => s + enrichOrderFinancials(o).remaining_amount, 0);
+            const otherTextEl = document.getElementById('other-pending-text');
+            if (otherTextEl) {
+              otherTextEl.textContent = `Atenção: Existem ${otherPending.length} pedido(s) pendente(s) em outros eventos totalizando ${fmtBRL(otherSum)}.`;
+            }
+            otherAlertEl.style.display = 'flex';
+          } else {
+            otherAlertEl.style.display = 'none';
+          }
+        }
+
+        // 5. Métricas do Banner do Evento Ativo
+        const activeEv = cachedEvents.find((e) => String(e.id) === String(selectedEventId));
+        if (activeEv) {
+          const attEl = document.getElementById('banner-attendance');
+          const buyersEl = document.getElementById('banner-buyers');
+          const ticketEl = document.getElementById('banner-ticket');
+          const adhEl = document.getElementById('banner-adherence');
+          const adhChip = document.getElementById('banner-adherence-chip');
+
+          if (attEl) attEl.textContent = String(activeEv.attendance_count || 0);
+          if (buyersEl) buyersEl.textContent = `${activeEv.unique_buyers_count || 0} pessoa(s)`;
+          if (ticketEl) ticketEl.textContent = fmtBRL(activeEv.avg_ticket || 0);
+          if (adhChip && activeEv.attendance_count > 0) {
+            adhChip.style.display = 'inline-flex';
+            if (adhEl) adhEl.textContent = `${activeEv.adherence_rate}%`;
+          }
+        }
+
+        // 6. Atualizar Datalist apenas se o usuário NÃO estiver com foco no campo de cliente
+        const custInput = document.getElementById('order-customer');
+        if (document.activeElement !== custInput) {
+          const datalist = document.getElementById('customers-datalist');
+          if (datalist) {
+            datalist.innerHTML = '';
+            const knownNamesMap = new Map();
+            cachedOrders.forEach((o) => {
+              const k = normalizeCustomerKey(o.customer_name);
+              if (k && !knownNamesMap.has(k)) knownNamesMap.set(k, o.customer_name.trim());
+            });
+            knownNamesMap.forEach((displayName) => {
+              const opt = document.createElement('option');
+              opt.value = displayName;
+              datalist.appendChild(opt);
+            });
+          }
+        }
+
+        // 7. Atualizar Tela de Custos se ativa
+        if (typeof renderCostsScreen === 'function') {
+          try {
+            renderCostsScreen();
+          } catch (_) {}
+        }
+
+        // 8. Sincronizar Modais Abertos (sem fechar nada!)
+        const payModal = document.getElementById('payment-modal');
+        if (payModal && payModal.style.display === 'flex' && currentPayModalOrder) {
+          const updatedOrder = (cachedOrders || []).find((o) => Number(o.id) === Number(currentPayModalOrder.id));
+          if (updatedOrder) {
+            currentPayModalOrder = updatedOrder;
+            const fin = enrichOrderFinancials(updatedOrder);
+            const infoEl = document.getElementById('pay-modal-order-info');
+            if (infoEl) {
+              if (updatedOrder.payment_status === 'pago' || fin.remaining_amount <= 0) {
+                infoEl.innerHTML = `
+                  <div style="font-weight: 700; font-size: 1.05rem; color: var(--text);">${updatedOrder.customer_name}</div>
+                  <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(16, 185, 129, 0.15); border-radius: 6px; color: #10b981; font-weight: 600;">
+                    ✓ Este pedido foi quitado!
+                  </div>
+                `;
+              } else {
+                infoEl.innerHTML = `
+                  <div style="font-weight: 700; font-size: 1.05rem; color: var(--text);">${updatedOrder.customer_name}</div>
+                  <div style="display: flex; justify-content: space-between; margin-top: 0.4rem; color: var(--muted); font-size: 0.82rem;">
+                    <span>Total do Pedido: <strong>${fmtBRL(fin.total_amount)}</strong></span>
+                    <span>Já pago: <strong style="color: #34d399;">${fmtBRL(fin.paid_amount)}</strong></span>
+                  </div>
+                  <div style="margin-top: 0.5rem; padding-top: 0.4rem; border-top: 1px dashed var(--border); font-size: 0.95rem; font-weight: 700; color: #fbbf24;">
+                    Saldo pendente atual: ${fmtBRL(fin.remaining_amount)}
+                  </div>
+                `;
+                const amountInput = document.getElementById('pay-modal-amount');
+                if (amountInput) amountInput.max = fin.remaining_amount;
+              }
+            }
+          }
+        }
+
+        const closingModal = document.getElementById('event-closing-modal');
+        if (closingModal && closingModal.style.display === 'flex' && closingModalEventId) {
+          const isClosingAction = document.getElementById('btn-confirm-event-close') && document.getElementById('btn-confirm-event-close').style.display !== 'none';
+          openEventClosingModal(closingModalEventId, isClosingAction);
+        }
+
+      } catch (err) {
+        console.warn('[Realtime] Erro ao sincronizar UI:', err);
+      }
+    }
+
+    const RealtimeManager = {
+      eventSource: null,
+      supabaseSubscription: null,
+      status: 'idle',
+      reconnectAttempts: 0,
+      reconnectTimer: null,
+      pollingTimer: null,
+      refreshDebounceTimer: null,
+      lastKnownOrderHash: null,
+      baseReconnectDelay: 1000,
+      maxReconnectDelay: 30000,
+      visiblePollingInterval: 5000,
+      hiddenPollingInterval: 15000,
+
+      async init() {
+        initBroadcastSync();
+        this.setupLifecycleListeners();
+        await this.connect();
+      },
+
+      setupLifecycleListeners() {
+        window.addEventListener('online', () => {
+          this.reconnectAttempts = 0;
+          this.scheduleUiRefresh();
+          this.connect();
+        });
+
+        window.addEventListener('offline', () => {
+          this.disconnectStreamOnly();
+          this.status = 'disconnected';
+        });
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            this.scheduleUiRefresh();
+            if (this.status === 'polling_fallback' || !this.isStreamActive()) {
+              this.startPolling(true);
+            }
+          } else {
+            if (this.pollingTimer) {
+              this.startPolling(false);
+            }
+          }
+        });
+      },
+
+      isStreamActive() {
+        return (this.eventSource && this.eventSource.readyState === 1) ||
+               (this.supabaseSubscription && this.status === 'connected');
+      },
+
+      async connect() {
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = null;
+        }
+
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          this.connectExpressSse();
+        } else if (mode === 'supabase') {
+          this.connectSupabaseRealtime();
+        } else {
+          this.startPolling();
+        }
+      },
+
+      connectExpressSse() {
+        if (typeof EventSource === 'undefined') {
+          this.startPolling();
+          return;
+        }
+
+        this.disconnectStreamOnly();
+
+        const clientId = getClientId();
+        const streamUrl = `/orders/realtime/stream?client_id=${encodeURIComponent(clientId)}`;
+        this.status = 'connecting';
+
+        try {
+          this.eventSource = new EventSource(streamUrl);
+
+          this.eventSource.onopen = () => {
+            this.status = 'connected';
+            this.reconnectAttempts = 0;
+            this.stopPolling();
+          };
+
+          this.eventSource.onmessage = (event) => {
+            try {
+              if (!event.data) return;
+              const payload = JSON.parse(event.data);
+              this.handleIncomingEvent(payload, 'sse');
+            } catch (err) {
+              console.error('[Realtime] Erro ao analisar payload SSE:', err);
+            }
+          };
+
+          this.eventSource.onerror = () => {
+            this.handleStreamDisconnect();
+          };
+        } catch (err) {
+          this.handleStreamDisconnect();
+        }
+      },
+
+      handleStreamDisconnect() {
+        this.disconnectStreamOnly();
+        this.status = 'reconnecting';
+        this.startPolling();
+
+        this.reconnectAttempts++;
+        const delay = Math.min(
+          this.baseReconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1),
+          this.maxReconnectDelay
+        );
+
+        this.reconnectTimer = setTimeout(() => {
+          this.connect();
+        }, delay);
+      },
+
+      disconnectStreamOnly() {
+        if (this.eventSource) {
+          try {
+            this.eventSource.close();
+          } catch (_) {}
+          this.eventSource = null;
+        }
+        if (this.supabaseSubscription) {
+          try {
+            if (sbClient && sbClient.removeChannel) {
+              sbClient.removeChannel(this.supabaseSubscription);
+            }
+          } catch (_) {}
+          this.supabaseSubscription = null;
+        }
+      },
+
+      connectSupabaseRealtime() {
+        if (!sbClient) initSupabaseClient();
+        if (!sbClient || typeof sbClient.channel !== 'function') {
+          this.startPolling();
+          return;
+        }
+
+        this.disconnectStreamOnly();
+        this.status = 'connecting';
+
+        try {
+          const channel = sbClient.channel('controle-social-jovens:orders');
+          channel
+            .on('postgres_changes', { event: '*', schema: SCHEMA_NAME, table: 'orders' }, (payload) => {
+              this.handleSupabasePostgresChange(payload);
+            })
+            .subscribe((status) => {
+              if (status === 'SUBSCRIBED') {
+                this.status = 'connected';
+                this.reconnectAttempts = 0;
+                this.stopPolling();
+              } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                this.status = 'reconnecting';
+                this.startPolling();
+              }
+            });
+
+          this.supabaseSubscription = channel;
+        } catch (err) {
+          this.startPolling();
+        }
+      },
+
+      handleSupabasePostgresChange(payload) {
+        if (!payload) return;
+        const eventType = payload.eventType;
+        const newRecord = payload.new;
+        const oldRecord = payload.old;
+
+        let type = 'order_updated';
+        let order = newRecord;
+
+        if (eventType === 'INSERT') {
+          type = 'order_created';
+        } else if (eventType === 'DELETE') {
+          type = 'order_deleted';
+          order = oldRecord;
+        } else if (eventType === 'UPDATE') {
+          if (newRecord && newRecord.payment_status === 'pago' && oldRecord && oldRecord.payment_status !== 'pago') {
+            type = 'order_paid';
+          } else {
+            type = 'order_updated';
+          }
+        }
+
+        this.handleIncomingEvent({
+          type,
+          order,
+          order_id: (order && order.id) || (oldRecord && oldRecord.id),
+          client_id: (order && order.client_id) || 'supabase_remote',
+          timestamp: Date.now()
+        }, 'supabase');
+      },
+
+      startPolling(immediate = false) {
+        this.stopPolling();
+        this.status = this.isStreamActive() ? 'connected' : 'polling_fallback';
+
+        const getInterval = () => (document.hidden ? this.hiddenPollingInterval : this.visiblePollingInterval);
+
+        const pollTick = async () => {
+          try {
+            await this.pollForChanges();
+          } catch (_) {}
+          this.pollingTimer = setTimeout(pollTick, getInterval());
+        };
+
+        if (immediate) {
+          pollTick();
+        } else {
+          this.pollingTimer = setTimeout(pollTick, getInterval());
+        }
+      },
+
+      stopPolling() {
+        if (this.pollingTimer) {
+          clearTimeout(this.pollingTimer);
+          this.pollingTimer = null;
+        }
+      },
+
+      async pollForChanges() {
+        const orders = await DataService.getOrders();
+        if (!orders || !Array.isArray(orders)) return;
+
+        const hash = orders.map((o) => `${o.id}:${o.payment_status}:${o.paid_amount}:${o.total_amount}`).join('|');
+        if (this.lastKnownOrderHash === null) {
+          this.lastKnownOrderHash = hash;
+          return;
+        }
+
+        if (hash !== this.lastKnownOrderHash) {
+          this.lastKnownOrderHash = hash;
+          this.scheduleUiRefresh();
+        }
+      },
+
+      handleIncomingEvent(payload, source = 'sse') {
+        if (!payload || !payload.type) return;
+
+        if (isDuplicateRealtimeEvent(payload)) return;
+
+        const myClientId = getClientId();
+        const isRemote = Boolean(payload.client_id && payload.client_id !== myClientId);
+
+        if (source !== 'broadcast') {
+          broadcastLocalOrderEvent(payload);
+        }
+
+        if (isRemote) {
+          const toastMsg = formatRealtimeToastMessage(payload);
+          if (toastMsg) {
+            showToast(toastMsg, payload.type);
+          }
+        }
+
+        this.scheduleUiRefresh(payload);
+      },
+
+      scheduleUiRefresh(payload = null) {
+        if (this.refreshDebounceTimer) {
+          clearTimeout(this.refreshDebounceTimer);
+        }
+
+        this.refreshDebounceTimer = setTimeout(async () => {
+          this.refreshDebounceTimer = null;
+          await reconcileOrdersAndMetrics(payload);
+        }, 120);
+      },
+
+      reconcileOrdersAndMetrics(payload = null) {
+        return reconcileOrdersAndMetrics(payload);
+      }
+    };
+
+    window.RealtimeManager = RealtimeManager;
+    window.getClientId = getClientId;
+    window.isDuplicateRealtimeEvent = isDuplicateRealtimeEvent;
+    window.reconcileOrdersAndMetrics = reconcileOrdersAndMetrics;
+    window.formatRealtimeToastMessage = formatRealtimeToastMessage;
 
     let costsEventId = null;
 
@@ -5963,7 +6726,15 @@
 
     updateEnvUi();
     initUserSession();
-    loadDashboard();
+    loadDashboard().then(() => {
+      if (window.RealtimeManager) {
+        RealtimeManager.init();
+      }
+    }).catch(() => {
+      if (window.RealtimeManager) {
+        RealtimeManager.init();
+      }
+    });
 
     // Registro do Service Worker e suporte a Instalação PWA no Celular (Android / iOS)
     let deferredInstallPrompt = null;

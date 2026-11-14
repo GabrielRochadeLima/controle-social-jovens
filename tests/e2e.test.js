@@ -940,3 +940,7 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
     console.log('✔ [Teste 11] Alteração de pedido e reconciliação automática de estoque validadas com sucesso!');
   });
 });
+
+// Integração da Suíte Real-Time (Milestone 3)
+require('./realtime.test');
+
