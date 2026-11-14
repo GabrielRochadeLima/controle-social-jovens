@@ -367,4 +367,233 @@ router.patch('/:id/pay', async (req, res) => {
   }
 });
 
+/**
+ * PUT /orders/:id
+ * Altera um pedido existente (itens, quantidades, cliente, forma e status de pagamento).
+ * Ajusta automaticamente o estoque dos produtos (estorna ou abate a diferença).
+ */
+router.put('/:id', async (req, res) => {
+  try {
+    const orderId = Number(req.params.id);
+    if (!orderId || Number.isNaN(orderId)) {
+      return res.status(400).json({ error: 'ID do pedido inválido.' });
+    }
+
+    const { data: existingOrder, error: findError } = await supabase
+      .from('orders')
+      .select('*, order_items (*)')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    if (findError) {
+      return res.status(500).json({ error: findError.message });
+    }
+    if (!existingOrder) {
+      return res.status(404).json({ error: `Pedido #${orderId} não encontrado.` });
+    }
+
+    const { customer_name, payment_method, payment_status, paid_amount, items } = req.body || {};
+
+    let newCustomer = existingOrder.customer_name;
+    if (customer_name !== undefined) {
+      if (!String(customer_name).trim()) {
+        return res.status(400).json({ error: 'O nome do cliente não pode ser vazio.' });
+      }
+      newCustomer = String(customer_name).trim();
+    }
+
+    let newMethod = existingOrder.payment_method;
+    if (payment_method !== undefined && String(payment_method).trim()) {
+      newMethod = String(payment_method).trim().toLowerCase();
+    }
+
+    let newStatus = existingOrder.payment_status;
+    if (payment_status !== undefined) {
+      const normalizedStatus = String(payment_status).trim().toLowerCase();
+      if (!VALID_STATUSES.includes(normalizedStatus)) {
+        return res.status(400).json({ error: 'Status de pagamento inválido.' });
+      }
+      newStatus = normalizedStatus;
+    }
+
+    // Se novos itens foram enviados, recalcula produtos e estoque
+    let updatedTotal = Number(existingOrder.total_amount);
+    let finalOrderItems = existingOrder.order_items || [];
+
+    if (items && Array.isArray(items) && items.length > 0) {
+      // 1. Validar itens
+      const oldItemsMap = new Map();
+      for (const it of existingOrder.order_items || []) {
+        oldItemsMap.set(Number(it.product_id), Number(it.quantity));
+      }
+
+      const newItemsMap = new Map();
+      const productIds = [];
+      for (const it of items) {
+        const pid = Number(it.product_id);
+        const qty = Number(it.quantity);
+        if (!pid || Number.isNaN(pid) || !qty || Number.isNaN(qty) || qty <= 0) {
+          return res.status(400).json({ error: 'Itens do pedido inválidos (produto e quantidade > 0).' });
+        }
+        newItemsMap.set(pid, (newItemsMap.get(pid) || 0) + qty);
+        if (!productIds.includes(pid)) productIds.push(pid);
+      }
+
+      // 2. Buscar dados atuais dos produtos
+      const allProductIds = Array.from(new Set([...productIds, ...Array.from(oldItemsMap.keys())]));
+      const { data: dbProducts, error: pErr } = await supabase
+        .from('products')
+        .select('*')
+        .in('id', allProductIds);
+
+      if (pErr) return res.status(500).json({ error: pErr.message });
+
+      const prodMap = new Map();
+      for (const p of dbProducts || []) {
+        prodMap.set(Number(p.id), p);
+      }
+
+      // 3. Checar estoque para cada produto modificado
+      for (const pid of allProductIds) {
+        const prod = prodMap.get(pid);
+        if (!prod) continue;
+        if (prod.stock_quantity !== null && prod.stock_quantity !== undefined) {
+          const oldQty = oldItemsMap.get(pid) || 0;
+          const newQty = newItemsMap.get(pid) || 0;
+          const diff = newQty - oldQty; // Se positivo, consome mais estoque; se negativo, devolve
+          if (diff > 0 && prod.stock_quantity < diff) {
+            return res.status(400).json({
+              error: `Estoque insuficiente para "${prod.name}". Disponível: ${prod.stock_quantity}, Adicional solicitado: ${diff}.`
+            });
+          }
+        }
+      }
+
+      // 4. Ajustar estoque no banco
+      for (const pid of allProductIds) {
+        const prod = prodMap.get(pid);
+        if (!prod || prod.stock_quantity === null || prod.stock_quantity === undefined) continue;
+        const oldQty = oldItemsMap.get(pid) || 0;
+        const newQty = newItemsMap.get(pid) || 0;
+        const diff = newQty - oldQty;
+        if (diff !== 0) {
+          const nextStock = Math.max(0, prod.stock_quantity - diff);
+          await supabase.from('products').update({ stock_quantity: nextStock }).eq('id', pid);
+        }
+      }
+
+      // 5. Deletar itens antigos e reinserir os novos
+      await supabase.from('order_items').delete().eq('order_id', orderId);
+
+      let calcTotal = 0;
+      const insertItemsList = [];
+      for (const [pid, qty] of newItemsMap.entries()) {
+        const prod = prodMap.get(pid);
+        const unitPrice = (prod.is_promo_active && prod.promo_price > 0)
+          ? Number(Number(prod.promo_price).toFixed(2))
+          : Number(Number(prod.price).toFixed(2));
+        calcTotal += qty * unitPrice;
+        insertItemsList.push({
+          order_id: orderId,
+          product_id: pid,
+          quantity: qty,
+          unit_price: unitPrice
+        });
+      }
+
+      const { data: insertedItems, error: itemsInsertErr } = await supabase
+        .from('order_items')
+        .insert(insertItemsList)
+        .select('*');
+
+      if (itemsInsertErr) return res.status(400).json({ error: itemsInsertErr.message });
+      updatedTotal = Number(calcTotal.toFixed(2));
+      finalOrderItems = insertedItems || [];
+    }
+
+    // 6. Atualizar financeiro do pedido
+    let finalPaid = Number(existingOrder.paid_amount || 0);
+    if (newStatus === 'pago') {
+      finalPaid = updatedTotal;
+    } else if (paid_amount !== undefined) {
+      finalPaid = Math.min(updatedTotal, Math.max(0, Number(paid_amount) || 0));
+      if (finalPaid >= updatedTotal - 0.001) {
+        newStatus = 'pago';
+        finalPaid = updatedTotal;
+      }
+    } else {
+      finalPaid = Math.min(updatedTotal, finalPaid);
+    }
+
+    const updatePayload = {
+      customer_name: newCustomer,
+      payment_method: newMethod,
+      payment_status: newStatus,
+      total_amount: updatedTotal,
+      paid_amount: finalPaid,
+      paid_at: newStatus === 'pago' ? (existingOrder.paid_at || new Date().toISOString()) : null
+    };
+
+    const { data: updatedOrder, error: ordUpdateErr } = await supabase
+      .from('orders')
+      .update(updatePayload)
+      .eq('id', orderId)
+      .select('*, order_items ( id, product_id, quantity, unit_price, products ( id, name, category_id ) )')
+      .single();
+
+    if (ordUpdateErr) return res.status(400).json({ error: ordUpdateErr.message });
+
+    const fin = computeOrderFinancials(updatedOrder);
+    return res.status(200).json({
+      ...updatedOrder,
+      ...fin
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro interno ao alterar pedido.', details: err.message });
+  }
+});
+
+/**
+ * DELETE /orders/:id
+ * Cancela/exclui um pedido e devolve o estoque dos produtos correspondentes.
+ */
+router.delete('/:id', async (req, res) => {
+  try {
+    const orderId = Number(req.params.id);
+    if (!orderId || Number.isNaN(orderId)) {
+      return res.status(400).json({ error: 'ID do pedido inválido.' });
+    }
+
+    const { data: existingOrder, error: findError } = await supabase
+      .from('orders')
+      .select('*, order_items (*)')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    if (findError) return res.status(500).json({ error: findError.message });
+    if (!existingOrder) return res.status(404).json({ error: 'Pedido não encontrado.' });
+
+    // Devolver estoque dos itens do pedido
+    for (const item of existingOrder.order_items || []) {
+      const pid = Number(item.product_id);
+      const qty = Number(item.quantity);
+      const { data: prod } = await supabase.from('products').select('stock_quantity').eq('id', pid).single();
+      if (prod && prod.stock_quantity !== null && prod.stock_quantity !== undefined) {
+        await supabase
+          .from('products')
+          .update({ stock_quantity: prod.stock_quantity + qty })
+          .eq('id', pid);
+      }
+    }
+
+    // Excluir itens e pedido
+    await supabase.from('order_items').delete().eq('order_id', orderId);
+    await supabase.from('orders').delete().eq('id', orderId);
+
+    return res.status(200).json({ success: true, message: `Pedido #${orderId} cancelado com sucesso.` });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro interno ao cancelar pedido.', details: err.message });
+  }
+});
+
 module.exports = router;

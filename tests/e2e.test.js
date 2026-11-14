@@ -809,4 +809,134 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
 
     console.log('✔ [Teste 9] Autenticação por PIN, perfis e rastreamento de vendas validados com sucesso!');
   });
+  test('Teste 10: Promoção de produto no meio do evento (PATCH /products/:id/promo) e preço efetivo', async () => {
+    // 10.1 Verificar preço inicial do Refrigerante
+    const prodsBefore = await apiRequest('/products');
+    const refri = prodsBefore.body.find((p) => p.id === prodRefriId);
+    assert.ok(refri, 'Refrigerante deve existir');
+    assert.equal(refri.price, 6);
+    assert.equal(refri.effective_price, 6);
+
+    // 10.2 Ativar promoção (de R$ 6,00 para R$ 4,50)
+    const promoPatch = await apiRequest(`/products/${prodRefriId}/promo`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        is_promo_active: true,
+        promo_price: 4.5
+      })
+    });
+    assert.equal(promoPatch.status, 200);
+    assert.equal(promoPatch.body.is_promo_active, true);
+    assert.equal(Number(promoPatch.body.promo_price), 4.5);
+
+    // 10.3 Listar produtos e validar que effective_price agora é o promocional
+    const prodsAfterPromo = await apiRequest('/products');
+    const refriPromo = prodsAfterPromo.body.find((p) => p.id === prodRefriId);
+    assert.equal(refriPromo.is_promo_active, true);
+    assert.equal(refriPromo.promo_price, 4.5);
+    assert.equal(refriPromo.effective_price, 4.5);
+
+    // 10.4 Desativar a promoção
+    const promoOff = await apiRequest(`/products/${prodRefriId}/promo`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        is_promo_active: false
+      })
+    });
+    assert.equal(promoOff.status, 200);
+    assert.equal(promoOff.body.is_promo_active, false);
+
+    const prodsFinal = await apiRequest('/products');
+    const refriFinal = prodsFinal.body.find((p) => p.id === prodRefriId);
+    assert.equal(refriFinal.is_promo_active, false);
+    assert.equal(refriFinal.effective_price, 6);
+
+    console.log('✔ [Teste 10] Promoção ativada, validada e desativada com sucesso!');
+  });
+
+  test('Teste 11: Alteração de pedido feito (PUT /orders/:id) e reconciliação automática de estoque', async () => {
+    // 11.1 Obter estoque atual do Refrigerante
+    const prodsInit = await apiRequest('/products');
+    const initStock = prodsInit.body.find((p) => p.id === prodRefriId).stock_quantity;
+
+    // 11.2 Criar um pedido com 2 Refrigerantes
+    const createRes = await apiRequest('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        customer_name: 'Cliente Original',
+        payment_method: 'dinheiro',
+        payment_status: 'pago',
+        items: [{ product_id: prodRefriId, quantity: 2 }]
+      })
+    });
+    assert.equal(createRes.status, 201);
+    const orderId = createRes.body.id;
+    assert.equal(createRes.body.total_amount, 12);
+
+    // Conferir que estoque baixou em 2 unidades
+    const prodsAfterCreate = await apiRequest('/products');
+    const stockAfterCreate = prodsAfterCreate.body.find((p) => p.id === prodRefriId).stock_quantity;
+    assert.equal(stockAfterCreate, initStock - 2);
+
+    // 11.3 Alterar pedido: aumentar para 4 Refrigerantes e mudar cliente (diff = +2 no estoque)
+    const updateRes = await apiRequest(`/orders/${orderId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        customer_name: 'Cliente Editado',
+        payment_method: 'pix',
+        payment_status: 'pago',
+        items: [{ product_id: prodRefriId, quantity: 4 }]
+      })
+    });
+    assert.equal(updateRes.status, 200);
+    assert.equal(updateRes.body.customer_name, 'Cliente Editado');
+    assert.equal(updateRes.body.payment_method, 'pix');
+    assert.equal(updateRes.body.total_amount, 24);
+
+    const prodsAfterInc = await apiRequest('/products');
+    const stockAfterInc = prodsAfterInc.body.find((p) => p.id === prodRefriId).stock_quantity;
+    assert.equal(stockAfterInc, initStock - 4);
+
+    // 11.4 Alterar pedido: diminuir para 1 Refrigerante (diff = -3, deve estornar 3 unidades de volta ao estoque)
+    const updateRefundRes = await apiRequest(`/orders/${orderId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        customer_name: 'Cliente Editado',
+        payment_method: 'pix',
+        payment_status: 'pago',
+        items: [{ product_id: prodRefriId, quantity: 1 }]
+      })
+    });
+    assert.equal(updateRefundRes.status, 200);
+    assert.equal(updateRefundRes.body.total_amount, 6);
+
+    const prodsAfterRefund = await apiRequest('/products');
+    const stockAfterRefund = prodsAfterRefund.body.find((p) => p.id === prodRefriId).stock_quantity;
+    assert.equal(stockAfterRefund, initStock - 1);
+
+    // 11.5 Tentar alterar solicitando quantidade acima do estoque disponível
+    const overflowRes = await apiRequest(`/orders/${orderId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        customer_name: 'Cliente Editado',
+        payment_method: 'pix',
+        payment_status: 'pago',
+        items: [{ product_id: prodRefriId, quantity: 999 }]
+      })
+    });
+    assert.equal(overflowRes.status, 400);
+    assert.match(overflowRes.body.error, /Estoque insuficiente/i);
+
+    // 11.6 Excluir o pedido (DELETE /orders/:id) e verificar estorno final do estoque
+    const deleteRes = await apiRequest(`/orders/${orderId}`, {
+      method: 'DELETE'
+    });
+    assert.equal(deleteRes.status, 200);
+
+    const prodsFinal = await apiRequest('/products');
+    const finalStock = prodsFinal.body.find((p) => p.id === prodRefriId).stock_quantity;
+    assert.equal(finalStock, initStock);
+
+    console.log('✔ [Teste 11] Alteração de pedido e reconciliação automática de estoque validadas com sucesso!');
+  });
 });

@@ -26,18 +26,28 @@ router.get('/', async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
 
-    const products = (data || []).map((p) => ({
-      ...p,
-      price: Number(p.price),
-      cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
-      stock_quantity: p.stock_quantity === null || p.stock_quantity === undefined ? null : Number(p.stock_quantity),
-      has_stock_control: p.stock_quantity !== null && p.stock_quantity !== undefined,
-      unit: p.unit || 'un',
-      package_name: p.package_name || null,
-      package_cost: p.package_cost !== null && p.package_cost !== undefined ? Number(p.package_cost) : null,
-      package_yield: p.package_yield !== null && p.package_yield !== undefined ? Number(p.package_yield) : null,
-      category_name: p.categories ? p.categories.name : null
-    }));
+    const products = (data || []).map((p) => {
+      const isPromoActive = Boolean(p.is_promo_active);
+      const promoPrice = p.promo_price !== null && p.promo_price !== undefined ? Number(p.promo_price) : null;
+      const effectivePrice = (isPromoActive && promoPrice !== null && promoPrice > 0)
+        ? Number(promoPrice.toFixed(2))
+        : Number(Number(p.price).toFixed(2));
+      return {
+        ...p,
+        price: Number(p.price),
+        promo_price: promoPrice,
+        is_promo_active: isPromoActive,
+        effective_price: effectivePrice,
+        cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
+        stock_quantity: p.stock_quantity === null || p.stock_quantity === undefined ? null : Number(p.stock_quantity),
+        has_stock_control: p.stock_quantity !== null && p.stock_quantity !== undefined,
+        unit: p.unit || 'un',
+        package_name: p.package_name || null,
+        package_cost: p.package_cost !== null && p.package_cost !== undefined ? Number(p.package_cost) : null,
+        package_yield: p.package_yield !== null && p.package_yield !== undefined ? Number(p.package_yield) : null,
+        category_name: p.categories ? p.categories.name : null
+      };
+    });
 
     if (grouped === 'true') {
       const byCategory = {};
@@ -73,7 +83,9 @@ router.post('/', async (req, res) => {
       unit,
       package_name,
       package_cost,
-      package_yield
+      package_yield,
+      promo_price,
+      is_promo_active
     } = req.body || {};
 
     if (!name || typeof name !== 'string' || !name.trim()) {
@@ -94,6 +106,9 @@ router.post('/', async (req, res) => {
     const parsedPkgYield =
       package_yield !== undefined && package_yield !== null && package_yield !== '' ? Number(package_yield) : null;
     const parsedPkgName = package_name ? String(package_name).trim().slice(0, 100) : null;
+    const parsedPromoPrice =
+      promo_price !== undefined && promo_price !== null && promo_price !== '' ? Number(promo_price) : null;
+    const isPromoActiveVal = Boolean(is_promo_active);
 
     let numericCost = 0;
     if (parsedPkgCost !== null && parsedPkgYield !== null && parsedPkgYield > 0 && (cost_price === undefined || cost_price === null || cost_price === '')) {
@@ -126,7 +141,9 @@ router.post('/', async (req, res) => {
       unit: normalizedUnit,
       package_name: parsedPkgName,
       package_cost: parsedPkgCost,
-      package_yield: parsedPkgYield
+      package_yield: parsedPkgYield,
+      promo_price: parsedPromoPrice,
+      is_promo_active: isPromoActiveVal
     };
 
     let { data, error } = await supabase
@@ -135,7 +152,7 @@ router.post('/', async (req, res) => {
       .select('*, categories ( id, name )')
       .single();
 
-    if (error && (String(error.message).includes('package_') || String(error.message).includes('unit') || error.code === '42703')) {
+    if (error && (String(error.message).includes('promo_') || String(error.message).includes('package_') || String(error.message).includes('unit') || error.code === '42703')) {
       const safePayload = {
         name: insertPayload.name,
         category_id: insertPayload.category_id,
@@ -159,6 +176,8 @@ router.post('/', async (req, res) => {
     return res.status(201).json({
       ...data,
       price: Number(data.price),
+      promo_price: data.promo_price !== undefined ? (data.promo_price !== null ? Number(data.promo_price) : null) : parsedPromoPrice,
+      is_promo_active: data.is_promo_active !== undefined ? Boolean(data.is_promo_active) : isPromoActiveVal,
       cost_price: Number(data.cost_price || 0),
       stock_quantity: data.stock_quantity === null || data.stock_quantity === undefined ? null : Number(data.stock_quantity),
       has_stock_control: data.stock_quantity !== null && data.stock_quantity !== undefined,
@@ -193,7 +212,9 @@ async function updateProductHandler(req, res) {
       unit,
       package_name,
       package_cost,
-      package_yield
+      package_yield,
+      promo_price,
+      is_promo_active
     } = req.body || {};
 
     if (!name || typeof name !== 'string' || !name.trim()) {
@@ -214,6 +235,9 @@ async function updateProductHandler(req, res) {
     const parsedPkgYield =
       package_yield !== undefined && package_yield !== null && package_yield !== '' ? Number(package_yield) : null;
     const parsedPkgName = package_name ? String(package_name).trim().slice(0, 100) : null;
+    const parsedPromoPrice =
+      promo_price !== undefined ? (promo_price !== null && promo_price !== '' ? Number(promo_price) : null) : undefined;
+    const isPromoActiveVal = is_promo_active !== undefined ? Boolean(is_promo_active) : undefined;
 
     let numericCost = 0;
     if (parsedPkgCost !== null && parsedPkgYield !== null && parsedPkgYield > 0 && (cost_price === undefined || cost_price === null || cost_price === '')) {
@@ -248,6 +272,8 @@ async function updateProductHandler(req, res) {
       package_cost: parsedPkgCost,
       package_yield: parsedPkgYield
     };
+    if (parsedPromoPrice !== undefined) updatePayload.promo_price = parsedPromoPrice;
+    if (isPromoActiveVal !== undefined) updatePayload.is_promo_active = isPromoActiveVal;
 
     let { data, error } = await supabase
       .from('products')
@@ -256,7 +282,7 @@ async function updateProductHandler(req, res) {
       .select('*, categories ( id, name )')
       .single();
 
-    if (error && (String(error.message).includes('package_') || String(error.message).includes('unit') || error.code === '42703')) {
+    if (error && (String(error.message).includes('promo_') || String(error.message).includes('package_') || String(error.message).includes('unit') || error.code === '42703')) {
       const safePayload = {
         name: updatePayload.name,
         category_id: updatePayload.category_id,
@@ -282,6 +308,8 @@ async function updateProductHandler(req, res) {
     return res.status(200).json({
       ...data,
       price: Number(data.price),
+      promo_price: data.promo_price !== undefined ? (data.promo_price !== null ? Number(data.promo_price) : null) : parsedPromoPrice,
+      is_promo_active: data.is_promo_active !== undefined ? Boolean(data.is_promo_active) : isPromoActiveVal,
       cost_price: Number(data.cost_price || 0),
       stock_quantity: data.stock_quantity === null || data.stock_quantity === undefined ? null : Number(data.stock_quantity),
       has_stock_control: data.stock_quantity !== null && data.stock_quantity !== undefined,
@@ -298,6 +326,45 @@ async function updateProductHandler(req, res) {
 
 router.put('/:id', updateProductHandler);
 router.patch('/:id', updateProductHandler);
+
+/**
+ * PATCH /products/:id/promo
+ * Ativa/desativa promoção ou ajusta preço promocional rapidamente
+ */
+router.patch('/:id/promo', async (req, res) => {
+  try {
+    const productId = Number(req.params.id);
+    if (!productId || Number.isNaN(productId)) {
+      return res.status(400).json({ error: 'ID do produto inválido.' });
+    }
+
+    const { is_promo_active, promo_price } = req.body || {};
+    const updatePayload = {};
+
+    if (is_promo_active !== undefined) {
+      updatePayload.is_promo_active = Boolean(is_promo_active);
+    }
+
+    if (promo_price !== undefined) {
+      updatePayload.promo_price = promo_price !== null && promo_price !== '' ? Number(Number(promo_price).toFixed(2)) : null;
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(updatePayload)
+      .eq('id', productId)
+      .select('*, categories ( id, name )')
+      .single();
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    return res.status(200).json(data);
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao atualizar promoção.', details: err.message });
+  }
+});
 
 /**
  * DELETE /products/:id

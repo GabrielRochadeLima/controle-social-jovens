@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS "controle-social-jovens".products (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Caso a tabela products já exista sem as colunas cost_price, unit ou dados de embalagem/rendimento:
+-- Caso a tabela products já exista sem as colunas cost_price, unit, dados de embalagem ou promocionais:
 ALTER TABLE "controle-social-jovens".products
     ADD COLUMN IF NOT EXISTS cost_price NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (cost_price >= 0);
 ALTER TABLE "controle-social-jovens".products
@@ -50,6 +50,10 @@ ALTER TABLE "controle-social-jovens".products
     ADD COLUMN IF NOT EXISTS package_cost NUMERIC(10, 2) NULL;
 ALTER TABLE "controle-social-jovens".products
     ADD COLUMN IF NOT EXISTS package_yield NUMERIC(10, 2) NULL;
+ALTER TABLE "controle-social-jovens".products
+    ADD COLUMN IF NOT EXISTS promo_price NUMERIC(10, 2) NULL;
+ALTER TABLE "controle-social-jovens".products
+    ADD COLUMN IF NOT EXISTS is_promo_active BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- 3.2.1. Tabela de Eventos / Dias de Social (events)
 CREATE TABLE IF NOT EXISTS "controle-social-jovens".events (

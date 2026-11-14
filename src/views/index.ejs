@@ -796,6 +796,182 @@
       color: #fbbf24;
       border: 1px solid rgba(245, 158, 11, 0.6);
     }
+
+    /* ==========================================================================
+       TOUCH PDV & PROMOÇÕES RÁPIDAS
+       ========================================================================== */
+    .pos-pill-group {
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      margin-top: 0.25rem;
+    }
+    .pos-pill {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.45rem 0.85rem;
+      border-radius: 0.5rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      user-select: none;
+    }
+    .pos-pill:hover {
+      border-color: var(--primary);
+      background: var(--surface);
+    }
+    .pos-pill.active {
+      background: rgba(99, 102, 241, 0.22);
+      border-color: var(--primary);
+      color: #818cf8;
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+    .pos-cat-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 0.32rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .pos-cat-pill:hover {
+      color: var(--text);
+      border-color: var(--primary);
+    }
+    .pos-cat-pill.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .pos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 0.55rem;
+      max-height: 320px;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+      margin-top: 0.4rem;
+      margin-bottom: 0.75rem;
+    }
+    .pos-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 0.6rem;
+      padding: 0.65rem 0.6rem;
+      cursor: pointer;
+      transition: transform 0.1s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      text-align: left;
+      user-select: none;
+      min-height: 96px;
+    }
+    .pos-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--primary);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+    .pos-card:active {
+      transform: scale(0.97);
+    }
+    .pos-card.out-of-stock {
+      opacity: 0.52;
+      cursor: not-allowed;
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+    .pos-card.is-promo {
+      border-color: rgba(245, 158, 11, 0.65);
+      background: linear-gradient(180deg, rgba(245, 158, 11, 0.12) 0%, var(--surface2) 100%);
+    }
+    .pos-card-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      line-height: 1.25;
+      color: var(--text);
+      margin-bottom: 0.35rem;
+      word-break: break-word;
+    }
+    .pos-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 0.25rem;
+      margin-top: auto;
+    }
+    .pos-card-price {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .pos-card-price.promo {
+      color: #fbbf24;
+    }
+    .pos-old-price {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-decoration: line-through;
+      margin-right: 0.2rem;
+    }
+    .pos-badge-promo {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.3rem;
+      display: inline-block;
+      letter-spacing: 0.04em;
+    }
+    .pos-stock-badge {
+      font-size: 0.68rem;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.3rem;
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .pos-stock-badge.low {
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+    .btn-promo-quick {
+      background: rgba(245, 158, 11, 0.18);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      color: #fbbf24;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 0.3rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-promo-quick:hover {
+      background: #f59e0b;
+      color: #000;
+    }
+    .order-edit-banner {
+      display: none;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid var(--warning);
+      border-radius: 0.5rem;
+      padding: 0.65rem 0.85rem;
+      margin-bottom: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
   </style>
 </head>
 <body>
@@ -974,28 +1150,56 @@
         </div>
 
         <form id="order-form">
+          <!-- Banner de Modo de Edição de Pedido -->
+          <div id="order-edit-banner" class="order-edit-banner">
+            <div>
+              <span style="font-weight: 700; color: #fbbf24;">✏️ Editando Pedido <strong id="edit-banner-order-id">#0</strong>:</span>
+              <span id="edit-banner-customer" style="font-weight: 600; margin-left: 0.25rem;">-</span>
+              <div style="font-size: 0.74rem; color: var(--muted); margin-top: 0.15rem;">
+                Ajuste produtos, quantidades ou pagamento. O estoque será sincronizado automaticamente.
+              </div>
+            </div>
+            <button type="button" class="btn-secondary" onclick="cancelOrderEdit()" style="padding: 0.3rem 0.65rem; font-size: 0.75rem; white-space: nowrap;">
+              ✕ Cancelar
+            </button>
+          </div>
+
           <div>
             <label for="order-customer">Nome do Cliente / Jovem <span style="font-weight:400;">(Sugere nomes já cadastrados)</span></label>
             <input type="text" id="order-customer" list="customers-datalist" autocomplete="off" placeholder="Ex: Lucas Mendes" required style="width: 100%;" />
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+
+          <!-- Seletores 1-Toque de Forma de Pagamento e Status -->
+          <div style="margin-top: 0.45rem; display: flex; flex-direction: column; gap: 0.55rem;">
             <div>
-              <label for="order-method">Forma de Pagamento</label>
-              <select id="order-method" style="width: 100%;">
-                <option value="pix">Pix</option>
+              <label style="margin-bottom: 0.2rem; font-size: 0.8rem;">Forma de Pagamento:</label>
+              <div class="pos-pill-group" id="pos-method-pills">
+                <button type="button" class="pos-pill active" data-method="pix" onclick="selectOrderMethod('pix')">📱 PIX</button>
+                <button type="button" class="pos-pill" data-method="dinheiro" onclick="selectOrderMethod('dinheiro')">💵 Dinheiro</button>
+                <button type="button" class="pos-pill" data-method="cartao" onclick="selectOrderMethod('cartao')">💳 Cartão</button>
+              </div>
+              <select id="order-method" style="display: none;">
+                <option value="pix" selected>Pix</option>
                 <option value="dinheiro">Dinheiro</option>
                 <option value="cartao">Cartão</option>
               </select>
             </div>
+
             <div>
-              <label for="order-status">Status do Pagamento</label>
-              <select id="order-status" onchange="onOrderStatusChange()" style="width: 100%;">
-                <option value="pago">Pago na hora</option>
+              <label style="margin-bottom: 0.2rem; font-size: 0.8rem;">Status do Pagamento:</label>
+              <div class="pos-pill-group" id="pos-status-pills">
+                <button type="button" class="pos-pill active" data-status="pago" onclick="selectOrderStatus('pago')">✅ Pago na hora</button>
+                <button type="button" class="pos-pill" data-status="pendente" onclick="selectOrderStatus('pendente')">⏳ Fiado / Pendente</button>
+                <button type="button" class="pos-pill" data-status="parcial" onclick="selectOrderStatus('parcial')">💰 Parcial (Entrada)</button>
+              </div>
+              <select id="order-status" onchange="onOrderStatusChange()" style="display: none;">
+                <option value="pago" selected>Pago na hora</option>
                 <option value="pendente">Pendente (Pagar depois)</option>
                 <option value="parcial">Pagamento Parcial (Entrada)</option>
               </select>
             </div>
           </div>
+
           <div id="partial-entry-box" style="display: none; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.35); padding: 0.75rem; border-radius: 0.5rem; margin-top: 0.4rem;">
             <div style="font-weight: 700; color: #93c5fd; margin-bottom: 0.4rem; font-size: 0.85rem;">💵 Entrada do Pagamento Parcial:</div>
             <div class="grid-2" style="margin-top: 0;">
@@ -1017,22 +1221,43 @@
               O restante ficará registrado na lista de fiados/pendentes.
             </div>
           </div>
-          <div class="product-add-row">
-            <div>
-              <label for="order-product">Adicionar Produto</label>
-              <select id="order-product" style="width: 100%;"></select>
+
+          <!-- Catálogo Rápido Touch PDV -->
+          <div style="margin-top: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <span style="font-weight: 700; font-size: 0.84rem; color: var(--text);">🛍️ Catálogo Rápido (Toque para adicionar):</span>
+              <span id="pos-catalog-count" style="font-size: 0.74rem; color: var(--muted);"></span>
             </div>
-            <div>
-              <label for="order-qty">Qtd</label>
-              <input type="number" id="order-qty" value="1" min="1" style="width: 100%;" />
-            </div>
-            <button type="button" class="btn-secondary btn-add-item" onclick="addItemToOrderCart()">
-              + Incluir
-            </button>
+            <!-- Filtro de Categorias -->
+            <div id="pos-cat-filter-pills" style="display: flex; gap: 0.35rem; overflow-x: auto; padding-bottom: 0.35rem; margin-bottom: 0.35rem;"></div>
+            <!-- Grade de Produtos Toque Rápido -->
+            <div id="pos-product-grid" class="pos-grid"></div>
           </div>
+
+          <!-- Opções Manuais de Seleção / Fallback -->
+          <details style="margin-top: 0.2rem; margin-bottom: 0.4rem; font-size: 0.76rem; color: var(--muted);">
+            <summary style="cursor: pointer; padding: 0.2rem 0;">Opções manuais de inclusão por lista suspensa</summary>
+            <div class="product-add-row" style="margin-top: 0.4rem;">
+              <div>
+                <label for="order-product">Selecionar Produto</label>
+                <select id="order-product" style="width: 100%;"></select>
+              </div>
+              <div>
+                <label for="order-qty">Qtd</label>
+                <input type="number" id="order-qty" value="1" min="1" style="width: 100%;" />
+              </div>
+              <button type="button" class="btn-secondary btn-add-item" onclick="addItemToOrderCart()">
+                + Incluir
+              </button>
+            </div>
+          </details>
 
           <!-- Lista de Itens do Pedido Atual -->
           <div class="cart-box" id="order-cart-box">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <span style="font-weight: 700; font-size: 0.84rem;">🛒 Carrinho do Pedido:</span>
+              <button type="button" id="btn-clear-cart" onclick="clearOrderCart()" style="display:none; background:none; border:none; color:var(--muted); font-size:0.74rem; cursor:pointer; text-decoration:underline;">Limpar</button>
+            </div>
             <div id="order-cart-items" style="display: flex; flex-direction: column; gap: 0.35rem;"></div>
             <div class="cart-total-bar">
               <span style="color: var(--muted); font-size: 0.8rem;" id="order-cart-count">0 item(ns) no pedido</span>
@@ -1040,7 +1265,7 @@
             </div>
           </div>
 
-          <button type="submit" class="btn-primary" id="order-submit-btn">Finalizar Pedido</button>
+          <button type="submit" class="btn-primary" id="order-submit-btn" style="font-size: 1rem; font-weight: 700; padding: 0.8rem; margin-top: 0.5rem;">Finalizar Pedido</button>
         </form>
 
         <h2 style="margin-top: 1.35rem;">Pedidos Registrados</h2>
@@ -1054,6 +1279,7 @@
                 <th>Itens</th>
                 <th>Total</th>
                 <th>Status</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody id="orders-tbody"></tbody>
@@ -1169,6 +1395,21 @@
                 </div>
               </div>
             </div>
+            <!-- Promoção e Queima de Estoque -->
+            <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 0.5rem; padding: 0.65rem; margin-top: 0.35rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <span style="font-weight: 700; font-size: 0.8rem; color: #fbbf24;">⚡ Promoção / Queima de Estoque</span>
+                <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.76rem; cursor: pointer; margin: 0;">
+                  <input type="checkbox" id="prod-promo-active" style="width: 15px; height: 15px;" />
+                  <span>Ativar agora</span>
+                </label>
+              </div>
+              <div>
+                <label for="prod-promo-price" style="font-size: 0.74rem;">Preço Promocional (R$)</label>
+                <input type="number" id="prod-promo-price" step="0.01" min="0" placeholder="Ex: 5.00" style="width: 100%; font-size: 0.84rem;" />
+              </div>
+            </div>
+
             <div style="display: flex; gap: 0.5rem;">
               <button type="submit" class="btn-primary" id="prod-submit-btn" style="flex: 1;">Salvar Produto</button>
               <button type="button" class="btn-secondary" id="prod-cancel-btn" onclick="cancelEditProduct()" style="display: none;">Cancelar</button>
@@ -1551,6 +1792,58 @@
     </div>
   </div>
 
+  <!-- ====================================================================== -->
+  <!-- MODAL DE PROMOÇÃO RÁPIDA (1-CLICK PROMO)                                -->
+  <!-- ====================================================================== -->
+  <div id="quick-promo-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.94); z-index: 9999; justify-content: center; align-items: center; padding: 1rem; backdrop-filter: blur(8px);">
+    <div class="card" style="width: 100%; max-width: 440px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6); border: 1px solid #f59e0b; text-align: left; padding: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <h2 style="margin: 0; font-size: 1.25rem; color: #fbbf24;">⚡ Promoção do Produto</h2>
+        <button type="button" class="btn-secondary" onclick="closeQuickPromoModal()" style="padding: 0.2rem 0.5rem; font-size: 0.85rem;">✕</button>
+      </div>
+      <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 0.85rem;">
+        Ative ou altere o preço promocional durante o evento para queima de estoque ou promoções especiais:
+      </p>
+
+      <div id="quick-promo-prod-info" style="background: var(--surface2); padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 1px solid var(--border);">
+        <strong id="quick-promo-prod-name" style="font-size: 1.05rem;">-</strong>
+        <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem;">
+          Preço Normal de Venda: <span id="quick-promo-regular-price" style="font-weight: 700; color: var(--text);">-</span>
+        </div>
+      </div>
+
+      <form id="quick-promo-form" onsubmit="saveQuickPromo(event)" style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <input type="hidden" id="quick-promo-prod-id" value="" />
+
+        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35); padding: 0.75rem; border-radius: 0.5rem;">
+          <label style="display: flex; align-items: center; gap: 0.55rem; cursor: pointer; font-weight: 700; color: #fbbf24; margin: 0;">
+            <input type="checkbox" id="quick-promo-active-toggle" style="width: 18px; height: 18px; cursor: pointer;" />
+            <span>Ativar Preço Promocional Imediatamente</span>
+          </label>
+        </div>
+
+        <div>
+          <label for="quick-promo-price-input" style="font-weight: 600;">Preço Promocional de Venda (R$)</label>
+          <input type="number" id="quick-promo-price-input" step="0.01" min="0.01" placeholder="Ex: 6.00" style="width: 100%; font-size: 1.25rem; font-weight: 800; color: #fbbf24;" />
+          <div style="font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem;">
+            Atalhos rápidos de desconto sobre o valor normal:
+          </div>
+          <div style="display: flex; gap: 0.35rem; margin-top: 0.35rem;">
+            <button type="button" class="btn-secondary" onclick="applyPromoDiscount(0.10)" style="flex: 1; padding: 0.25rem; font-size: 0.75rem;">-10%</button>
+            <button type="button" class="btn-secondary" onclick="applyPromoDiscount(0.20)" style="flex: 1; padding: 0.25rem; font-size: 0.75rem;">-20%</button>
+            <button type="button" class="btn-secondary" onclick="applyPromoDiscount(0.25)" style="flex: 1; padding: 0.25rem; font-size: 0.75rem;">-25%</button>
+            <button type="button" class="btn-secondary" onclick="applyPromoDiscount(0.50)" style="flex: 1; padding: 0.25rem; font-size: 0.75rem;">-50%</button>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.6rem;">
+          <button type="submit" class="btn-primary" style="flex: 1; padding: 0.75rem; font-size: 0.95rem; font-weight: 700; background: linear-gradient(135deg, #f59e0b, #d97706); border: none;">Salvar Promoção ➔</button>
+          <button type="button" class="btn-secondary" onclick="closeQuickPromoModal()" style="padding: 0.75rem 1rem;">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL DE PAGAMENTO / QUITAÇÃO / BAIXA PARCIAL                          -->
   <!-- ====================================================================== -->
   <div id="payment-modal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.94); z-index: 9999; justify-content: center; align-items: center; padding: 1rem; backdrop-filter: blur(8px);">
@@ -1661,28 +1954,35 @@
     let cachedOrders = [];
     let orderCart = [];
     let selectedEventId = localStorage.getItem('csj_selected_event_id') || '';
+    let posActiveCategoryFilter = 'all';
+    let editingOrderId = null;
+    let quickPromoProductId = null;
 
     function renderOrderCart() {
       const itemsContainer = document.getElementById('order-cart-items');
       const countEl = document.getElementById('order-cart-count');
       const totalEl = document.getElementById('order-cart-total');
+      const clearBtn = document.getElementById('btn-clear-cart');
       if (!itemsContainer) return;
 
       itemsContainer.innerHTML = '';
 
       if (orderCart.length === 0) {
-        // Se o carrinho estiver vazio, mostra a prévia do item selecionado no select para compra rápida
+        if (clearBtn) clearBtn.style.display = 'none';
         const selEl = document.getElementById('order-product');
         const qtyEl = document.getElementById('order-qty');
         const selProd = cachedProducts.find((p) => Number(p.id) === Number(selEl && selEl.value));
         const previewQty = Math.max(1, Number((qtyEl && qtyEl.value) || 1));
-        const previewTotal = selProd ? selProd.price * previewQty : 0;
+        const effectivePrice = selProd ? (selProd.is_promo_active && selProd.promo_price > 0 ? Number(selProd.promo_price) : Number(selProd.price)) : 0;
+        const previewTotal = selProd ? effectivePrice * previewQty : 0;
 
-        itemsContainer.innerHTML = `<div style="color:var(--muted);font-size:0.78rem;text-align:center;padding:0.2rem 0;">Toque em <strong>+ Incluir</strong> para adicionar vários produtos, ou finalize direto com o produto selecionado acima.</div>`;
-        countEl.textContent = selProd ? `1 item selecionado (${previewQty}x ${selProd.name})` : '0 itens';
+        itemsContainer.innerHTML = `<div style="color:var(--muted);font-size:0.78rem;text-align:center;padding:0.4rem 0;">Toque em qualquer produto do <strong>Catálogo acima</strong> para adicionar ao pedido.</div>`;
+        countEl.textContent = selProd ? `1 item no seletor (${previewQty}x ${selProd.name})` : '0 itens';
         totalEl.textContent = fmtBRL(previewTotal);
         return;
       }
+
+      if (clearBtn) clearBtn.style.display = 'inline';
 
       let totalAmount = 0;
       let totalUnits = 0;
@@ -1696,11 +1996,15 @@
         row.className = 'cart-item-row';
         row.innerHTML = `
           <div style="flex:1;">
-            <strong>${item.quantity}x ${item.name}</strong>
+            <div style="display:flex;align-items:center;gap:0.25rem;">
+              <strong>${item.quantity}x ${item.name}</strong>
+              ${item.is_promo ? '<span class="pos-badge-promo">PROMO</span>' : ''}
+            </div>
             <div style="font-size:0.74rem;color:var(--muted);">${fmtBRL(item.price)} un. = <strong style="color:var(--text);">${fmtBRL(subtotal)}</strong></div>
           </div>
           <div class="cart-item-controls">
             <button type="button" class="cart-qty-btn" onclick="changeCartItemQty(${idx}, -1)">-</button>
+            <span style="font-weight:700;font-size:0.85rem;min-width:18px;text-align:center;">${item.quantity}</span>
             <button type="button" class="cart-qty-btn" onclick="changeCartItemQty(${idx}, 1)">+</button>
             <button type="button" class="cart-remove-btn" onclick="removeCartItem(${idx})">✕</button>
           </div>
@@ -1710,6 +2014,42 @@
 
       countEl.textContent = `${orderCart.length} produto(s) (${totalUnits} un.)`;
       totalEl.textContent = fmtBRL(totalAmount);
+    }
+
+    function clearOrderCart() {
+      orderCart = [];
+      renderOrderCart();
+    }
+
+    function addSingleProductToCart(productId) {
+      const prod = cachedProducts.find((p) => Number(p.id) === Number(productId));
+      if (!prod) return;
+
+      const isPromo = Boolean(prod.is_promo_active && prod.promo_price > 0);
+      const effectivePrice = isPromo ? Number(prod.promo_price) : Number(prod.price);
+
+      const existing = orderCart.find((i) => Number(i.product_id) === Number(productId));
+      const newTotalQty = (existing ? existing.quantity : 0) + 1;
+
+      if (prod.stock_quantity !== null && prod.stock_quantity !== undefined && newTotalQty > prod.stock_quantity) {
+        showToast(`Estoque máximo atingido para "${prod.name}" (Disponível: ${prod.stock_quantity} un.)`);
+        return;
+      }
+
+      if (existing) {
+        existing.quantity = newTotalQty;
+      } else {
+        orderCart.push({
+          product_id: prod.id,
+          name: prod.name,
+          price: effectivePrice,
+          regular_price: Number(prod.price),
+          is_promo: isPromo,
+          stock_quantity: prod.stock_quantity,
+          quantity: 1
+        });
+      }
+      renderOrderCart();
     }
 
     function addItemToOrderCart() {
@@ -1726,6 +2066,9 @@
       const prod = cachedProducts.find((p) => Number(p.id) === prodId);
       if (!prod) return;
 
+      const isPromo = Boolean(prod.is_promo_active && prod.promo_price > 0);
+      const effectivePrice = isPromo ? Number(prod.promo_price) : Number(prod.price);
+
       const existing = orderCart.find((i) => Number(i.product_id) === prodId);
       const newTotalQty = (existing ? existing.quantity : 0) + qty;
 
@@ -1740,7 +2083,9 @@
         orderCart.push({
           product_id: prod.id,
           name: prod.name,
-          price: Number(prod.price),
+          price: effectivePrice,
+          regular_price: Number(prod.price),
+          is_promo: isPromo,
           stock_quantity: prod.stock_quantity,
           quantity: qty
         });
@@ -1769,6 +2114,255 @@
     function removeCartItem(index) {
       orderCart.splice(index, 1);
       renderOrderCart();
+    }
+
+    function selectOrderMethod(method) {
+      const select = document.getElementById('order-method');
+      if (select) select.value = method;
+      const pills = document.querySelectorAll('#pos-method-pills .pos-pill');
+      pills.forEach((p) => {
+        p.classList.toggle('active', p.getAttribute('data-method') === method);
+      });
+    }
+
+    function selectOrderStatus(status) {
+      const select = document.getElementById('order-status');
+      if (select) {
+        select.value = status;
+        onOrderStatusChange();
+      }
+      const pills = document.querySelectorAll('#pos-status-pills .pos-pill');
+      pills.forEach((p) => {
+        p.classList.toggle('active', p.getAttribute('data-status') === status);
+      });
+    }
+
+    function renderPosCatalog(filter = null) {
+      if (filter !== null) posActiveCategoryFilter = String(filter);
+      const filterPillsContainer = document.getElementById('pos-cat-filter-pills');
+      const gridContainer = document.getElementById('pos-product-grid');
+      const countLabel = document.getElementById('pos-catalog-count');
+      if (!gridContainer || !filterPillsContainer) return;
+
+      const activeCat = posActiveCategoryFilter;
+      let pillsHtml = `<button type="button" class="pos-cat-pill ${activeCat === 'all' ? 'active' : ''}" onclick="renderPosCatalog('all')">Todos</button>`;
+      cachedCategories.forEach((c) => {
+        const isAct = String(c.id) === String(activeCat);
+        pillsHtml += `<button type="button" class="pos-cat-pill ${isAct ? 'active' : ''}" onclick="renderPosCatalog('${c.id}')">${c.name}</button>`;
+      });
+      filterPillsContainer.innerHTML = pillsHtml;
+
+      const filteredProds = cachedProducts.filter((p) => {
+        if (activeCat === 'all') return true;
+        return String(p.category_id) === String(activeCat);
+      });
+
+      if (countLabel) {
+        countLabel.textContent = `${filteredProds.length} produto(s)`;
+      }
+
+      gridContainer.innerHTML = '';
+      if (filteredProds.length === 0) {
+        gridContainer.innerHTML = `<div style="grid-column: 1 / -1; color: var(--muted); font-size: 0.8rem; text-align: center; padding: 1.5rem;">Nenhum produto cadastrado nesta categoria.</div>`;
+        return;
+      }
+
+      filteredProds.forEach((p) => {
+        const isOutOfStock = p.stock_quantity !== null && p.stock_quantity !== undefined && p.stock_quantity <= 0;
+        const isPromo = Boolean(p.is_promo_active && p.promo_price > 0);
+        const effectivePrice = isPromo ? Number(p.promo_price) : Number(p.price);
+
+        let stockText = 'Livre';
+        let isLowStock = false;
+        if (p.stock_quantity !== null && p.stock_quantity !== undefined) {
+          if (p.stock_quantity <= 0) {
+            stockText = 'Esgotado';
+            isLowStock = true;
+          } else if (p.stock_quantity <= 5) {
+            stockText = `${p.stock_quantity} un.`;
+            isLowStock = true;
+          } else {
+            stockText = `${p.stock_quantity} un.`;
+          }
+        }
+
+        const card = document.createElement('div');
+        card.className = `pos-card ${isPromo ? 'is-promo' : ''} ${isOutOfStock ? 'out-of-stock' : ''}`;
+        card.onclick = () => {
+          if (isOutOfStock) {
+            showToast(`Produto "${p.name}" está sem estoque no momento.`);
+            return;
+          }
+          addSingleProductToCart(p.id);
+        };
+
+        card.innerHTML = `
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.2rem;">
+              <span class="pos-card-title">${p.name}</span>
+              <button type="button" class="btn-promo-quick" title="Ajustar / Ativar Promoção Rápida" onclick="event.stopPropagation(); openQuickPromoModal(${p.id})">⚡</button>
+            </div>
+            ${isPromo ? `<div style="margin-bottom: 0.25rem;"><span class="pos-badge-promo">🔥 PROMO</span></div>` : ''}
+          </div>
+          <div class="pos-card-footer">
+            <div>
+              ${isPromo ? `<span class="pos-old-price">${fmtBRL(p.price)}</span>` : ''}
+              <span class="pos-card-price ${isPromo ? 'promo' : ''}">${fmtBRL(effectivePrice)}</span>
+            </div>
+            <span class="pos-stock-badge ${isLowStock ? 'low' : ''}">${stockText}</span>
+          </div>
+        `;
+        gridContainer.appendChild(card);
+      });
+    }
+
+    function openQuickPromoModal(productId) {
+      const prod = cachedProducts.find((p) => Number(p.id) === Number(productId));
+      if (!prod) return;
+
+      quickPromoProductId = prod.id;
+      document.getElementById('quick-promo-prod-id').value = prod.id;
+      document.getElementById('quick-promo-prod-name').textContent = prod.name;
+      document.getElementById('quick-promo-regular-price').textContent = fmtBRL(prod.price);
+
+      const isPromo = Boolean(prod.is_promo_active);
+      document.getElementById('quick-promo-active-toggle').checked = isPromo;
+      document.getElementById('quick-promo-price-input').value =
+        (prod.promo_price !== null && prod.promo_price !== undefined && prod.promo_price > 0)
+          ? Number(prod.promo_price).toFixed(2)
+          : (Number(prod.price) * 0.8).toFixed(2);
+
+      const modal = document.getElementById('quick-promo-modal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeQuickPromoModal() {
+      const modal = document.getElementById('quick-promo-modal');
+      if (modal) modal.style.display = 'none';
+      quickPromoProductId = null;
+    }
+
+    function applyPromoDiscount(percent) {
+      const prod = cachedProducts.find((p) => Number(p.id) === Number(quickPromoProductId));
+      if (!prod) return;
+      const discPrice = Math.max(0.01, Number((prod.price * (1 - percent)).toFixed(2)));
+      document.getElementById('quick-promo-price-input').value = discPrice.toFixed(2);
+      document.getElementById('quick-promo-active-toggle').checked = true;
+    }
+
+    async function saveQuickPromo(event) {
+      if (event) event.preventDefault();
+      try {
+        const prodId = Number(document.getElementById('quick-promo-prod-id').value);
+        const isActive = document.getElementById('quick-promo-active-toggle').checked;
+        const rawPrice = document.getElementById('quick-promo-price-input').value.trim();
+        const promoPrice = rawPrice ? Number(rawPrice.replace(',', '.')) : null;
+
+        if (isActive && (!promoPrice || Number.isNaN(promoPrice) || promoPrice <= 0)) {
+          showToast('Para ativar a promoção, informe um preço promocional maior que zero.');
+          return;
+        }
+
+        await DataService.updateProductPromo(prodId, {
+          is_promo_active: isActive,
+          promo_price: promoPrice
+        });
+
+        const cached = cachedProducts.find((p) => Number(p.id) === prodId);
+        if (cached) {
+          cached.is_promo_active = isActive;
+          cached.promo_price = promoPrice;
+          cached.effective_price = isActive && promoPrice > 0 ? promoPrice : Number(cached.price);
+        }
+
+        closeQuickPromoModal();
+        renderPosCatalog();
+        renderOrderCart();
+        showToast(`Promoção de "${cached ? cached.name : 'Produto'}" ${isActive ? `ativada por ${fmtBRL(promoPrice)}!` : 'desativada.'}`);
+        loadDashboard();
+      } catch (err) {
+        showToast(err.message || 'Erro ao salvar promoção.');
+      }
+    }
+
+    function editOrder(orderId) {
+      const order = cachedOrders.find((o) => Number(o.id) === Number(orderId));
+      if (!order) {
+        showToast(`Pedido #${orderId} não encontrado.`);
+        return;
+      }
+
+      editingOrderId = Number(order.id);
+      switchScreen('orders');
+
+      const formEl = document.getElementById('order-form');
+      if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
+
+      document.getElementById('order-customer').value = order.customer_name || '';
+
+      selectOrderMethod(order.payment_method || 'pix');
+
+      const fin = enrichOrderFinancials(order);
+      let statusVal = 'pago';
+      if (fin.remaining_amount <= 0 || order.payment_status === 'pago') {
+        statusVal = 'pago';
+      } else if (fin.is_partial) {
+        statusVal = 'parcial';
+      } else {
+        statusVal = 'pendente';
+      }
+      selectOrderStatus(statusVal);
+
+      if (statusVal === 'parcial') {
+        document.getElementById('order-paid-now').value = Number(fin.paid_amount || 0).toFixed(2);
+      }
+
+      orderCart = (order.order_items || []).map((item) => {
+        const prod = cachedProducts.find((p) => Number(p.id) === Number(item.product_id));
+        return {
+          product_id: Number(item.product_id),
+          name: prod ? prod.name : (item.products ? item.products.name : 'Item'),
+          price: Number(item.unit_price || (prod ? prod.price : 0)),
+          regular_price: prod ? Number(prod.price) : Number(item.unit_price || 0),
+          is_promo: prod ? Boolean(prod.is_promo_active && prod.promo_price > 0) : false,
+          stock_quantity: prod ? prod.stock_quantity : null,
+          quantity: Number(item.quantity)
+        };
+      });
+
+      renderOrderCart();
+
+      const banner = document.getElementById('order-edit-banner');
+      if (banner) {
+        banner.style.display = 'flex';
+        document.getElementById('edit-banner-order-id').textContent = `#${order.id}`;
+        document.getElementById('edit-banner-customer').textContent = order.customer_name || 'Sem nome';
+      }
+
+      const submitBtn = document.getElementById('order-submit-btn');
+      if (submitBtn) {
+        submitBtn.textContent = `💾 Salvar Alterações do Pedido #${order.id}`;
+      }
+
+      showToast(`Modo de edição: Pedido #${order.id}. Ajuste itens ou pagamento e clique em Salvar.`);
+    }
+
+    function cancelOrderEdit() {
+      editingOrderId = null;
+      const banner = document.getElementById('order-edit-banner');
+      if (banner) banner.style.display = 'none';
+
+      document.getElementById('order-customer').value = '';
+      document.getElementById('order-paid-now').value = '';
+      selectOrderMethod('pix');
+      selectOrderStatus('pago');
+
+      const submitBtn = document.getElementById('order-submit-btn');
+      if (submitBtn) submitBtn.textContent = 'Finalizar Pedido';
+
+      orderCart = [];
+      renderOrderCart();
+      showToast('Edição cancelada.');
     }
 
     // Preenche a data de hoje por padrão no formulário de evento
@@ -2357,9 +2951,14 @@
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
           return (testDb.products || []).map((p) => {
             const cat = (testDb.categories || []).find((c) => Number(c.id) === Number(p.category_id));
+            const isPromo = Boolean(p.is_promo_active);
+            const promoPrice = p.promo_price !== null && p.promo_price !== undefined ? Number(p.promo_price) : null;
             return {
               ...p,
               price: Number(p.price),
+              promo_price: promoPrice,
+              is_promo_active: isPromo,
+              effective_price: isPromo && promoPrice > 0 ? promoPrice : Number(p.price),
               cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
               category_name: cat ? cat.name : '-'
             };
@@ -2383,9 +2982,14 @@
         const db = loadLocalDb();
         return db.products.map((p) => {
           const cat = db.categories.find((c) => Number(c.id) === Number(p.category_id));
+          const isPromo = Boolean(p.is_promo_active);
+          const promoPrice = p.promo_price !== null && p.promo_price !== undefined ? Number(p.promo_price) : null;
           return {
             ...p,
             price: Number(p.price),
+            promo_price: promoPrice,
+            is_promo_active: isPromo,
+            effective_price: isPromo && promoPrice > 0 ? promoPrice : Number(p.price),
             cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
             category_name: cat ? cat.name : '-'
           };
@@ -2593,6 +3197,158 @@
         db.products = (db.products || []).filter((p) => Number(p.id) !== Number(id));
         saveLocalDb(db);
         return { id: Number(id) };
+      },
+
+      async updateProductPromo(productId, { is_promo_active, promo_price }) {
+        const pId = Number(productId);
+        const isActive = Boolean(is_promo_active);
+        const parsedPrice = promo_price !== null && promo_price !== undefined && promo_price !== '' ? Number(promo_price) : null;
+
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const prod = (testDb.products || []).find((p) => Number(p.id) === pId);
+          if (!prod) throw new Error('Produto de teste não encontrado');
+          prod.is_promo_active = isActive;
+          prod.promo_price = parsedPrice;
+          saveTestDb(testDb);
+          return prod;
+        }
+
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch(`/products/${pId}/promo`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_promo_active: isActive, promo_price: parsedPrice })
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao atualizar promoção');
+          return data;
+        }
+
+        if (mode === 'supabase') {
+          const { data, error } = await sbClient
+            .from('products')
+            .update({ is_promo_active: isActive, promo_price: parsedPrice })
+            .eq('id', pId)
+            .select()
+            .single();
+          if (error) {
+            console.warn('Fallback de atualização de promoção no Supabase:', error.message);
+            return { id: pId, is_promo_active: isActive, promo_price: parsedPrice };
+          }
+          return data;
+        }
+
+        const db = loadLocalDb();
+        const prod = db.products.find((p) => Number(p.id) === pId);
+        if (prod) {
+          prod.is_promo_active = isActive;
+          prod.promo_price = parsedPrice;
+          saveLocalDb(db);
+        }
+        return prod || { id: pId };
+      },
+
+      async updateOrder(orderId, { customer_name, payment_method, payment_status, paid_amount, items }) {
+        const oId = Number(orderId);
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const existingOrder = (testDb.orders || []).find((o) => Number(o.id) === oId);
+          if (!existingOrder) throw new Error(`Pedido #${oId} não encontrado no banco de testes.`);
+
+          const oldItems = (testDb.order_items || []).filter((i) => Number(i.order_id) === oId);
+          const oldItemsMap = new Map();
+          oldItems.forEach((i) => oldItemsMap.set(Number(i.product_id), Number(i.quantity)));
+
+          const newItemsMap = new Map();
+          for (const it of items) {
+            const pid = Number(it.product_id);
+            const qty = Number(it.quantity);
+            newItemsMap.set(pid, (newItemsMap.get(pid) || 0) + qty);
+          }
+
+          // Verificar estoque para diferenças
+          for (const [pid, newQty] of newItemsMap.entries()) {
+            const oldQty = oldItemsMap.get(pid) || 0;
+            const diff = newQty - oldQty;
+            if (diff > 0) {
+              const prod = (testDb.products || []).find((p) => Number(p.id) === pid);
+              if (prod && prod.stock_quantity !== null && prod.stock_quantity !== undefined && prod.stock_quantity < diff) {
+                throw new Error(`Estoque insuficiente para "${prod.name}". Disponível: ${prod.stock_quantity}`);
+              }
+            }
+          }
+
+          // Ajustar estoque
+          const allPids = Array.from(new Set([...oldItemsMap.keys(), ...newItemsMap.keys()]));
+          for (const pid of allPids) {
+            const oldQty = oldItemsMap.get(pid) || 0;
+            const newQty = newItemsMap.get(pid) || 0;
+            const diff = newQty - oldQty;
+            const prod = (testDb.products || []).find((p) => Number(p.id) === pid);
+            if (prod && prod.stock_quantity !== null && prod.stock_quantity !== undefined) {
+              prod.stock_quantity -= diff;
+            }
+          }
+
+          // Recalcular total
+          let total = 0;
+          for (const it of items) {
+            const prod = (testDb.products || []).find((p) => Number(p.id) === Number(it.product_id));
+            const unitPrice = (prod && prod.is_promo_active && prod.promo_price > 0) ? Number(prod.promo_price) : Number(prod ? prod.price : 0);
+            total += unitPrice * Number(it.quantity);
+          }
+          const finalTotal = Number(total.toFixed(2));
+          let finalPaid = payment_status === 'pago' ? finalTotal : 0;
+          if (paid_amount !== undefined && paid_amount !== null && paid_amount !== '') {
+            finalPaid = Number(Number(paid_amount).toFixed(2));
+          }
+          const dbStatus = finalPaid >= finalTotal ? 'pago' : 'pendente';
+
+          if (customer_name) existingOrder.customer_name = customer_name;
+          if (payment_method) existingOrder.payment_method = payment_method;
+          existingOrder.payment_status = dbStatus;
+          existingOrder.total_amount = finalTotal;
+          existingOrder.paid_amount = finalPaid;
+
+          testDb.order_items = (testDb.order_items || []).filter((i) => Number(i.order_id) !== oId);
+          let nextItemId = (testDb.order_items || []).reduce((m, i) => Math.max(m, i.id), 0) + 1;
+          for (const it of items) {
+            const prod = (testDb.products || []).find((p) => Number(p.id) === Number(it.product_id));
+            const unitPrice = (prod && prod.is_promo_active && prod.promo_price > 0) ? Number(prod.promo_price) : Number(prod ? prod.price : 0);
+            testDb.order_items.push({
+              id: nextItemId++,
+              order_id: oId,
+              product_id: Number(it.product_id),
+              quantity: Number(it.quantity),
+              unit_price: unitPrice
+            });
+          }
+          saveTestDb(testDb);
+          return enrichOrderFinancials(existingOrder);
+        }
+
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const r = await fetch(`/orders/${oId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customer_name, payment_method, payment_status, paid_amount, items })
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || 'Erro ao alterar pedido');
+          return enrichOrderFinancials(data);
+        }
+
+        const db = loadLocalDb();
+        const existingOrder = db.orders.find((o) => Number(o.id) === oId);
+        if (existingOrder) {
+          if (customer_name) existingOrder.customer_name = customer_name;
+          if (payment_method) existingOrder.payment_method = payment_method;
+          saveLocalDb(db);
+        }
+        return enrichOrderFinancials(existingOrder || { id: oId });
       },
 
       async getOrders() {
@@ -3321,6 +4077,11 @@
       if (pkgCostEl) pkgCostEl.value = (prod.package_cost !== null && prod.package_cost !== undefined) ? prod.package_cost : '';
       if (pkgYieldEl) pkgYieldEl.value = (prod.package_yield !== null && prod.package_yield !== undefined) ? prod.package_yield : '';
 
+      const promoActiveEl = document.getElementById('prod-promo-active');
+      const promoPriceEl = document.getElementById('prod-promo-price');
+      if (promoActiveEl) promoActiveEl.checked = Boolean(prod.is_promo_active);
+      if (promoPriceEl) promoPriceEl.value = (prod.promo_price !== null && prod.promo_price !== undefined) ? prod.promo_price : '';
+
       if (prod.package_cost && prod.package_yield) {
         togglePackageCalculator(true);
         calculateUnitCostFromPackage();
@@ -3349,6 +4110,10 @@
       if (pkgCostEl) pkgCostEl.value = '';
       if (pkgYieldEl) pkgYieldEl.value = '';
       togglePackageCalculator(false);
+      const promoActiveEl = document.getElementById('prod-promo-active');
+      const promoPriceEl = document.getElementById('prod-promo-price');
+      if (promoActiveEl) promoActiveEl.checked = false;
+      if (promoPriceEl) promoPriceEl.value = '';
       document.getElementById('product-form-title').textContent = 'Cadastrar Novo Produto';
       document.getElementById('prod-submit-btn').textContent = 'Salvar Produto';
       document.getElementById('prod-cancel-btn').style.display = 'none';
@@ -3789,23 +4554,32 @@
               ? '<span style="color:var(--muted)">Livre</span>'
               : `<strong>${p.stock_quantity} un.</strong>`;
 
+          const isPromo = Boolean(p.is_promo_active && p.promo_price > 0);
+          const effectivePrice = isPromo ? Number(p.promo_price) : Number(p.price);
+
           const opt = document.createElement('option');
           opt.value = p.id;
-          opt.textContent = `${p.name} — ${fmtBRL(p.price)}${p.stock_quantity !== null ? ` (Est: ${p.stock_quantity})` : ''}`;
+          opt.textContent = `${p.name} — ${fmtBRL(effectivePrice)}${isPromo ? ' (PROMO)' : ''}${p.stock_quantity !== null ? ` (Est: ${p.stock_quantity})` : ''}`;
           select.appendChild(opt);
+
+          const priceCellHtml = isPromo
+            ? `<div><span style="text-decoration: line-through; font-size: 0.74rem; color: var(--muted); margin-right: 0.25rem;">${fmtBRL(p.price)}</span><strong style="color: #fbbf24;">${fmtBRL(p.promo_price)}</strong></div>`
+            : `<strong style="color:var(--primary);">${fmtBRL(p.price)}</strong>`;
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td>
               <strong>${p.name}</strong>
               <span class="tag tag-aberto" style="font-size:0.68rem;padding:0.1rem 0.35rem;margin-left:0.25rem;">${p.unit || 'un'}</span>
+              ${isPromo ? '<span class="pos-badge-promo" style="margin-left:0.25rem;">PROMO</span>' : ''}
               ${(p.package_yield && p.package_yield > 1) ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;">📦 ${p.package_name || 'Embalagem'}: Rende ${p.package_yield} ${p.unit || 'un'} (${fmtBRL(p.package_cost || 0)})</div>` : ''}
             </td>
             <td>${p.category_name || '-'}</td>
             <td style="color:#f87171;">${fmtBRL(p.cost_price || 0)}</td>
-            <td style="color:var(--primary);font-weight:600;">${fmtBRL(p.price)}</td>
+            <td>${priceCellHtml}</td>
             <td>${stockLabel}</td>
             <td style="text-align: center; white-space: nowrap;">
+              <button type="button" class="btn-promo-quick" style="margin-right: 0.35rem;" onclick="openQuickPromoModal(${p.id})">⚡ Promo</button>
               <button type="button" class="btn-edit" style="margin-right: 0.35rem;" onclick="startEditProduct(${p.id})">Editar</button>
               <button type="button" class="btn-danger" style="padding: 0.35rem 0.6rem; font-size: 0.74rem;" title="Excluir produto" onclick="handleDeleteProduct(${p.id}, '${encodeURIComponent(p.name)}')">✕</button>
             </td>
@@ -3856,7 +4630,7 @@
         const ordersTbody = document.getElementById('orders-tbody');
         ordersTbody.innerHTML = '';
         if (filteredOrders.length === 0) {
-          ordersTbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido registrado neste evento ainda.</td></tr>';
+          ordersTbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido registrado neste evento ainda.</td></tr>';
         } else {
           filteredOrders.slice(0, 12).forEach((o) => {
             const fin = enrichOrderFinancials(o);
@@ -3879,12 +4653,16 @@
               <td style="font-size:0.76rem;color:var(--muted);">${itemsDesc || '-'}</td>
               <td>${fmtBRL(o.total_amount)}</td>
               <td>${statusHtml}</td>
+              <td style="text-align: center; white-space: nowrap;">
+                <button type="button" class="btn-edit" onclick="editOrder(${o.id})" style="padding: 0.22rem 0.5rem; font-size: 0.74rem;">✏️ Editar</button>
+              </td>
             `;
             ordersTbody.appendChild(tr);
           });
         }
-        // Atualizar prévia do carrinho e tela de custos
+        // Atualizar catálogo rápido, prévia do carrinho e tela de custos
         applyRolePermissions();
+        renderPosCatalog();
         renderOrderCart();
         renderCostsScreen();
       } catch (err) {
@@ -4734,13 +5512,22 @@
           created_by_name: currentUser ? currentUser.name : 'Balcão',
           items: itemsToSend
         };
+
+        if (editingOrderId) {
+          const targetOrderId = editingOrderId;
+          const updated = await DataService.updateOrder(targetOrderId, payload);
+          cancelOrderEdit();
+          showToast(`Pedido #${targetOrderId} atualizado com sucesso (${fmtBRL(updated.total_amount)})!`);
+          await loadDashboard();
+          return;
+        }
+
         const created = await DataService.createOrder(payload);
         document.getElementById('order-customer').value = '';
         document.getElementById('order-qty').value = '1';
         document.getElementById('order-paid-now').value = '';
         if (statusVal === 'parcial') {
-          document.getElementById('order-status').value = 'pago';
-          onOrderStatusChange();
+          selectOrderStatus('pago');
         }
         orderCart = [];
         renderOrderCart();
@@ -5182,7 +5969,7 @@
     let deferredInstallPrompt = null;
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=7').then((reg) => {
+        navigator.serviceWorker.register('./sw.js?v=8').then((reg) => {
           reg.update();
         }).catch(() => {});
       });
