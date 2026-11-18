@@ -448,6 +448,68 @@ router.patch('/:id/pay', async (req, res) => {
 });
 
 /**
+ * PATCH /orders/:id/toggle-status
+ * Alterna rapidamente o status de um pedido entre pago e pendente.
+ */
+router.patch('/:id/toggle-status', async (req, res) => {
+  try {
+    const orderId = Number(req.params.id);
+    if (!orderId || Number.isNaN(orderId)) {
+      return res.status(400).json({ error: 'ID do pedido inválido.' });
+    }
+
+    const { data: existingOrder, error: findError } = await supabase
+      .from('orders')
+      .select('*, order_items (*)')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    if (findError) return res.status(500).json({ error: findError.message });
+    if (!existingOrder) return res.status(404).json({ error: `Pedido #${orderId} não encontrado.` });
+
+    const total = Number(existingOrder.total_amount || 0);
+    const nextStatus = existingOrder.payment_status === 'pago' ? 'pendente' : 'pago';
+    const nextPaid = nextStatus === 'pago' ? total : 0;
+
+    const updatePayload = {
+      payment_status: nextStatus,
+      paid_amount: nextPaid,
+      paid_at: nextStatus === 'pago' ? new Date().toISOString() : null
+    };
+
+    const { data: updatedOrder, error: updateErr } = await supabase
+      .from('orders')
+      .update(updatePayload)
+      .eq('id', orderId)
+      .select('*, order_items (*)')
+      .single();
+
+    if (updateErr) return res.status(400).json({ error: updateErr.message });
+
+    const updatedFin = computeOrderFinancials(updatedOrder);
+
+    const clientId = req.headers['x-client-id'] || req.query.client_id;
+    try {
+      sseBroadcaster.broadcast({
+        type: 'order_updated',
+        originClientId: clientId,
+        payload: {
+          ...updatedOrder,
+          ...updatedFin
+        }
+      });
+    } catch (_) {}
+
+    return res.status(200).json({
+      ...updatedOrder,
+      ...updatedFin
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao alternar status do pedido', details: err.message });
+  }
+});
+
+/**
  * PUT /orders/:id
  * Altera um pedido existente (itens, quantidades, cliente, forma e status de pagamento).
  * Ajusta automaticamente o estoque dos produtos (estorna ou abate a diferença).
@@ -607,6 +669,8 @@ router.put('/:id', async (req, res) => {
         newStatus = 'pago';
         finalPaid = updatedTotal;
       }
+    } else if (existingOrder.payment_status === 'pago' && newStatus === 'pendente') {
+      finalPaid = 0;
     } else {
       finalPaid = Math.min(updatedTotal, finalPaid);
     }

@@ -45,7 +45,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { event_id, description, amount } = req.body || {};
+    const { event_id, description, amount, category } = req.body || {};
 
     if (!event_id || Number.isNaN(Number(event_id))) {
       return res.status(400).json({ error: 'O evento (event_id) é obrigatório e deve ser válido.' });
@@ -60,17 +60,31 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'O valor da despesa (amount) deve ser um número maior que zero.' });
     }
 
-    const { data, error } = await supabase
+    const payload = {
+      event_id: Number(event_id),
+      description: description.trim(),
+      amount: Number(numericAmount.toFixed(2))
+    };
+    if (category) {
+      payload.category = String(category).trim();
+    }
+
+    let { data, error } = await supabase
       .from('event_expenses')
-      .insert([
-        {
-          event_id: Number(event_id),
-          description: description.trim(),
-          amount: Number(numericAmount.toFixed(2))
-        }
-      ])
+      .insert([payload])
       .select('*')
       .single();
+
+    if (error && String(error.message || '').includes('category')) {
+      delete payload.category;
+      const retry = await supabase
+        .from('event_expenses')
+        .insert([payload])
+        .select('*')
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       return res.status(400).json({ error: error.message });
@@ -80,7 +94,8 @@ router.post('/', async (req, res) => {
       ...data,
       id: Number(data.id),
       event_id: Number(data.event_id),
-      amount: Number(data.amount)
+      amount: Number(data.amount),
+      category: data.category || category || 'Alimentos'
     });
   } catch (err) {
     return res.status(500).json({ error: 'Erro interno ao cadastrar despesa.', details: err.message });

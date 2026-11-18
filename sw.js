@@ -1,4 +1,4 @@
-const CACHE_NAME = 'controle-social-jovens-v12';
+const CACHE_NAME = 'controle-social-jovens-v13';
 const ASSETS = [
   './',
   './index.html',

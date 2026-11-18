@@ -107,8 +107,13 @@ CREATE TABLE IF NOT EXISTS "controle-social-jovens".event_expenses (
     event_id BIGINT NOT NULL REFERENCES "controle-social-jovens".events(id) ON DELETE CASCADE ON UPDATE CASCADE,
     description VARCHAR(150) NOT NULL,
     amount NUMERIC(10, 2) NOT NULL CHECK (amount > 0),
+    category VARCHAR(50) NOT NULL DEFAULT 'Alimentos',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Caso a tabela event_expenses já exista sem a coluna category:
+ALTER TABLE "controle-social-jovens".event_expenses
+    ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'Alimentos';
 
 -- 3.6. Tabela de Usuários / Operadores (app_users)
 CREATE TABLE IF NOT EXISTS "controle-social-jovens".app_users (

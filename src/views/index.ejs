@@ -13,6 +13,7 @@
   <link rel="apple-touch-icon" href="./icon-192.png?v=3" />
   <title>Controle Social Jovens</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
       --bg: #0f172a;
@@ -1019,6 +1020,9 @@
       <button type="button" class="nav-tab" id="tab-costs" onclick="switchScreen('costs')">
         💰 Custos & Lucro
       </button>
+      <button type="button" class="nav-tab" id="tab-reports" onclick="switchScreen('reports')">
+        📊 Relatórios
+      </button>
       <button type="button" class="nav-tab" id="tab-forecast" onclick="switchScreen('forecast')" style="display: none;">
         📋 Previsão & Compras
       </button>
@@ -1276,8 +1280,21 @@
           <button type="submit" class="btn-primary" id="order-submit-btn" style="font-size: 1rem; font-weight: 700; padding: 0.8rem; margin-top: 0.5rem;">Finalizar Pedido</button>
         </form>
 
-        <h2 style="margin-top: 1.35rem;">Pedidos Registrados</h2>
-        <div class="table-wrap">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.35rem; margin-bottom: 0.45rem;">
+          <h2 style="margin: 0; padding: 0; border: none; font-size: 1.05rem;">Pedidos do Evento</h2>
+          <span id="orders-count-label" style="font-size: 0.76rem; color: var(--muted); font-weight: 600;">Carregando pedidos...</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.65rem;">
+          <div style="flex: 1; min-width: 170px;">
+            <input type="text" id="orders-search-input" placeholder="🔍 Buscar cliente ou #pedido..." oninput="onOrdersSearchChange(this.value)" style="width: 100%; padding: 0.35rem 0.6rem; font-size: 0.8rem;" />
+          </div>
+          <div style="display: flex; gap: 0.3rem;">
+            <button type="button" class="pos-cat-pill active" id="chip-orders-all" onclick="setOrdersStatusFilter('all')" style="padding: 0.28rem 0.6rem; font-size: 0.74rem;">Todos</button>
+            <button type="button" class="pos-cat-pill" id="chip-orders-pago" onclick="setOrdersStatusFilter('pago')" style="padding: 0.28rem 0.6rem; font-size: 0.74rem;">Pagos</button>
+            <button type="button" class="pos-cat-pill" id="chip-orders-pendente" onclick="setOrdersStatusFilter('pendente')" style="padding: 0.28rem 0.6rem; font-size: 0.74rem;">Pendentes</button>
+          </div>
+        </div>
+        <div class="table-wrap" style="max-height: 480px; overflow-y: auto;">
           <table>
             <thead>
               <tr>
@@ -1287,7 +1304,7 @@
                 <th>Itens</th>
                 <th>Total</th>
                 <th>Status</th>
-                <th>Ações</th>
+                <th style="text-align: center;">Ações</th>
               </tr>
             </thead>
             <tbody id="orders-tbody"></tbody>
@@ -1323,6 +1340,125 @@
         </div>
       </div>
     </div>
+  
+  <!-- ====================================================================== -->
+  <!-- TELA: CENTRAL DE RELATÓRIOS (VENDAS, PENDÊNCIAS E EXPORTAÇÃO EXCEL)   -->
+  <!-- ====================================================================== -->
+  <section id="screen-reports" class="screen">
+    <div class="card" style="margin-bottom: 0.85rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h2 style="margin: 0; padding: 0; border: none; font-size: 1.05rem;">📊 Central de Relatórios & Prestação de Contas</h2>
+          <small style="color: var(--muted);">Visualize pendências, detalhamento de pedidos e exporte planilhas Excel (.xlsx) e CSV com 1 clique.</small>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <label for="reports-event-filter" style="margin: 0; font-weight: 600; white-space: nowrap; font-size: 0.84rem;">Evento:</label>
+          <select id="reports-event-filter" onchange="onReportsEventChange(this.value)" style="min-width: 200px; max-width: 100%;"></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de Ações Rápidas de Exportação -->
+    <div class="card" style="margin-bottom: 0.85rem; padding: 0.75rem 1rem; background: var(--surface2); border: 1px solid var(--border);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+        <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.86rem; font-weight: 700; color: var(--text);">
+          <span>📥 Exportar Relatórios:</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button type="button" class="btn-success" onclick="exportReportsToExcel()" style="padding: 0.42rem 0.85rem; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <span>📗 Baixar Planilha Excel (.xlsx)</span>
+          </button>
+          <button type="button" class="btn-secondary" onclick="exportReportsToCSV()" style="padding: 0.42rem 0.85rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <span>📄 Baixar CSV</span>
+          </button>
+          <button type="button" class="btn-primary" onclick="window.print()" style="padding: 0.42rem 0.85rem; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <span>🖨️ Imprimir / Salvar PDF</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Indicadores Financeiros do Relatório -->
+    <div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 0.85rem;">
+      <div class="stat-card">
+        <span>Total Vendido</span>
+        <strong id="rep-stat-sales" class="text-primary">R$ 0,00</strong>
+        <small id="rep-stat-orders-count">0 pedido(s)</small>
+      </div>
+      <div class="stat-card">
+        <span>Total Já Recebido (Pago)</span>
+        <strong id="rep-stat-paid" class="text-success">R$ 0,00</strong>
+        <small id="rep-stat-paid-pct">0% arrecadado</small>
+      </div>
+      <div class="stat-card">
+        <span>Total Pendente (Na Rua)</span>
+        <strong id="rep-stat-pending" class="text-warning">R$ 0,00</strong>
+        <small id="rep-stat-pending-count">0 pessoa(s) a pagar</small>
+      </div>
+      <div class="stat-card">
+        <span>Total Compradores</span>
+        <strong id="rep-stat-buyers" style="color: #38bdf8;">0 pessoa(s)</strong>
+        <small id="rep-stat-avg-ticket">Ticket Médio: R$ 0,00</small>
+      </div>
+    </div>
+
+    <!-- Tabela de Cobrança e Pendências por Cliente -->
+    <div class="card" style="margin-bottom: 1rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.65rem;">
+        <div>
+          <h2 style="margin: 0; padding: 0; border: none; font-size: 1.05rem;">⚠️ Pendências por Cliente (Cobrança WhatsApp)</h2>
+          <small style="color: var(--muted);">Lista de quem ainda falta pagar com botão de 1 clique para copiar mensagem de cobrança personalizada.</small>
+        </div>
+        <span id="rep-pending-badge" class="tag tag-pendente">0 pendências</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th style="text-align: right;">Total Comprado</th>
+              <th style="text-align: right;">Já Pago</th>
+              <th style="text-align: right;">FALTA PAGAR</th>
+              <th>Itens Consumidos</th>
+              <th style="text-align: center;">Cobrança WhatsApp</th>
+            </tr>
+          </thead>
+          <tbody id="rep-pending-tbody">
+            <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1.5rem;">Carregando pendências...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Relação Completa de Pedidos -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.65rem;">
+        <h2 style="margin: 0; padding: 0; border: none; font-size: 1.05rem;">📋 Relação Geral de Pedidos Realizados</h2>
+        <span id="rep-orders-total-badge" style="font-size: 0.78rem; color: var(--muted); font-weight: 600;">0 pedidos</span>
+      </div>
+      <div class="table-wrap" style="max-height: 480px; overflow-y: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Horário</th>
+              <th>Cliente</th>
+              <th>Itens</th>
+              <th>Total</th>
+              <th>Pago</th>
+              <th>Status</th>
+              <th>Forma</th>
+              <th>Operador</th>
+            </tr>
+          </thead>
+          <tbody id="rep-orders-tbody">
+            <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1.5rem;">Carregando pedidos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   </main>
 
   <!-- ====================================================================== -->
@@ -1339,20 +1475,20 @@
               <label for="prod-name">Nome do Produto</label>
               <input type="text" id="prod-name" placeholder="Ex: Refrigerante Lata 350ml" required style="width: 100%;" />
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem;">
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.6rem;">
               <div>
                 <label for="prod-category">Categoria</label>
                 <select id="prod-category" style="width: 100%;"></select>
               </div>
               <div>
                 <label for="prod-price">Preço Venda (R$)</label>
-                <input type="number" id="prod-price" step="0.01" min="0" placeholder="Ex: 6.00" required style="width: 100%;" />
-              </div>
-              <div>
-                <label for="prod-cost">Preço Custo (R$)</label>
-                <input type="number" id="prod-cost" step="0.01" min="0" placeholder="Ex: 3.00" style="width: 100%;" />
+                <input type="number" id="prod-price" step="0.01" min="0" placeholder="Ex: 8.00" required style="width: 100%;" />
               </div>
             </div>
+            <input type="hidden" id="prod-cost" value="0" />
+            <input type="hidden" id="prod-pkg-name" value="" />
+            <input type="hidden" id="prod-pkg-cost" value="" />
+            <input type="hidden" id="prod-pkg-yield" value="" />
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
               <div>
                 <label for="prod-unit">Unidade de Venda (no Caixa)</label>
@@ -1373,8 +1509,9 @@
             </div>
 
             <!-- Assistente de Rendimento / Embalagem de Atacado (ex: Balde 10L) -->
+            <!-- Ocultado a pedido do usuario: compras agora sao lancadas direto em Custos & Lucro -->
             <div style="margin-top: 0.35rem;">
-              <button type="button" class="btn-secondary" id="btn-toggle-pkg-calc" onclick="togglePackageCalculator()" style="width: 100%; font-size: 0.78rem; padding: 0.45rem 0.6rem; display: flex; align-items: center; justify-content: space-between; border: 1px dashed var(--primary); background: rgba(99, 102, 241, 0.08);">
+              <button type="button" class="btn-secondary" id="btn-toggle-pkg-calc" onclick="togglePackageCalculator()" style="display: none !important;" style="width: 100%; font-size: 0.78rem; padding: 0.45rem 0.6rem; display: flex; align-items: center; justify-content: space-between; border: 1px dashed var(--primary); background: rgba(99, 102, 241, 0.08);">
                 <span>🧮 <strong>Calcular por Embalagem / Rendimento</strong> (ex: balde 10L, caixa)</span>
                 <span id="pkg-calc-arrow">▼</span>
               </button>
@@ -1519,11 +1656,10 @@
             <thead>
               <tr>
                 <th>Produto</th>
-                <th style="text-align: center;">Qtd</th>
-                <th style="text-align: right;">Custo Unit.</th>
-                <th style="text-align: right;">Custo Total</th>
-                <th style="text-align: right;">Total Vendas</th>
-                <th style="text-align: right;">Lucro Bruto</th>
+                <th style="text-align: center;">Qtd Vendida</th>
+                <th style="text-align: right;">Preço Unit.</th>
+                <th style="text-align: right;">Faturamento Gerado</th>
+                <th style="text-align: right;">% Participação</th>
               </tr>
             </thead>
             <tbody id="costs-products-tbody">
@@ -1538,17 +1674,27 @@
         <h2>🧾 Despesas Extras deste Evento</h2>
         <form id="expense-form" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.85rem;" onsubmit="handleCreateExpense(event)">
           <div style="flex: 2; min-width: 140px;">
-            <label for="expense-desc">Descrição da Despesa</label>
-            <input type="text" id="expense-desc" placeholder="Ex: Gelo, Copos, Carvão..." required style="width: 100%;" />
+            <label for="expense-desc">Descrição da Compra / Insumo</label>
+            <input type="text" id="expense-desc" placeholder="Ex: Balde Açaí 20L, Complementos, Copos..." required style="width: 100%;" />
+          </div>
+          <div style="flex: 1.2; min-width: 130px;">
+            <label for="expense-category">Categoria da Compra</label>
+            <select id="expense-category" style="width: 100%;">
+              <option value="Alimentos">🍓 Alimentos / Ingredientes</option>
+              <option value="Bebidas">🥤 Bebidas</option>
+              <option value="Descartáveis">📦 Descartáveis / Embalagens</option>
+              <option value="Estrutura">⚡ Estrutura / Gás / Outros</option>
+            </select>
           </div>
           <div style="flex: 1; min-width: 100px;">
-            <label for="expense-amount">Valor (R$)</label>
-            <input type="number" id="expense-amount" step="0.01" min="0.01" placeholder="Ex: 25.00" required style="width: 100%;" />
+            <label for="expense-amount">Valor Total Pago (R$)</label>
+            <input type="number" id="expense-amount" step="0.01" min="0.01" placeholder="Ex: 200.00" required style="width: 100%;" />
           </div>
           <div style="align-self: flex-end;">
-            <button type="submit" class="btn-primary" style="white-space: nowrap;">+ Adicionar</button>
+            <button type="submit" class="btn-primary" style="white-space: nowrap;">+ Adicionar Compra</button>
           </div>
         </form>
+        <div id="costs-categories-breakdown" style="display: flex; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.85rem;"></div>
 
         <div class="table-wrap">
           <table>
@@ -2364,6 +2510,49 @@
       await saveQuickPromo(null, false);
     }
 
+    
+    let ordersSearchQuery = '';
+    let ordersStatusFilter = 'all';
+
+    function onOrdersSearchChange(val) {
+      ordersSearchQuery = (val || '').trim().toLowerCase();
+      renderOrdersTable();
+    }
+
+    function setOrdersStatusFilter(filter) {
+      ordersStatusFilter = filter || 'all';
+      ['all', 'pago', 'pendente'].forEach((f) => {
+        const btn = document.getElementById(`chip-orders-${f}`);
+        if (btn) btn.classList.toggle('active', f === ordersStatusFilter);
+      });
+      renderOrdersTable();
+    }
+
+    async function handleToggleOrderStatus(orderId) {
+      const o = (cachedOrders || []).find((ord) => Number(ord.id) === Number(orderId));
+      if (!o) return;
+      const fin = enrichOrderFinancials(o);
+      const isCurrentlyPaid = fin.payment_status === 'pago' || fin.remaining_amount <= 0;
+      const nextLabel = isCurrentlyPaid ? 'PENDENTE' : 'TOTALMENTE PAGO';
+      const promptConfirm = isCurrentlyPaid
+        ? `Deseja alterar o Pedido #${o.id} de "${o.customer_name}" para PENDENTE (o cliente pagará depois)?`
+        : `Deseja marcar o Pedido #${o.id} de "${o.customer_name}" como PAGO (${fmtBRL(fin.total_amount)})?`;
+
+      if (!window.confirm(promptConfirm)) return;
+
+      try {
+        const updated = await DataService.toggleOrderPaymentStatus(orderId);
+        showToast(
+          updated.payment_status === 'pago'
+            ? `✅ Pedido #${orderId} de "${updated.customer_name}" marcado como PAGO!`
+            : `⚠️ Pedido #${orderId} de "${updated.customer_name}" alterado para PENDENTE!`
+        );
+        await loadDashboard();
+      } catch (err) {
+        showToast(err.message || 'Erro ao alterar status do pedido.');
+      }
+    }
+
     function editOrder(orderId) {
       const order = cachedOrders.find((o) => Number(o.id) === Number(orderId));
       if (!order) {
@@ -2461,7 +2650,7 @@
         return;
       }
 
-      ['events', 'orders', 'products', 'costs', 'forecast', 'users'].forEach((s) => {
+      ['events', 'orders', 'products', 'costs', 'reports', 'forecast', 'users'].forEach((s) => {
         const screenEl = document.getElementById(`screen-${s}`);
         const tabEl = document.getElementById(`tab-${s}`);
         if (screenEl) screenEl.classList.toggle('active', s === screenName);
@@ -2469,6 +2658,9 @@
       });
       if (screenName === 'costs') {
         renderCostsScreen();
+      }
+      if (screenName === 'reports') {
+        renderReportsScreen();
       }
       if (screenName === 'forecast') {
         renderForecastScreen();
@@ -3552,6 +3744,69 @@
         return prod || { id: pId };
       },
 
+            async toggleOrderPaymentStatus(orderId) {
+        const oId = Number(orderId);
+        const order = (cachedOrders || []).find((o) => Number(o.id) === oId);
+        const fin = order ? enrichOrderFinancials(order) : { total_amount: 0, payment_status: 'pago' };
+        const nextStatus = fin.payment_status === 'pago' ? 'pendente' : 'pago';
+        const nextPaid = nextStatus === 'pago' ? fin.total_amount : 0;
+
+        if (isTestEnv()) {
+          const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
+          const ord = (testDb.orders || []).find((o) => Number(o.id) === oId);
+          if (!ord) throw new Error('Pedido de teste não encontrado');
+          ord.payment_status = nextStatus;
+          ord.paid_amount = nextPaid;
+          saveTestDb(testDb);
+          return enrichOrderFinancials(ord);
+        }
+
+        const mode = await detectBackend();
+        if (mode === 'express') {
+          const clientId = getClientId();
+          const r = await fetch(`/orders/${oId}/toggle-status`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Client-Id': clientId
+            }
+          });
+          if (r.ok) {
+            const data = await r.json();
+            return enrichOrderFinancials(data);
+          }
+          // Fallback to PUT /orders/:id
+          const rPut = await fetch(`/orders/${oId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-Client-Id': clientId },
+            body: JSON.stringify({ payment_status: nextStatus, paid_amount: nextPaid, client_id: clientId })
+          });
+          const putData = await rPut.json();
+          if (!rPut.ok) throw new Error(putData.error || 'Erro ao alterar status');
+          return enrichOrderFinancials(putData);
+        }
+
+        if (mode === 'supabase') {
+          const { data, error } = await sbClient
+            .from('orders')
+            .update({ payment_status: nextStatus, paid_amount: nextPaid, paid_at: nextStatus === 'pago' ? new Date().toISOString() : null })
+            .eq('id', oId)
+            .select('*, order_items(*, products(name))')
+            .single();
+          if (error) throw new Error(error.message);
+          return enrichOrderFinancials(data);
+        }
+
+        const db = loadLocalDb();
+        const ord = db.orders.find((o) => Number(o.id) === oId);
+        if (ord) {
+          ord.payment_status = nextStatus;
+          ord.paid_amount = nextPaid;
+          saveLocalDb(db);
+        }
+        return enrichOrderFinancials(ord || { id: oId, payment_status: nextStatus, paid_amount: nextPaid });
+      },
+
       async updateOrder(orderId, { customer_name, payment_method, payment_status, paid_amount, items }) {
         const oId = Number(orderId);
         if (isTestEnv()) {
@@ -4111,13 +4366,13 @@
           .sort((a, b) => b.id - a.id);
       },
 
-      async createExpense({ event_id, description, amount }) {
+      async createExpense({ event_id, description, amount, category }) {
         const numAmount = Number(Number(amount).toFixed(2));
         if (isTestEnv()) {
           const testDb = loadTestDb() || initTestDbFromProduction(cachedCategories, cachedProducts);
           if (!testDb.event_expenses) testDb.event_expenses = [];
           const nextId = testDb.event_expenses.reduce((m, e) => Math.max(m, e.id), 0) + 1;
-          const exp = { id: nextId, event_id: Number(event_id), description: description.trim(), amount: numAmount, created_at: new Date().toISOString() };
+          const exp = { id: nextId, event_id: Number(event_id), description: description.trim(), amount: numAmount, category: category || 'Alimentos', created_at: new Date().toISOString() };
           testDb.event_expenses.push(exp);
           saveTestDb(testDb);
           return exp;
@@ -4127,7 +4382,7 @@
           const r = await fetch('/expenses', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event_id: Number(event_id), description: description.trim(), amount: numAmount })
+            body: JSON.stringify({ event_id: Number(event_id), description: description.trim(), amount: numAmount, category: category || 'Alimentos' })
           });
           const data = await r.json();
           if (!r.ok) throw new Error(data.error || 'Erro ao cadastrar despesa');
@@ -4647,6 +4902,89 @@
       switchScreen('orders');
     }
 
+    
+    let currentDashboardFilteredOrders = [];
+
+    function renderOrdersTable() {
+      const ordersTbody = document.getElementById('orders-tbody');
+      const countLabel = document.getElementById('orders-count-label');
+      if (!ordersTbody) return;
+
+      let list = (currentDashboardFilteredOrders || []).slice();
+
+      // Filtrar por status
+      if (ordersStatusFilter === 'pago') {
+        list = list.filter((o) => {
+          const fin = enrichOrderFinancials(o);
+          return fin.payment_status === 'pago' || fin.remaining_amount <= 0;
+        });
+      } else if (ordersStatusFilter === 'pendente') {
+        list = list.filter((o) => {
+          const fin = enrichOrderFinancials(o);
+          return fin.payment_status !== 'pago' && fin.remaining_amount > 0;
+        });
+      }
+
+      // Filtrar por busca
+      if (ordersSearchQuery) {
+        list = list.filter((o) => {
+          const name = String(o.customer_name || '').toLowerCase();
+          const id = String(o.id || '');
+          const seller = String(o.created_by_name || '').toLowerCase();
+          return name.includes(ordersSearchQuery) || id.includes(ordersSearchQuery) || seller.includes(ordersSearchQuery);
+        });
+      }
+
+      // Ordenar do mais recente para o mais antigo
+      list.sort((a, b) => Number(b.id) - Number(a.id));
+
+      if (countLabel) {
+        countLabel.textContent = `Exibindo ${list.length} de ${currentDashboardFilteredOrders.length} pedido(s)`;
+      }
+
+      ordersTbody.innerHTML = '';
+      if (list.length === 0) {
+        ordersTbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:1.5rem;">Nenhum pedido encontrado para o filtro selecionado.</td></tr>';
+        return;
+      }
+
+      list.forEach((o) => {
+        const fin = enrichOrderFinancials(o);
+        const isPaid = fin.payment_status === 'pago' || fin.remaining_amount <= 0;
+        const itemsDesc = (o.order_items || [])
+          .map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`)
+          .join(', ');
+
+        let statusHtml = '';
+        if (isPaid) {
+          statusHtml = '<span class="tag tag-pago">pago</span>';
+        } else if (fin.is_partial) {
+          statusHtml = `<span class="tag tag-parcial">parcial (faltam ${fmtBRL(fin.remaining_amount)})</span>`;
+        } else {
+          statusHtml = '<span class="tag tag-pendente">pendente</span>';
+        }
+
+        const toggleBtnHtml = isPaid
+          ? `<button type="button" class="btn-warning" onclick="handleToggleOrderStatus(${o.id})" title="Alterar para pendente (pagar depois)" style="padding: 0.22rem 0.45rem; font-size: 0.72rem; margin-right: 0.25rem;">⚠️ P/ Pendente</button>`
+          : `<button type="button" class="btn-success" onclick="handleToggleOrderStatus(${o.id})" title="Marcar como quitado" style="padding: 0.22rem 0.45rem; font-size: 0.72rem; margin-right: 0.25rem;">✅ P/ Pago</button>`;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>#${o.id}</td>
+          <td><strong>${o.customer_name}</strong></td>
+          <td><span style="font-size:0.75rem;color:var(--muted);">${o.created_by_name || '-'}</span></td>
+          <td style="font-size:0.76rem;color:var(--muted);">${itemsDesc || '-'}</td>
+          <td><strong>${fmtBRL(o.total_amount)}</strong></td>
+          <td>${statusHtml}</td>
+          <td style="text-align: center; white-space: nowrap;">
+            ${toggleBtnHtml}
+            <button type="button" class="btn-edit" onclick="editOrder(${o.id})" style="padding: 0.22rem 0.5rem; font-size: 0.74rem;">✏️ Editar</button>
+          </td>
+        `;
+        ordersTbody.appendChild(tr);
+      });
+    }
+
     async function loadDashboard() {
       try {
         const [categories, products, allOrders] = await Promise.all([
@@ -4993,39 +5331,8 @@
         }
 
         // Preencher Pedidos Registrados (Tela 1)
-        const ordersTbody = document.getElementById('orders-tbody');
-        ordersTbody.innerHTML = '';
-        if (filteredOrders.length === 0) {
-          ordersTbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido registrado neste evento ainda.</td></tr>';
-        } else {
-          filteredOrders.slice(0, 12).forEach((o) => {
-            const fin = enrichOrderFinancials(o);
-            const itemsDesc = (o.order_items || [])
-              .map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`)
-              .join(', ');
-            let statusHtml = '';
-            if (o.payment_status === 'pago' || fin.remaining_amount <= 0) {
-              statusHtml = '<span class="tag tag-pago">pago</span>';
-            } else if (fin.is_partial) {
-              statusHtml = `<span class="tag tag-parcial">parcial (faltam ${fmtBRL(fin.remaining_amount)})</span>`;
-            } else {
-              statusHtml = '<span class="tag tag-pendente">pendente</span>';
-            }
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td>#${o.id}</td>
-              <td>${o.customer_name}</td>
-              <td><span style="font-size:0.75rem;color:var(--muted);">${o.created_by_name || '-'}</span></td>
-              <td style="font-size:0.76rem;color:var(--muted);">${itemsDesc || '-'}</td>
-              <td>${fmtBRL(o.total_amount)}</td>
-              <td>${statusHtml}</td>
-              <td style="text-align: center; white-space: nowrap;">
-                <button type="button" class="btn-edit" onclick="editOrder(${o.id})" style="padding: 0.22rem 0.5rem; font-size: 0.74rem;">✏️ Editar</button>
-              </td>
-            `;
-            ordersTbody.appendChild(tr);
-          });
-        }
+        currentDashboardFilteredOrders = filteredOrders;
+        renderOrdersTable();
         // Atualizar catálogo rápido, prévia do carrinho e tela de custos
         applyRolePermissions();
         renderPosCatalog();
@@ -5033,6 +5340,389 @@
         renderCostsScreen();
       } catch (err) {
         showToast(err.message || 'Erro ao carregar dados');
+      }
+    }
+
+    
+    let reportsEventId = 'all';
+
+    function onReportsEventChange(val) {
+      reportsEventId = val;
+      renderReportsScreen();
+    }
+
+    async function renderReportsScreen() {
+      const repFilterEl = document.getElementById('reports-event-filter');
+      if (!repFilterEl) return;
+
+      if (!reportsEventId || (reportsEventId !== 'all' && !cachedEvents.some((e) => String(e.id) === String(reportsEventId)))) {
+        reportsEventId = selectedEventId || (cachedEvents[0] ? String(cachedEvents[0].id) : 'all');
+      }
+
+      repFilterEl.innerHTML = '';
+      cachedEvents.forEach((ev) => {
+        const opt = document.createElement('option');
+        opt.value = String(ev.id);
+        const st = ev.status === 'aberto' ? '🟢' : ev.status === 'agendado' ? '🟡' : '⚪';
+        opt.textContent = `${st} ${ev.name} (${fmtDateBR(ev.event_date)})`;
+        repFilterEl.appendChild(opt);
+      });
+      const allOpt = document.createElement('option');
+      allOpt.value = 'all';
+      allOpt.textContent = '📊 Todos os Eventos (Geral)';
+      repFilterEl.appendChild(allOpt);
+      repFilterEl.value = String(reportsEventId);
+
+      try {
+        const allOrders = await DataService.getOrders();
+        const targetOrders = reportsEventId === 'all'
+          ? allOrders
+          : allOrders.filter((o) => String(o.event_id || 1) === String(reportsEventId));
+
+        let totalSales = 0;
+        let totalPaid = 0;
+        let totalPending = 0;
+
+        const peopleMap = {};
+
+        targetOrders.forEach((o) => {
+          const fin = enrichOrderFinancials(o);
+          const rawName = (o.customer_name || 'Sem Nome').trim();
+          const key = rawName.toLowerCase();
+
+          totalSales += fin.total_amount;
+          totalPaid += fin.paid_amount;
+          totalPending += fin.remaining_amount;
+
+          if (!peopleMap[key]) {
+            peopleMap[key] = {
+              name: rawName,
+              totalBought: 0,
+              totalPaid: 0,
+              totalPending: 0,
+              orders: []
+            };
+          }
+
+          peopleMap[key].totalBought += fin.total_amount;
+          peopleMap[key].totalPaid += fin.paid_amount;
+          peopleMap[key].totalPending += fin.remaining_amount;
+
+          const itemsStr = (o.order_items || [])
+            .map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`)
+            .join(', ');
+
+          peopleMap[key].orders.push({
+            id: o.id,
+            total: fin.total_amount,
+            paid: fin.paid_amount,
+            pending: fin.remaining_amount,
+            method: o.payment_method,
+            status: fin.payment_status,
+            items: itemsStr
+          });
+        });
+
+        // Update Stat Cards
+        const repSalesEl = document.getElementById('rep-stat-sales');
+        if (repSalesEl) repSalesEl.textContent = fmtBRL(totalSales);
+        const repOrdersCountEl = document.getElementById('rep-stat-orders-count');
+        if (repOrdersCountEl) repOrdersCountEl.textContent = `${targetOrders.length} pedido(s) registrado(s)`;
+
+        const repPaidEl = document.getElementById('rep-stat-paid');
+        if (repPaidEl) repPaidEl.textContent = fmtBRL(totalPaid);
+        const repPaidPctEl = document.getElementById('rep-stat-paid-pct');
+        const paidPct = totalSales > 0 ? ((totalPaid / totalSales) * 100).toFixed(1) : 0;
+        if (repPaidPctEl) repPaidPctEl.textContent = `${paidPct}% arrecadado`;
+
+        const repPendingEl = document.getElementById('rep-stat-pending');
+        if (repPendingEl) repPendingEl.textContent = fmtBRL(totalPending);
+
+        const peopleList = Object.values(peopleMap);
+        const pendingPeople = peopleList.filter((p) => p.totalPending > 0.001).sort((a, b) => b.totalPending - a.totalPending);
+        const repPendingCountEl = document.getElementById('rep-stat-pending-count');
+        if (repPendingCountEl) repPendingCountEl.textContent = `${pendingPeople.length} pessoa(s) com pendência`;
+
+        const repBuyersEl = document.getElementById('rep-stat-buyers');
+        if (repBuyersEl) repBuyersEl.textContent = `${peopleList.length} pessoa(s)`;
+        const repAvgTicketEl = document.getElementById('rep-stat-avg-ticket');
+        const avgTicket = peopleList.length > 0 ? totalSales / peopleList.length : 0;
+        if (repAvgTicketEl) repAvgTicketEl.textContent = `Ticket Médio: ${fmtBRL(avgTicket)}`;
+
+        // Render Tabela de Pendências por Cliente
+        const pendingBadge = document.getElementById('rep-pending-badge');
+        if (pendingBadge) pendingBadge.textContent = `${pendingPeople.length} pendência(s) • Total ${fmtBRL(totalPending)}`;
+
+        const pendingTbody = document.getElementById('rep-pending-tbody');
+        if (pendingTbody) {
+          pendingTbody.innerHTML = '';
+          if (pendingPeople.length === 0) {
+            pendingTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--success);padding:1.5rem;font-weight:700;">🎉 Parabéns! Não há nenhuma pendência em aberto para este evento!</td></tr>';
+          } else {
+            pendingPeople.forEach((p) => {
+              const pendingOrders = p.orders.filter((o) => o.pending > 0.001);
+              const itemsListStr = pendingOrders.map((o) => o.items).filter(Boolean).join(' | ');
+
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td><strong>${p.name}</strong></td>
+                <td style="text-align:right;">${fmtBRL(p.totalBought)}</td>
+                <td style="text-align:right;color:var(--success);">${fmtBRL(p.totalPaid)}</td>
+                <td style="text-align:right;color:var(--warning);font-weight:700;font-size:0.95rem;">${fmtBRL(p.totalPending)}</td>
+                <td style="font-size:0.75rem;color:var(--muted);max-width:280px;">${itemsListStr || '-'}</td>
+                <td style="text-align:center;white-space:nowrap;">
+                  <button type="button" class="btn-primary" onclick="copyWhatsappBilling('${p.name.replace(/'/g, "\\'")}', ${p.totalPending}, ${p.totalBought}, ${p.totalPaid}, '${itemsListStr.replace(/'/g, "\\'")}')" style="padding:0.26rem 0.55rem;font-size:0.74rem;display:inline-flex;align-items:center;gap:0.3rem;">
+                    <span>📱 Copiar WhatsApp</span>
+                  </button>
+                </td>
+              `;
+              pendingTbody.appendChild(tr);
+            });
+          }
+        }
+
+        // Render Tabela Geral de Pedidos Realizados
+        const repOrdersTotalBadge = document.getElementById('rep-orders-total-badge');
+        if (repOrdersTotalBadge) repOrdersTotalBadge.textContent = `${targetOrders.length} pedidos realizados`;
+
+        const ordersTbody = document.getElementById('rep-orders-tbody');
+        if (ordersTbody) {
+          ordersTbody.innerHTML = '';
+          if (targetOrders.length === 0) {
+            ordersTbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1.5rem;">Nenhum pedido encontrado.</td></tr>';
+          } else {
+            const sorted = targetOrders.slice().sort((a, b) => Number(b.id) - Number(a.id));
+            sorted.forEach((o) => {
+              const fin = enrichOrderFinancials(o);
+              const isPaid = fin.payment_status === 'pago' || fin.remaining_amount <= 0;
+              const itemsStr = (o.order_items || []).map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`).join(', ');
+              const timeStr = o.created_at ? new Date(o.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-';
+
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>#${o.id}</td>
+                <td style="font-size:0.75rem;color:var(--muted);">${timeStr}</td>
+                <td><strong>${o.customer_name}</strong></td>
+                <td style="font-size:0.75rem;color:var(--muted);">${itemsStr || '-'}</td>
+                <td>${fmtBRL(fin.total_amount)}</td>
+                <td style="color:${isPaid ? 'var(--success)' : 'var(--warning)'};font-weight:600;">${fmtBRL(fin.paid_amount)}</td>
+                <td>${isPaid ? '<span class="tag tag-pago">pago</span>' : '<span class="tag tag-pendente">pendente</span>'}</td>
+                <td>${(o.payment_method || '').toUpperCase()}</td>
+                <td style="font-size:0.75rem;color:var(--muted);">${o.created_by_name || '-'}</td>
+              `;
+              ordersTbody.appendChild(tr);
+            });
+          }
+        }
+      } catch (err) {
+        showToast(err.message || 'Erro ao carregar relatórios.');
+      }
+    }
+
+    function copyWhatsappBilling(name, pending, total, paid, items) {
+      const pendingStr = fmtBRL(pending);
+      const totalStr = fmtBRL(total);
+      const paidStr = fmtBRL(paid);
+
+      let msg = `Olá ${name}! Tudo bem? 😊\n`;
+      msg += `Aqui é da equipe do Social de Jovens.\n\n`;
+      msg += `Passando para enviar o resumo do seu consumo no evento:\n`;
+      if (items && items !== '-') {
+        msg += `🍔 Itens: ${items}\n`;
+      }
+      msg += `💰 Total consumido: ${totalStr}\n`;
+      if (paid > 0) {
+        msg += `✅ Já pago: ${paidStr}\n`;
+      }
+      msg += `⚠️ Saldo restante a pagar: *${pendingStr}*\n\n`;
+      msg += `Se puder fazer o PIX quando puder, nos ajuda muito com o fechamento do caixa!\n`;
+      msg += `Muito obrigado pela sua presença e que Deus abençoe! 🙏`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(msg).then(() => {
+          showToast(`Mensagem de cobrança para "${name}" copiada! Basta colar no WhatsApp.`);
+        }).catch(() => {
+          window.prompt('Copie a mensagem de cobrança abaixo:', msg);
+        });
+      } else {
+        window.prompt('Copie a mensagem de cobrança abaixo:', msg);
+      }
+    }
+
+    async function exportReportsToExcel() {
+      showToast('Gerando planilha Excel (.xlsx)...');
+      try {
+        const allOrders = await DataService.getOrders();
+        const targetOrders = reportsEventId === 'all'
+          ? allOrders
+          : allOrders.filter((o) => String(o.event_id || 1) === String(reportsEventId));
+
+        const ev = cachedEvents.find((e) => String(e.id) === String(reportsEventId));
+        const evName = ev ? ev.name : 'Geral';
+
+        // 1. Agrupar Pessoas
+        const peopleMap = {};
+        const productStats = {};
+
+        targetOrders.forEach((o) => {
+          const fin = enrichOrderFinancials(o);
+          const rawName = (o.customer_name || 'Sem Nome').trim();
+          const key = rawName.toLowerCase();
+
+          if (!peopleMap[key]) {
+            peopleMap[key] = {
+              name: rawName,
+              totalBought: 0,
+              totalPaid: 0,
+              totalPending: 0,
+              ordersCount: 0,
+              methods: new Set(),
+              items: []
+            };
+          }
+
+          peopleMap[key].totalBought += fin.total_amount;
+          peopleMap[key].totalPaid += fin.paid_amount;
+          peopleMap[key].totalPending += fin.remaining_amount;
+          peopleMap[key].ordersCount += 1;
+          if (o.payment_method) peopleMap[key].methods.add(String(o.payment_method).toUpperCase());
+
+          (o.order_items || []).forEach((i) => {
+            const pName = i.products ? i.products.name : 'Produto';
+            const qty = Number(i.quantity || 1);
+            peopleMap[key].items.push(`${qty}x ${pName}`);
+
+            if (!productStats[pName]) productStats[pName] = { qty: 0, revenue: 0 };
+            productStats[pName].qty += qty;
+            productStats[pName].revenue += qty * Number(i.unit_price || 0);
+          });
+        });
+
+        const allPeople = Object.values(peopleMap);
+        const pendingPeople = allPeople.filter((p) => p.totalPending > 0.001).sort((a, b) => b.totalPending - a.totalPending);
+
+        // Se SheetJS (XLSX) estiver disponível no navegador
+        if (typeof XLSX !== 'undefined') {
+          const wb = XLSX.utils.book_new();
+
+          // Aba 1: Pendências
+          const sheet1Data = [
+            [`RELATÓRIO DE PENDÊNCIAS - ${evName.toUpperCase()}`],
+            [],
+            ['Cliente', 'Total Comprado (R$)', 'Total Pago (R$)', 'FALTA PAGAR (R$)', 'Forma Prevista', 'Qtd Pedidos', 'Itens Consumidos nas Pendências']
+          ];
+          let sBought = 0, sPaid = 0, sPending = 0;
+          pendingPeople.forEach((p) => {
+            sBought += p.totalBought;
+            sPaid += p.totalPaid;
+            sPending += p.totalPending;
+            sheet1Data.push([
+              p.name,
+              p.totalBought,
+              p.totalPaid,
+              p.totalPending,
+              Array.from(p.methods).join(', '),
+              p.ordersCount,
+              p.items.join(', ')
+            ]);
+          });
+          sheet1Data.push([]);
+          sheet1Data.push(['TOTAL PENDENTE', sBought, sPaid, sPending, '', pendingPeople.length + ' pessoas', '']);
+
+          const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
+          ws1['!cols'] = [{ wch: 22 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 45 }];
+          XLSX.utils.book_append_sheet(wb, ws1, 'Pendências');
+
+          // Aba 2: Todos os Pedidos
+          const sheet2Data = [
+            [`RELAÇÃO DE TODOS OS PEDIDOS - ${evName.toUpperCase()}`],
+            [],
+            ['Nº Pedido', 'Horário', 'Cliente', 'Itens do Pedido', 'Valor Total (R$)', 'Valor Pago (R$)', 'Saldo Pendente (R$)', 'Status', 'Forma', 'Operador']
+          ];
+          targetOrders.slice().sort((a, b) => Number(a.id) - Number(b.id)).forEach((o) => {
+            const fin = enrichOrderFinancials(o);
+            const timeStr = o.created_at ? new Date(o.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+            const itemsStr = (o.order_items || []).map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`).join(', ');
+            sheet2Data.push([
+              '#' + o.id,
+              timeStr,
+              o.customer_name,
+              itemsStr,
+              fin.total_amount,
+              fin.paid_amount,
+              fin.remaining_amount,
+              fin.payment_status === 'pago' ? 'PAGO' : 'PENDENTE',
+              (o.payment_method || '').toUpperCase(),
+              o.created_by_name || 'Caixa'
+            ]);
+          });
+          const ws2 = XLSX.utils.aoa_to_sheet(sheet2Data);
+          ws2['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 22 }, { wch: 40 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 12 }, { wch: 14 }, { wch: 14 }];
+          XLSX.utils.book_append_sheet(wb, ws2, 'Todos os Pedidos');
+
+          // Aba 3: Vendas por Produto
+          const sheet3Data = [
+            [`VENDAS POR PRODUTO - ${evName.toUpperCase()}`],
+            [],
+            ['Produto', 'Quantidade Vendida', 'Faturamento Total (R$)']
+          ];
+          Object.keys(productStats).sort((a, b) => productStats[b].qty - productStats[a].qty).forEach((pName) => {
+            sheet3Data.push([pName, productStats[pName].qty, productStats[pName].revenue]);
+          });
+          const ws3 = XLSX.utils.aoa_to_sheet(sheet3Data);
+          ws3['!cols'] = [{ wch: 28 }, { wch: 20 }, { wch: 22 }];
+          XLSX.utils.book_append_sheet(wb, ws3, 'Por Produto');
+
+          const fileName = `Relatorio_Social_${evName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+          XLSX.writeFile(wb, fileName);
+          showToast(`Planilha "${fileName}" baixada com sucesso!`);
+        } else {
+          // Fallback para CSV
+          exportReportsToCSV();
+        }
+      } catch (err) {
+        showToast(err.message || 'Erro ao exportar planilha Excel.');
+      }
+    }
+
+    async function exportReportsToCSV() {
+      showToast('Gerando arquivo CSV...');
+      try {
+        const allOrders = await DataService.getOrders();
+        const targetOrders = reportsEventId === 'all'
+          ? allOrders
+          : allOrders.filter((o) => String(o.event_id || 1) === String(reportsEventId));
+
+        const ev = cachedEvents.find((e) => String(e.id) === String(reportsEventId));
+        const evName = ev ? ev.name : 'Geral';
+
+        let csv = '\uFEFF'; // UTF-8 BOM
+        csv += 'Nº Pedido;Horário;Cliente;Itens;Valor Total (R$);Valor Pago (R$);Saldo a Pagar (R$);Status;Forma;Operador\r\n';
+
+        let totV = 0, totP = 0, totPend = 0;
+        targetOrders.forEach((o) => {
+          const fin = enrichOrderFinancials(o);
+          totV += fin.total_amount;
+          totP += fin.paid_amount;
+          totPend += fin.remaining_amount;
+          const timeStr = o.created_at ? new Date(o.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+          const itemsStr = (o.order_items || []).map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`).join(', ').replace(/;/g, ',');
+          csv += `"#${o.id}";"${timeStr}";"${o.customer_name}";"${itemsStr}";"${fin.total_amount.toFixed(2).replace('.', ',')}";"${fin.paid_amount.toFixed(2).replace('.', ',')}";"${fin.remaining_amount.toFixed(2).replace('.', ',')}";"${fin.payment_status.toUpperCase()}";"${(o.payment_method || '').toUpperCase()}";"${o.created_by_name || 'Caixa'}"\r\n`;
+        });
+        csv += `\r\n"TOTAL";"";"";"";"${totV.toFixed(2).replace('.', ',')}";"${totP.toFixed(2).replace('.', ',')}";"${totPend.toFixed(2).replace('.', ',')}";"";"";""\r\n`;
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Relatorio_Social_${evName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Arquivo CSV baixado com sucesso!');
+      } catch (err) {
+        showToast(err.message || 'Erro ao exportar CSV.');
       }
     }
 
@@ -5179,41 +5869,8 @@
         }
 
         // 3. Tabela de Pedidos Registrados (#orders-tbody)
-        const ordersTbody = document.getElementById('orders-tbody');
-        if (ordersTbody) {
-          ordersTbody.innerHTML = '';
-          if (filteredOrders.length === 0) {
-            ordersTbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:1rem;">Nenhum pedido registrado neste evento ainda.</td></tr>';
-          } else {
-            filteredOrders.slice(0, 12).forEach((o) => {
-              const fin = enrichOrderFinancials(o);
-              const itemsDesc = (o.order_items || [])
-                .map((i) => `${i.quantity}x ${i.products ? i.products.name : 'Item'}`)
-                .join(', ');
-              let statusHtml = '';
-              if (o.payment_status === 'pago' || fin.remaining_amount <= 0) {
-                statusHtml = '<span class="tag tag-pago">pago</span>';
-              } else if (fin.is_partial) {
-                statusHtml = `<span class="tag tag-parcial">parcial (faltam ${fmtBRL(fin.remaining_amount)})</span>`;
-              } else {
-                statusHtml = '<span class="tag tag-pendente">pendente</span>';
-              }
-              const tr = document.createElement('tr');
-              tr.innerHTML = `
-                <td>#${o.id}</td>
-                <td>${o.customer_name}</td>
-                <td><span style="font-size:0.75rem;color:var(--muted);">${o.created_by_name || '-'}</span></td>
-                <td style="font-size:0.76rem;color:var(--muted);">${itemsDesc || '-'}</td>
-                <td>${fmtBRL(o.total_amount)}</td>
-                <td>${statusHtml}</td>
-                <td style="text-align: center; white-space: nowrap;">
-                  <button type="button" class="btn-edit" onclick="editOrder(${o.id})" style="padding: 0.22rem 0.5rem; font-size: 0.74rem;">✏️ Editar</button>
-                </td>
-              `;
-              ordersTbody.appendChild(tr);
-            });
-          }
-        }
+        currentDashboardFilteredOrders = filteredOrders;
+        renderOrdersTable();
 
         // 4. Alerta de Pedidos de Outros Eventos
         const otherPending = selectedEventId === 'all'
@@ -6231,42 +6888,62 @@
         cashProfitEl.style.color = cashProfit >= 0 ? '#38bdf8' : '#f87171';
         document.getElementById('cost-stat-pending-desc').textContent = `${fmtBRL(totalPendingInOrders)} pendente a receber`;
 
-        // Renderizar Tabela de Detalhamento dos Produtos Vendidos
+        // Renderizar Tabela de Participação dos Produtos Vendidos
         const prodTbody = document.getElementById('costs-products-tbody');
         prodTbody.innerHTML = '';
         const itemsList = Object.values(productStats).sort((a, b) => b.total_sales - a.total_sales);
 
         if (itemsList.length === 0) {
-          prodTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1.5rem;">Nenhum item vendido neste evento ainda.</td></tr>';
+          prodTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1.5rem;">Nenhum item vendido neste evento ainda.</td></tr>';
         } else {
           itemsList.forEach((item) => {
-            const itemGrossProfit = Number((item.total_sales - item.total_cost).toFixed(2));
+            const pctPart = totalSales > 0 ? ((item.total_sales / totalSales) * 100).toFixed(1) : 0;
+            const unitPrice = item.quantity > 0 ? (item.total_sales / item.quantity) : 0;
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td><strong>${item.name}</strong></td>
-              <td style="text-align:center;">${item.quantity}</td>
-              <td style="text-align:right;">${fmtBRL(item.cost_price)}</td>
-              <td style="text-align:right;color:#f87171;">${fmtBRL(item.total_cost)}</td>
-              <td style="text-align:right;color:var(--primary);font-weight:600;">${fmtBRL(item.total_sales)}</td>
-              <td style="text-align:right;color:${itemGrossProfit >= 0 ? 'var(--success)' : '#f87171'};font-weight:700;">${fmtBRL(itemGrossProfit)}</td>
+              <td style="text-align:center;"><strong>${item.quantity}</strong> un</td>
+              <td style="text-align:right;">${fmtBRL(unitPrice)}</td>
+              <td style="text-align:right;color:var(--primary);font-weight:700;">${fmtBRL(item.total_sales)}</td>
+              <td style="text-align:right;color:var(--success);font-weight:700;">${pctPart}%</td>
             `;
             prodTbody.appendChild(tr);
           });
         }
 
-        // Renderizar Tabela de Despesas Extras
+        // Breakdown por Categoria de Compra
+        const breakdownEl = document.getElementById('costs-categories-breakdown');
+        if (breakdownEl) {
+          const byCat = {};
+          (expenses || []).forEach((e) => {
+            const c = e.category || 'Alimentos';
+            byCat[c] = (byCat[c] || 0) + Number(e.amount || 0);
+          });
+          const catIcons = { Alimentos: '🍓', Bebidas: '🥤', Descartáveis: '📦', Estrutura: '⚡', Outros: '🧾' };
+          const badges = Object.entries(byCat).map(([cat, val]) => {
+            const icon = catIcons[cat] || '🏷️';
+            return `<span class="tag" style="background:var(--surface);border:1px solid var(--border);padding:0.25rem 0.55rem;font-size:0.75rem;">${icon} ${cat}: <strong style="color:var(--text);margin-left:0.2rem;">${fmtBRL(val)}</strong></span>`;
+          });
+          breakdownEl.innerHTML = badges.length ? badges.join('') : '<small style="color:var(--muted);">Nenhuma compra lançada ainda.</small>';
+        }
+
+        // Renderizar Tabela de Compras / Despesas
         const expTbody = document.getElementById('expenses-tbody');
         expTbody.innerHTML = '';
         if (!expenses || expenses.length === 0) {
-          expTbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:1rem;">Nenhuma despesa extra registrada.</td></tr>';
+          expTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem;">Nenhuma compra registrada para este evento.</td></tr>';
         } else {
+          const catIcons = { Alimentos: '🍓', Bebidas: '🥤', Descartáveis: '📦', Estrutura: '⚡', Outros: '🧾' };
           expenses.forEach((exp) => {
+            const cat = exp.category || 'Alimentos';
+            const icon = catIcons[cat] || '🏷️';
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td><strong>${exp.description}</strong></td>
-              <td style="text-align:right;color:#fbbf24;font-weight:600;">${fmtBRL(exp.amount)}</td>
+              <td><span class="tag" style="font-size:0.72rem;background:var(--surface2);">${icon} ${cat}</span></td>
+              <td style="text-align:right;color:#fbbf24;font-weight:700;">${fmtBRL(exp.amount)}</td>
               <td style="text-align:center;">
-                <button type="button" class="btn-danger" onclick="handleDeleteExpense(${exp.id})" title="Excluir despesa">✕</button>
+                <button type="button" class="btn-danger" onclick="handleDeleteExpense(${exp.id})" title="Excluir compra">✕</button>
               </td>
             `;
             expTbody.appendChild(tr);
@@ -6280,12 +6957,14 @@
     async function handleCreateExpense(e) {
       e.preventDefault();
       const descInput = document.getElementById('expense-desc');
+      const catInput = document.getElementById('expense-category');
       const amountInput = document.getElementById('expense-amount');
       const desc = descInput.value.trim();
+      const cat = catInput ? catInput.value : 'Alimentos';
       const amount = Number(amountInput.value);
 
       if (!desc || Number.isNaN(amount) || amount <= 0) {
-        showToast('Informe uma descrição e um valor válido para a despesa.');
+        showToast('Informe uma descrição e um valor válido para a compra.');
         return;
       }
 
@@ -6297,11 +6976,12 @@
         await DataService.createExpense({
           event_id: Number(targetEvId),
           description: desc,
-          amount
+          amount,
+          category: cat
         });
         descInput.value = '';
         amountInput.value = '';
-        showToast('Despesa adicionada com sucesso!');
+        showToast(`Compra de "${desc}" adicionada com sucesso!`);
         await renderCostsScreen();
       } catch (err) {
         showToast(err.message);
@@ -6663,6 +7343,7 @@
       const tabOrders = document.getElementById('tab-orders');
       const tabProducts = document.getElementById('tab-products');
       const tabCosts = document.getElementById('tab-costs');
+      const tabReports = document.getElementById('tab-reports');
       const tabForecast = document.getElementById('tab-forecast');
       const tabUsers = document.getElementById('tab-users');
       const btnEnvToggle = document.getElementById('btn-env-toggle');
@@ -6673,6 +7354,7 @@
         if (tabOrders) tabOrders.style.display = 'inline-flex';
         if (tabProducts) tabProducts.style.display = 'none';
         if (tabCosts) tabCosts.style.display = 'none';
+        if (tabReports) tabReports.style.display = 'none';
         if (tabForecast) tabForecast.style.display = 'none';
         if (tabUsers) tabUsers.style.display = 'none';
         if (btnEnvToggle) btnEnvToggle.style.display = 'none';
@@ -6701,6 +7383,7 @@
         if (tabOrders) tabOrders.style.display = 'inline-flex';
         if (tabProducts) tabProducts.style.display = 'inline-flex';
         if (tabCosts) tabCosts.style.display = 'inline-flex';
+        if (tabReports) tabReports.style.display = 'inline-flex';
         if (tabForecast) tabForecast.style.display = 'inline-flex';
         if (tabUsers) tabUsers.style.display = 'inline-flex';
         if (btnEnvToggle) btnEnvToggle.style.display = 'inline-flex';
@@ -7007,7 +7690,7 @@
     let deferredInstallPrompt = null;
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=12').then((reg) => {
+        navigator.serviceWorker.register('./sw.js?v=13').then((reg) => {
           reg.update();
         }).catch(() => {});
       });

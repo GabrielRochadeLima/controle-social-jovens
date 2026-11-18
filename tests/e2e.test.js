@@ -939,6 +939,72 @@ describe('Suíte E2E - Controle Social Jovens (Frente de Caixa, Estoque e Fecham
 
     console.log('✔ [Teste 11] Alteração de pedido e reconciliação automática de estoque validadas com sucesso!');
   });
+
+  test('Teste 12: Alternância rápida de status de pagamento (PATCH /orders/:id/toggle-status)', async () => {
+    // 12.1 Criar pedido inicialmente pago
+    const orderRes = await apiRequest('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        customer_name: 'Teste Troca Status',
+        payment_method: 'pix',
+        payment_status: 'pago',
+        items: [{ product_id: 1, quantity: 1 }]
+      })
+    });
+    assert.equal(orderRes.status, 201);
+    const orderId = orderRes.body.id;
+    assert.equal(orderRes.body.payment_status, 'pago');
+    assert.equal(orderRes.body.paid_amount, 6);
+
+    // 12.2 Alternar para pendente via PATCH /orders/:id/toggle-status
+    const toggleToPending = await apiRequest(`/orders/${orderId}/toggle-status`, {
+      method: 'PATCH'
+    });
+    assert.equal(toggleToPending.status, 200);
+    assert.equal(toggleToPending.body.payment_status, 'pendente');
+    assert.equal(toggleToPending.body.paid_amount, 0);
+    assert.equal(toggleToPending.body.remaining_amount, 6);
+
+    // 12.3 Alternar de volta para pago
+    const toggleToPaid = await apiRequest(`/orders/${orderId}/toggle-status`, {
+      method: 'PATCH'
+    });
+    assert.equal(toggleToPaid.status, 200);
+    assert.equal(toggleToPaid.body.payment_status, 'pago');
+    assert.equal(toggleToPaid.body.paid_amount, 6);
+    assert.equal(toggleToPaid.body.remaining_amount, 0);
+
+    // Cleanup
+    await apiRequest(`/orders/${orderId}`, { method: 'DELETE' });
+    console.log('✔ [Teste 12] Alternância rápida de status de pagamento validada com sucesso!');
+  });
+
+  test('Teste 13: Compras/Despesas categorizadas do evento (/expenses com category)', async () => {
+    // 13.1 Criar despesa com categoria
+    const expRes = await apiRequest('/expenses', {
+      method: 'POST',
+      body: JSON.stringify({
+        event_id: 1,
+        description: 'Balde Açaí 20L',
+        amount: 200,
+        category: 'Alimentos'
+      })
+    });
+    assert.equal(expRes.status, 201);
+    assert.equal(expRes.body.description, 'Balde Açaí 20L');
+    assert.equal(expRes.body.amount, 200);
+    assert.equal(expRes.body.category, 'Alimentos');
+
+    // 13.2 Listar despesas
+    const listRes = await apiRequest('/expenses?event_id=1');
+    assert.equal(listRes.status, 200);
+    const found = listRes.body.find((e) => e.id === expRes.body.id);
+    assert.ok(found);
+
+    // Cleanup
+    await apiRequest(`/expenses/${expRes.body.id}`, { method: 'DELETE' });
+    console.log('✔ [Teste 13] Compras/Despesas categorizadas validadas com sucesso!');
+  });
 });
 
 // Integração da Suíte Real-Time (Milestone 3)
