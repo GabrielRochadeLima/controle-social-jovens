@@ -1340,7 +1340,8 @@
         </div>
       </div>
     </div>
-  
+  </main>
+
   <!-- ====================================================================== -->
   <!-- TELA: CENTRAL DE RELATÓRIOS (VENDAS, PENDÊNCIAS E EXPORTAÇÃO EXCEL)   -->
   <!-- ====================================================================== -->
@@ -1458,8 +1459,6 @@
       </div>
     </div>
   </section>
-
-  </main>
 
   <!-- ====================================================================== -->
   <!-- TELA 2: CADASTRO/EDIÇÃO DE PRODUTOS, CATEGORIAS E ESTOQUE              -->
@@ -2075,7 +2074,7 @@
   <div id="toast"></div>
 
   <script>
-    const SCHEMA_NAME = 'controle-social-jovens';
+    const SCHEMA_NAME = '<%= schema %>';
     const STORAGE_KEY = 'csj_db_v1';
     const EVENTS_BRIDGE_KEY = 'csj_events_bridge_v1';
     const TEST_STORAGE_KEY = 'csj_test_sandbox_v1';
@@ -3479,7 +3478,14 @@
           while (result.error && optionalCols.some((col) => String(result.error.message || '').includes(col))) {
             const missingCol = optionalCols.find((col) => String(result.error.message || '').includes(col));
             if (missingCol && missingCol in payload) {
-              delete payload[missingCol];
+              if (missingCol.startsWith('package_') || missingCol === 'unit') {
+                delete payload.package_cost;
+                delete payload.package_yield;
+                delete payload.package_name;
+                delete payload.unit;
+              } else {
+                delete payload[missingCol];
+              }
               result = await sbClient.from('products').insert([payload]).select().single();
             } else {
               break;
@@ -3581,7 +3587,14 @@
           while (result.error && optionalCols.some((col) => String(result.error.message || '').includes(col))) {
             const missingCol = optionalCols.find((col) => String(result.error.message || '').includes(col));
             if (missingCol && missingCol in payload) {
-              delete payload[missingCol];
+              if (missingCol.startsWith('package_') || missingCol === 'unit') {
+                delete payload.package_cost;
+                delete payload.package_yield;
+                delete payload.package_name;
+                delete payload.unit;
+              } else {
+                delete payload[missingCol];
+              }
               result = await sbClient
                 .from('products')
                 .update(payload)
@@ -5462,16 +5475,18 @@
             pendingPeople.forEach((p) => {
               const pendingOrders = p.orders.filter((o) => o.pending > 0.001);
               const itemsListStr = pendingOrders.map((o) => o.items).filter(Boolean).join(' | ');
+              const safeName = String(p.name || 'Cliente').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+              const safeItems = String(itemsListStr || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\r?\n/g, ' ');
 
               const tr = document.createElement('tr');
               tr.innerHTML = `
-                <td><strong>${p.name}</strong></td>
+                <td><strong>${p.name || 'Sem Nome'}</strong></td>
                 <td style="text-align:right;">${fmtBRL(p.totalBought)}</td>
                 <td style="text-align:right;color:var(--success);">${fmtBRL(p.totalPaid)}</td>
                 <td style="text-align:right;color:var(--warning);font-weight:700;font-size:0.95rem;">${fmtBRL(p.totalPending)}</td>
                 <td style="font-size:0.75rem;color:var(--muted);max-width:280px;">${itemsListStr || '-'}</td>
                 <td style="text-align:center;white-space:nowrap;">
-                  <button type="button" class="btn-primary" onclick="copyWhatsappBilling('${p.name.replace(/'/g, "\\'")}', ${p.totalPending}, ${p.totalBought}, ${p.totalPaid}, '${itemsListStr.replace(/'/g, "\\'")}')" style="padding:0.26rem 0.55rem;font-size:0.74rem;display:inline-flex;align-items:center;gap:0.3rem;">
+                  <button type="button" class="btn-primary" onclick="copyWhatsappBilling('${safeName}', ${p.totalPending}, ${p.totalBought}, ${p.totalPaid}, '${safeItems}')" style="padding:0.26rem 0.55rem;font-size:0.74rem;display:inline-flex;align-items:center;gap:0.3rem;">
                     <span>📱 Copiar WhatsApp</span>
                   </button>
                 </td>
@@ -5502,7 +5517,7 @@
               tr.innerHTML = `
                 <td>#${o.id}</td>
                 <td style="font-size:0.75rem;color:var(--muted);">${timeStr}</td>
-                <td><strong>${o.customer_name}</strong></td>
+                <td><strong>${o.customer_name || 'Sem Nome'}</strong></td>
                 <td style="font-size:0.75rem;color:var(--muted);">${itemsStr || '-'}</td>
                 <td>${fmtBRL(fin.total_amount)}</td>
                 <td style="color:${isPaid ? 'var(--success)' : 'var(--warning)'};font-weight:600;">${fmtBRL(fin.paid_amount)}</td>
@@ -5853,7 +5868,7 @@
                 : `<div class="text-warning"><strong>${fmtBRL(o.remaining_amount)}</strong></div>`;
               tr.innerHTML = `
                 <td>#${o.id}</td>
-                <td><strong>${o.customer_name}</strong></td>
+                <td><strong>${o.customer_name || 'Sem Nome'}</strong></td>
                 <td>${(o.payment_method || '').toUpperCase()}</td>
                 <td>${valHtml}</td>
                 <td>
@@ -7369,6 +7384,7 @@
         if (tabOrders) tabOrders.style.display = 'inline-flex';
         if (tabProducts) tabProducts.style.display = 'inline-flex';
         if (tabCosts) tabCosts.style.display = 'none';
+        if (tabReports) tabReports.style.display = 'inline-flex';
         if (tabForecast) tabForecast.style.display = 'none';
         if (tabUsers) tabUsers.style.display = 'none';
         if (btnEnvToggle) btnEnvToggle.style.display = 'none';
@@ -7690,7 +7706,7 @@
     let deferredInstallPrompt = null;
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=13').then((reg) => {
+        navigator.serviceWorker.register('./sw.js?v=14').then((reg) => {
           reg.update();
         }).catch(() => {});
       });
