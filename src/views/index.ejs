@@ -1738,6 +1738,92 @@
       </div>
     </div>
 
+    <!-- ====================================================================== -->
+    <!-- CARD: ASSISTENTE INTELIGENTE DE PREVISÃO (BASEADO EM HISTÓRICO)       -->
+    <!-- ====================================================================== -->
+    <div class="card" style="margin-bottom: 0.85rem; border: 1.5px solid rgba(99, 102, 241, 0.4); background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.9));">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.85rem; border-bottom: 1px solid var(--border); padding-bottom: 0.65rem;">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <span style="font-size: 1.45rem;">🧠</span>
+          <div>
+            <h3 style="margin: 0; font-size: 1.02rem; color: #818cf8; font-weight: 700;">Assistente Inteligente de Previsão de Compras</h3>
+            <small style="color: var(--muted);">Calcule sugestões automáticas de compras, faturamento e lucro baseando-se no consumo real de um evento anterior.</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controles de Simulação: Evento Modelo e Público Esperado -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem; margin-bottom: 1rem;">
+        <div>
+          <label for="ai-ref-event-select" style="font-size: 0.8rem; font-weight: 600; color: var(--text);">1. Escolha o Evento Modelo (Histórico):</label>
+          <select id="ai-ref-event-select" onchange="recalculateAiForecastScenarios()" style="width: 100%; font-weight: 600; padding: 0.45rem 0.6rem;"></select>
+          <small id="ai-ref-event-metrics" style="display: block; font-size: 0.73rem; color: var(--muted); margin-top: 0.25rem;">Carregando histórico do evento...</small>
+        </div>
+        <div>
+          <label for="ai-target-attendance-input" style="font-size: 0.8rem; font-weight: 600; color: var(--text);">2. Quantas pessoas você espera no NOVO evento?</label>
+          <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <input type="number" id="ai-target-attendance-input" min="1" step="1" placeholder="Ex: 50" oninput="recalculateAiForecastScenarios()" style="flex: 1; font-weight: 700; font-size: 1rem; padding: 0.42rem 0.6rem;" />
+            <span style="font-size: 0.82rem; color: var(--muted); white-space: nowrap;">jovens/presentes</span>
+          </div>
+          <small id="ai-calc-ratio-desc" style="display: block; font-size: 0.73rem; color: #38bdf8; margin-top: 0.25rem;">Projeção proporcional por pessoa</small>
+        </div>
+      </div>
+
+      <!-- 3 Cards de Cenários Comparativos -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem;">
+        <!-- Cenário 1: Conservador -->
+        <div id="ai-card-conservative" style="background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <strong style="color: var(--text); font-size: 0.92rem;">🛡️ Conservador</strong>
+              <span class="tag tag-aberto" style="font-size: 0.7rem; padding: 0.1rem 0.35rem;">100% Exato</span>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--muted); margin-bottom: 0.65rem;">Projeção proporcional exata do evento modelo, sem margem de sobra.</div>
+            <div style="font-size: 0.78rem; display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.85rem;">
+              <div>Custo Compras: <strong id="ai-cons-cost" style="color: #f87171;">R$ 0,00</strong></div>
+              <div>Faturamento: <strong id="ai-cons-sales" style="color: #818cf8;">R$ 0,00</strong></div>
+              <div>Lucro Líquido: <strong id="ai-cons-profit" style="color: #34d399;">R$ 0,00</strong> <small id="ai-cons-margin" style="color: var(--muted);">(0%)</small></div>
+            </div>
+          </div>
+          <button type="button" class="btn-secondary" onclick="applyAiForecastScenario('conservative')" style="width: 100%; font-size: 0.78rem; padding: 0.4rem 0.6rem; font-weight: 600;">Aplicar Conservador</button>
+        </div>
+
+        <!-- Cenário 2: Moderado (+10%) -->
+        <div id="ai-card-moderate" style="background: rgba(99, 102, 241, 0.12); border: 1.5px solid rgba(99, 102, 241, 0.5); border-radius: 8px; padding: 0.85rem; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <strong style="color: #a5b4fc; font-size: 0.92rem;">⭐ Moderado</strong>
+              <span class="tag tag-pago" style="font-size: 0.7rem; padding: 0.1rem 0.35rem; background: #6366f1; color: #fff;">+10% Folga</span>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--muted); margin-bottom: 0.65rem;">Margem de segurança para garantir que não falte comida no evento.</div>
+            <div style="font-size: 0.78rem; display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.85rem;">
+              <div>Custo Compras: <strong id="ai-mod-cost" style="color: #f87171;">R$ 0,00</strong></div>
+              <div>Faturamento: <strong id="ai-mod-sales" style="color: #818cf8;">R$ 0,00</strong></div>
+              <div>Lucro Líquido: <strong id="ai-mod-profit" style="color: #34d399;">R$ 0,00</strong> <small id="ai-mod-margin" style="color: var(--muted);">(0%)</small></div>
+            </div>
+          </div>
+          <button type="button" class="btn-primary" onclick="applyAiForecastScenario('moderate')" style="width: 100%; font-size: 0.78rem; padding: 0.4rem 0.6rem; font-weight: 700;">⭐ Aplicar Moderado</button>
+        </div>
+
+        <!-- Cenário 3: Otimista (+20%) -->
+        <div id="ai-card-optimistic" style="background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <strong style="color: var(--text); font-size: 0.92rem;">🚀 Otimista</strong>
+              <span class="tag tag-pendente" style="font-size: 0.7rem; padding: 0.1rem 0.35rem;">+20% Alta Demanda</span>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--muted); margin-bottom: 0.65rem;">Para eventos com grande expectativa de público e alto consumo por jovem.</div>
+            <div style="font-size: 0.78rem; display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.85rem;">
+              <div>Custo Compras: <strong id="ai-opt-cost" style="color: #f87171;">R$ 0,00</strong></div>
+              <div>Faturamento: <strong id="ai-opt-sales" style="color: #818cf8;">R$ 0,00</strong></div>
+              <div>Lucro Líquido: <strong id="ai-opt-profit" style="color: #34d399;">R$ 0,00</strong> <small id="ai-opt-margin" style="color: var(--muted);">(0%)</small></div>
+            </div>
+          </div>
+          <button type="button" class="btn-secondary" onclick="applyAiForecastScenario('optimistic')" style="width: 100%; font-size: 0.78rem; padding: 0.4rem 0.6rem; font-weight: 600;">Aplicar Otimista</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Indicadores Financeiros da Previsão -->
     <div class="stats-row" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 0.85rem;">
       <div class="stat-card">
@@ -6376,6 +6462,7 @@
       forecastEventId = String(val);
       loadForecastDataForCurrentSelection();
       renderForecastScreen();
+      initAiForecastAssistant(true);
     }
 
     function loadForecastDataForCurrentSelection() {
@@ -6507,6 +6594,9 @@
 
       // 4. Atualizar Indicadores Globais
       updateForecastKpis();
+
+      // 5. Inicializar / Atualizar Assistente Inteligente
+      initAiForecastAssistant();
     }
 
     function renderForecastExpensesTable() {
@@ -6677,6 +6767,177 @@
       if (marginEl) {
         marginEl.textContent = `Margem Líquida: ${margin}%`;
       }
+    }
+
+    // ========================================================================
+    // ASSISTENTE INTELIGENTE DE PREVISÃO (BASEADO EM HISTÓRICO)
+    // ========================================================================
+    let aiScenariosData = {
+      conservative: { items: {}, expenses: [], cost: 0, sales: 0, profit: 0, margin: '0.0' },
+      moderate: { items: {}, expenses: [], cost: 0, sales: 0, profit: 0, margin: '0.0' },
+      optimistic: { items: {}, expenses: [], cost: 0, sales: 0, profit: 0, margin: '0.0' }
+    };
+
+    let aiAssistantInitialized = false;
+
+    async function initAiForecastAssistant(forceReset = false) {
+      const refSelect = document.getElementById('ai-ref-event-select');
+      const targetInput = document.getElementById('ai-target-attendance-input');
+      if (!refSelect) return;
+
+      if (!aiAssistantInitialized || forceReset || refSelect.options.length === 0) {
+        refSelect.innerHTML = '';
+        const prevEvents = (cachedEvents || []).filter((e) => String(e.id) !== String(forecastEventId));
+        const listToUse = prevEvents.length > 0 ? prevEvents : (cachedEvents || []);
+
+        if (listToUse.length === 0) {
+          refSelect.innerHTML = '<option value="">Nenhum evento registrado ainda</option>';
+        } else {
+          listToUse.forEach((ev) => {
+            const opt = document.createElement('option');
+            opt.value = String(ev.id);
+            const st = ev.status === 'encerrado' ? '🏁' : ev.status === 'aberto' ? '🟢' : '🟡';
+            opt.textContent = `${st} ${ev.name} (${fmtDateBR(ev.event_date)})`;
+            refSelect.appendChild(opt);
+          });
+        }
+
+        const currentEv = (cachedEvents || []).find((e) => String(e.id) === String(forecastEventId));
+        if (targetInput && (!targetInput.value || Number(targetInput.value) <= 0)) {
+          targetInput.value = (currentEv && currentEv.attendance_count > 0) ? currentEv.attendance_count : 40;
+        }
+
+        aiAssistantInitialized = true;
+      }
+
+      await recalculateAiForecastScenarios();
+    }
+
+    async function recalculateAiForecastScenarios() {
+      const refSelect = document.getElementById('ai-ref-event-select');
+      const targetInput = document.getElementById('ai-target-attendance-input');
+      const metricsEl = document.getElementById('ai-ref-event-metrics');
+      const ratioDescEl = document.getElementById('ai-calc-ratio-desc');
+
+      if (!refSelect || !refSelect.value) return;
+      const refEventId = refSelect.value;
+      const targetAttendance = Math.max(1, parseInt(targetInput ? targetInput.value : 40, 10) || 40);
+
+      try {
+        const allOrders = await DataService.getOrders();
+        const refOrders = allOrders.filter((o) => String(o.event_id || 1) === String(refEventId));
+        const refExpenses = await DataService.getExpenses(refEventId);
+        const refEvent = (cachedEvents || []).find((e) => String(e.id) === String(refEventId));
+
+        const buyersSet = new Set();
+        const soldQtyMap = {};
+
+        refOrders.forEach((o) => {
+          if (o.customer_name) buyersSet.add(o.customer_name.trim().toLowerCase());
+          (o.order_items || []).forEach((item) => {
+            const pId = Number(item.product_id);
+            soldQtyMap[pId] = (soldQtyMap[pId] || 0) + Number(item.quantity || 0);
+          });
+        });
+
+        const buyersCount = buyersSet.size;
+        const refAttendance = Number(refEvent ? refEvent.attendance_count : 0) || buyersCount || 1;
+        const adherencePct = refAttendance > 0 ? ((buyersCount / refAttendance) * 100).toFixed(0) : 100;
+
+        if (metricsEl) {
+          metricsEl.textContent = `👥 ${refAttendance} presentes no evento modelo (${buyersCount} compradores reais • adesão: ${adherencePct}%) • ${refOrders.length} pedidos realizados`;
+        }
+
+        const scaleRatio = targetAttendance / refAttendance;
+        if (ratioDescEl) {
+          ratioDescEl.textContent = `🎯 Fator proporcional: ${scaleRatio.toFixed(2)}x (projetando de ${refAttendance} para ${targetAttendance} jovens)`;
+        }
+
+        const scenarios = [
+          { key: 'conservative', factor: 1.00, costElId: 'ai-cons-cost', salesElId: 'ai-cons-sales', profitElId: 'ai-cons-profit', marginElId: 'ai-cons-margin' },
+          { key: 'moderate', factor: 1.10, costElId: 'ai-mod-cost', salesElId: 'ai-mod-sales', profitElId: 'ai-mod-profit', marginElId: 'ai-mod-margin' },
+          { key: 'optimistic', factor: 1.20, costElId: 'ai-opt-cost', salesElId: 'ai-opt-sales', profitElId: 'ai-opt-profit', marginElId: 'ai-opt-margin' }
+        ];
+
+        scenarios.forEach((sc) => {
+          const scenarioItems = {};
+          let totalCost = 0;
+          let totalSales = 0;
+
+          (cachedProducts || []).forEach((p) => {
+            const pastSold = Number(soldQtyMap[p.id] || 0);
+            if (pastSold > 0) {
+              const suggested = Math.ceil(pastSold * scaleRatio * sc.factor);
+              scenarioItems[p.id] = suggested;
+
+              const hasPkg = Boolean(p.package_yield && p.package_yield > 1 && p.package_cost && p.package_cost > 0);
+              if (hasPkg) {
+                const pkgs = Math.ceil(suggested / p.package_yield);
+                totalCost += pkgs * Number(p.package_cost);
+              } else {
+                totalCost += suggested * Number(p.cost_price || 0);
+              }
+              totalSales += suggested * Number(p.price || 0);
+            }
+          });
+
+          const scenarioExpenses = (refExpenses || []).map((exp) => ({
+            id: Date.now() + Math.random(),
+            description: `${exp.description} (Proporcional)`,
+            amount: Number((Number(exp.amount || 0) * scaleRatio * sc.factor).toFixed(2))
+          }));
+          const totalExpenses = scenarioExpenses.reduce((s, x) => s + x.amount, 0);
+
+          const grandTotalCost = totalCost + totalExpenses;
+          const netProfit = totalSales - grandTotalCost;
+          const margin = totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(1) : '0.0';
+
+          aiScenariosData[sc.key] = {
+            items: scenarioItems,
+            expenses: scenarioExpenses,
+            cost: grandTotalCost,
+            sales: totalSales,
+            profit: netProfit,
+            margin
+          };
+
+          const cEl = document.getElementById(sc.costElId);
+          const sEl = document.getElementById(sc.salesElId);
+          const pEl = document.getElementById(sc.profitElId);
+          const mEl = document.getElementById(sc.marginElId);
+
+          if (cEl) cEl.textContent = fmtBRL(grandTotalCost);
+          if (sEl) sEl.textContent = fmtBRL(totalSales);
+          if (pEl) {
+            pEl.textContent = fmtBRL(netProfit);
+            pEl.style.color = netProfit >= 0 ? '#34d399' : '#f87171';
+          }
+          if (mEl) mEl.textContent = `(${margin}%)`;
+        });
+      } catch (err) {
+        console.warn('Erro ao calcular cenários inteligentes de previsão:', err);
+      }
+    }
+
+    function applyAiForecastScenario(scenarioKey) {
+      const scenario = aiScenariosData[scenarioKey];
+      if (!scenario) return;
+
+      const itemsCount = Object.keys(scenario.items).length;
+      if (itemsCount === 0) {
+        showToast('Nenhum consumo registrado no evento modelo para projetar.');
+        return;
+      }
+
+      forecastQuantities = { ...scenario.items };
+      forecastExpensesList = [...scenario.expenses];
+
+      renderForecastScreen();
+      renderForecastExpensesTable();
+      updateForecastKpis();
+
+      const label = scenarioKey === 'conservative' ? 'Conservador (100%)' : scenarioKey === 'moderate' ? 'Moderado (+10%)' : 'Otimista (+20%)';
+      showToast(`✨ Cenário ${label} aplicado com sucesso! ${itemsCount} produtos projetados.`);
     }
 
     async function saveCurrentForecast() {
@@ -7706,7 +7967,7 @@
     let deferredInstallPrompt = null;
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=14').then((reg) => {
+        navigator.serviceWorker.register('./sw.js?v=15').then((reg) => {
           reg.update();
         }).catch(() => {});
       });
