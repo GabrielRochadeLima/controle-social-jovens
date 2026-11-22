@@ -2160,7 +2160,7 @@
   <div id="toast"></div>
 
   <script>
-    const SCHEMA_NAME = '<%= schema %>';
+    const SCHEMA_NAME = '<%= typeof schema !== "undefined" && schema ? schema : "controle-social-jovens" %>';
     const STORAGE_KEY = 'csj_db_v1';
     const EVENTS_BRIDGE_KEY = 'csj_events_bridge_v1';
     const TEST_STORAGE_KEY = 'csj_test_sandbox_v1';
@@ -7967,7 +7967,7 @@
     let deferredInstallPrompt = null;
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=15').then((reg) => {
+        navigator.serviceWorker.register('./sw.js?v=16').then((reg) => {
           reg.update();
         }).catch(() => {});
       });
